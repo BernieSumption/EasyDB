@@ -62,3 +62,48 @@ struct AnyType: Hashable {
         ObjectIdentifier(type).hash(into: &hasher)
     }
 }
+
+/// Cycles through each value of a `Values` producing a grid of values where there are
+/// enough rows to ensure that each column is unique. For example if asked to produce five
+/// columns for a `Values` with 2 elements `0` and `1`, the counter will produce 3 rows:
+/// ```
+/// [
+///   [0, 1, 0, 1, 0],
+///   [0, 0, 1, 1, 0],
+///   [0, 0, 0, 0, 1],
+/// ]
+/// ```
+class CountingValueIterator {
+    private let values: AnyValues
+
+    private var item = 0
+    private var runLength = 1
+    private(set) var hasFinished = false
+
+    init(_ values: AnyValues) {
+        self.values = values
+    }
+
+    func nextRow() {
+        if didRollOver {
+            runLength *= values.count
+        } else {
+            hasFinished = true
+        }
+        item = 0
+    }
+
+    func next() -> Any {
+        guard !hasFinished else {
+            return values[0]
+        }
+        let index = (item / runLength) % values.count
+        item += 1
+        return values[index]
+    }
+
+    /// Whether we ran out of values and started again from the first value since the last call to `nextRow`
+    private var didRollOver: Bool {
+        runLength * values.count < item
+    }
+}

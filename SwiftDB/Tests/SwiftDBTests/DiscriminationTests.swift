@@ -2,99 +2,6 @@ import XCTest
 
 @testable import SwiftDB
 
-final class DiscriminationCounterTests: XCTestCase {
-    
-    func testCounter2Values1Items() throws {
-        let counter = DiscriminationUtils.Counter(AnyValues(ArrayOfValues([1, 2])))
-        let next = { counter.next() as! Int }
-        
-        XCTAssertEqual(next(), 1)
-        
-        XCTAssertEqual(counter.onInstanceFinish(), .one)
-    }
-    
-    func testCounter2Values0Items() throws {
-        let counter = DiscriminationUtils.Counter(AnyValues(ArrayOfValues([1, 2])))
-        XCTAssertEqual(counter.onInstanceFinish(), .one)
-    }
-    
-    func testCounter2Values2Items() throws {
-        let counter = DiscriminationUtils.Counter(AnyValues(ArrayOfValues([1, 2])))
-        let next = { counter.next() as! Int }
-        
-        XCTAssertEqual(next(), 1)
-        XCTAssertEqual(next(), 2)
-        
-        XCTAssertEqual(counter.onInstanceFinish(), .greaterThanOneLessThanCount)
-    }
-    
-    func testCounter2Values3Items() throws {
-        let counter = DiscriminationUtils.Counter(AnyValues(ArrayOfValues([1, 2])))
-        let next = { counter.next() as! Int }
-        
-        XCTAssertEqual(next(), 1)
-        XCTAssertEqual(next(), 2)
-        XCTAssertEqual(next(), 1)
-        
-        XCTAssertEqual(counter.onInstanceFinish(), .greaterThanCount)
-        
-        XCTAssertEqual(next(), 1)
-        XCTAssertEqual(next(), 1)
-        XCTAssertEqual(next(), 2)
-        
-        XCTAssertEqual(counter.onInstanceFinish(), .greaterThanOneLessThanCount)
-    }
-    
-    
-    func testCounter2Values4Items() throws {
-        let counter = DiscriminationUtils.Counter(AnyValues(ArrayOfValues([1, 2])))
-        let next = { counter.next() as! Int }
-        
-        XCTAssertEqual(next(), 1)
-        XCTAssertEqual(next(), 2)
-        XCTAssertEqual(next(), 1)
-        XCTAssertEqual(next(), 2)
-        
-        XCTAssertEqual(counter.onInstanceFinish(), .greaterThanCount)
-        
-        XCTAssertEqual(next(), 1)
-        XCTAssertEqual(next(), 1)
-        XCTAssertEqual(next(), 2)
-        XCTAssertEqual(next(), 2)
-        
-        XCTAssertEqual(counter.onInstanceFinish(), .greaterThanOneLessThanCount)
-    }
-    
-    func testCounter2Values5Items() throws {
-        let counter = DiscriminationUtils.Counter(AnyValues(ArrayOfValues([1, 2])))
-        let next = { counter.next() as! Int }
-        
-        XCTAssertEqual(next(), 1)
-        XCTAssertEqual(next(), 2)
-        XCTAssertEqual(next(), 1)
-        XCTAssertEqual(next(), 2)
-        XCTAssertEqual(next(), 1)
-        
-        XCTAssertEqual(counter.onInstanceFinish(), .greaterThanCount)
-        
-        XCTAssertEqual(next(), 1)
-        XCTAssertEqual(next(), 1)
-        XCTAssertEqual(next(), 2)
-        XCTAssertEqual(next(), 2)
-        XCTAssertEqual(next(), 1)
-        
-        XCTAssertEqual(counter.onInstanceFinish(), .greaterThanCount)
-        
-        XCTAssertEqual(next(), 1)
-        XCTAssertEqual(next(), 1)
-        XCTAssertEqual(next(), 1)
-        XCTAssertEqual(next(), 1)
-        XCTAssertEqual(next(), 2)
-        
-        XCTAssertEqual(counter.onInstanceFinish(), .greaterThanOneLessThanCount)
-    }
-}
-
 final class DiscriminationTests: XCTestCase {
     func testOnePropertyOfEachType() throws {
         let cycle = try Discrimination(OnePropertyOfEachType.self)
@@ -157,4 +64,3 @@ final class DiscriminationTests: XCTestCase {
 
     // TODO one bool = []
 }
-
