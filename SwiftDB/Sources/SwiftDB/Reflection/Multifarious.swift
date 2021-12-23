@@ -89,18 +89,18 @@ enum Multifarious {
             addValues(ArrayOfValues<String>(["a", "b", "c", "d", "e", "f", "g", "h"]))
             addValues(
                 ArrayOfValues<UUID>([
-                    UUID(uuid: (0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0)),
-                    UUID(uuid: (0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 1)),
+                    UUID(uuid: (0, 1, 0, 1, 0, 1, 0, 1, 0, 1, 0, 1, 0, 1, 0, 0)),
+                    UUID(uuid: (0, 1, 0, 1, 0, 1, 0, 1, 0, 1, 0, 1, 0, 1, 0, 1)),
                 ]))
             addValues(
                 ArrayOfValues<Date>([
-                    Date(timeIntervalSince1970: 0),
-                    Date(timeIntervalSince1970: 1),
+                    Date(timeIntervalSince1970: 1_234_567_890),
+                    Date(timeIntervalSince1970: 1_234_567_891),
                 ]))
             addValues(
                 ArrayOfValues<Data>([
-                    Data(repeating: 0, count: 1),
-                    Data(repeating: 1, count: 1),
+                    Data(repeating: 9, count: 10),
+                    Data(repeating: 8, count: 10),
                 ]))
         }
 

@@ -39,14 +39,14 @@ final class MultifariousTests: XCTestCase {
         let a: Bool, b: Bool, c: Bool, d: Bool, e: Bool
     }
 
-    private let uuid0 = UUID(uuid: (0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0))
-    private let uuid1 = UUID(uuid: (0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 1))
+    private let uuid0 = UUID(uuid: (0, 1, 0, 1, 0, 1, 0, 1, 0, 1, 0, 1, 0, 1, 0, 0))
+    private let uuid1 = UUID(uuid: (0, 1, 0, 1, 0, 1, 0, 1, 0, 1, 0, 1, 0, 1, 0, 1))
 
-    private let date0 = Date(timeIntervalSince1970: 0)
-    private let date1 = Date(timeIntervalSince1970: 1)
+    private let date0 = Date(timeIntervalSince1970: 1_234_567_890)
+    private let date1 = Date(timeIntervalSince1970: 1_234_567_891)
 
-    private let data0 = Data(repeating: 0, count: 1)
-    private let data1 = Data(repeating: 1, count: 1)
+    private let data0 = Data(repeating: 9, count: 10)
+    private let data1 = Data(repeating: 8, count: 10)
 
     func testMixed() throws {
         let instances = try Multifarious.instances(for: Mixed.self)
