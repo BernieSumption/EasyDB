@@ -61,6 +61,20 @@ enum JSON: Hashable {
             return []
         }
     }
+
+    /// Return the `JSON` value found by descending into objects using the specified path of property names
+    func value<S: RandomAccessCollection>(at path: S) -> JSON? where S.Element == String {
+        guard let firstProperty = path.first else {
+            return self
+        }
+        guard case .object(let dict) = self else {
+            return nil
+        }
+        guard let value = dict[firstProperty] else {
+            return nil
+        }
+        return value.value(at: path.dropFirst())
+    }
 }
 
 func valueAsBool(_ value: Any) -> Bool? {

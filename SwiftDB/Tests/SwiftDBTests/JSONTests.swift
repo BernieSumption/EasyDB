@@ -23,7 +23,7 @@ class JSONTests: XCTestCase {
                     [
                         true,
                         1,
-                        {"a": [4]},
+                        {"a": [{"b": 2}]},
                         [{"b": "5"}]
                     ]
                     """
@@ -32,7 +32,9 @@ class JSONTests: XCTestCase {
                 .boolean(true),
                 .number(1),
                 .object([
-                    "a": .array([.number(4)])
+                    "a": .array([
+                        .object(["b": .number(2)])
+                    ])
                 ]),
                 .array([
                     .object(["b": .string("5")])
@@ -94,9 +96,37 @@ class JSONTests: XCTestCase {
                 ["c", "c1"],
                 ["c", "c2"],
                 ["c", "c2", "c21"],
-                ["d"]
+                ["d"],
             ]
         )
+    }
+
+    func testValueAtPath() throws {
+        let json = JSON.object([
+            "b": .boolean(true),
+            "o1": .object(["o11": .number(1)]),
+            "o2": .object([
+                "o21": .object(["o211": .number(3)])
+            ]),
+        ])
+        XCTAssertEqual(json.value(at: []), json)
+        XCTAssertEqual(json.value(at: ["b"]), .boolean(true))
+        XCTAssertEqual(json.value(at: ["o1"]), .object(["o11": .number(1)]))
+        XCTAssertEqual(
+            json.value(at: ["o2"]),
+            .object([
+                "o21": .object(["o211": .number(3)])
+            ])
+        )
+        XCTAssertEqual(
+            json.value(at: ["o2", "o21"]),
+            .object(["o211": .number(3)])
+        )
+        XCTAssertEqual(
+            json.value(at: ["o2", "o21", "o211"]),
+            .number(3)
+        )
+
     }
 }
 
