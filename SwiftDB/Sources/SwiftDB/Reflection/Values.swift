@@ -18,15 +18,11 @@ struct ArrayOfValues<T>: Values {
     subscript(index: Int) -> T { values[index] }
 }
 
-struct NumericValues<T: Numeric>: Values {
-    typealias Element = T
+struct NumericValues: Values {
+    var count: Int { 128 }
 
-    init(_ type: T.Type) {}
-
-    var count: Int { 128 }  // safe count for the smallest numeric type - Int8
-
-    subscript(index: Int) -> T {
-        (T.zero + 1) * T(exactly: index)!
+    subscript(index: Int) -> Int8 {
+        return Int8(exactly: index)!
     }
 }
 
@@ -73,7 +69,7 @@ struct AnyType: Hashable {
 ///   [0, 0, 0, 0, 1],
 /// ]
 /// ```
-class CountingValueIterator {
+class ValueCycler {
     private let values: AnyValues
 
     private var item = 0

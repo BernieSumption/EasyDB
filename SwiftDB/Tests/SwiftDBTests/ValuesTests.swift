@@ -5,7 +5,7 @@ import XCTest
 class ValuesTests: XCTestCase {
 
     func testCounter2Values1Items() throws {
-        let counter = CountingValueIterator(AnyValues(ArrayOfValues([1, 2])))
+        let counter = ValueCycler(AnyValues(ArrayOfValues([1, 2])))
         let next = { counter.next() as! Int }
 
         XCTAssertEqual(next(), 1)
@@ -15,14 +15,14 @@ class ValuesTests: XCTestCase {
     }
 
     func testCounter2Values0Items() throws {
-        let counter = CountingValueIterator(AnyValues(ArrayOfValues([1, 2])))
+        let counter = ValueCycler(AnyValues(ArrayOfValues([1, 2])))
         XCTAssertEqual(counter.hasFinished, false)
         counter.nextRow()
         XCTAssertEqual(counter.hasFinished, true)
     }
 
     func testCounter2Values2Items() throws {
-        let counter = CountingValueIterator(AnyValues(ArrayOfValues([1, 2])))
+        let counter = ValueCycler(AnyValues(ArrayOfValues([1, 2])))
         let next = { counter.next() as! Int }
 
         XCTAssertEqual(next(), 1)
@@ -34,7 +34,7 @@ class ValuesTests: XCTestCase {
     }
 
     func testCounter2Values3Items() throws {
-        let counter = CountingValueIterator(AnyValues(ArrayOfValues([1, 2])))
+        let counter = ValueCycler(AnyValues(ArrayOfValues([1, 2])))
         let next = { counter.next() as! Int }
 
         XCTAssertEqual(next(), 1)
@@ -53,7 +53,7 @@ class ValuesTests: XCTestCase {
     }
 
     func testCounter2Values4Items() throws {
-        let counter = CountingValueIterator(AnyValues(ArrayOfValues([1, 2])))
+        let counter = ValueCycler(AnyValues(ArrayOfValues([1, 2])))
         let next = { counter.next() as! Int }
 
         XCTAssertEqual(next(), 1)
@@ -74,7 +74,7 @@ class ValuesTests: XCTestCase {
     }
 
     func testCounter2Values5Items() throws {
-        let counter = CountingValueIterator(AnyValues(ArrayOfValues([1, 2])))
+        let counter = ValueCycler(AnyValues(ArrayOfValues([1, 2])))
         let next = { counter.next() as! Int }
 
         XCTAssertEqual(next(), 1)
