@@ -38,13 +38,12 @@ enum DiscriminationError: Error, CustomStringConvertible {
     }
 }
 
-
 private enum InternalDiscriminationError: Error {
     case invalidRecordType(String)
 }
 
 enum DiscriminationUtils {
-    
+
     class CountingDecoder: Decoder {
         let codingPath = [CodingKey]()
         let userInfo = [CodingUserInfoKey: Any]()
@@ -275,7 +274,7 @@ enum DiscriminationUtils {
             let result: InstanceFinishResult =
                 item <= 1
                 ? .one
-            : (runLength * values.count < item
+                : (runLength * values.count < item
                     ? .greaterThanCount
                     : .greaterThanOneLessThanCount)
             item = 0

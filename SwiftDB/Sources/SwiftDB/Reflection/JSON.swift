@@ -1,22 +1,30 @@
 import Foundation
 
+/// A representation of parsed JSON
 enum JSON: Hashable {
-    
-    init<T: Encodable>(from encodable: T) throws {
+
+    case null
+    case boolean(Bool)
+    case number(Double)
+    case string(String)
+    case array([JSON])
+    case object([String: JSON])
+
+    init<T: Encodable>(encoding encodable: T) throws {
         let data = try JSONEncoder().encode(encodable)
-        try self.init(from: data)
+        try self.init(parsing: data)
     }
-    
-    init(from string: String) throws {
-        try self.init(from: Data(string.utf8))
+
+    init(parsing string: String) throws {
+        try self.init(parsing: Data(string.utf8))
     }
-    
-    init(from data: Data) throws {
+
+    init(parsing data: Data) throws {
         print(String(decoding: data, as: UTF8.self))
         let value = try JSONSerialization.jsonObject(with: data, options: .fragmentsAllowed)
         try self.init(fromParsedJson: value)
     }
-    
+
     private init(fromParsedJson value: Any) throws {
         if let dict = value as? [String: Any] {
             self = .object(try dict.mapValues { try JSON(fromParsedJson: $0) })
@@ -31,29 +39,39 @@ enum JSON: Hashable {
         } else if value is NSNull {
             self = .null
         } else {
-            throw SwiftDBError.unexpected("JSONSerialization.jsonObject produced unexpected type \(value), \(type(of: value))")
+            throw SwiftDBError.unexpected(
+                "JSONSerialization.jsonObject produced unexpected type \(value), \(type(of: value))"
+            )
         }
     }
 
-    case null
-    case boolean(Bool)
-    case number(Double)
-    case string(String)
-    case array([JSON])
-    case object([String: JSON])
+    var propertyPaths: [[String]] {
+        switch self {
+        case .object(let dict):
+            var paths = [[String]]()
+            for (key, value) in dict {
+                paths.append([key])
+                let childPaths = value.propertyPaths.map {
+                    [key] + $0
+                }
+                paths.append(contentsOf: childPaths)
+            }
+            return paths
+        default:
+            return []
+        }
+    }
 }
 
 func valueAsBool(_ value: Any) -> Bool? {
     guard let number = value as? NSNumber else {
         return nil
     }
-    // JSONSerialization stores bools as NSNumbers which will happily convert to
-    // integers, so we need to check that the underlying type is boolean
+    /// JSONSerialization converts JSON bools to NSNumbers which will happily convert to
+    /// other number types using e.g. `value as? Double`, so we need to check
+    /// that the underlying type is boolean
     guard CFGetTypeID(number as CFTypeRef) == CFBooleanGetTypeID() else {
         return nil
     }
     return number as? Bool
 }
-
-/// Test: parse floats and ints
-///
