@@ -102,6 +102,11 @@ enum Multifarious {
                     Data(repeating: 9, count: 10),
                     Data(repeating: 8, count: 10),
                 ]))
+            addValues(
+                ArrayOfValues<Decimal>([
+                    Decimal(100_000),
+                    Decimal(100_001),
+                ]))
         }
 
         func hasMoreInstances() -> Bool {
@@ -135,13 +140,15 @@ enum Multifarious {
         }
 
         private func decodeValue<T: Decodable>(_ type: T.Type, forKey key: Key) throws -> T {
-            let cycler = try getCycler(type)
-            guard let value = cycler.next() as? T else {
-                throw SwiftDBError.unexpected(
-                    "Generated values for key \(key.stringValue) were not of the expected type (\(type))"
-                )
+            if let cycler = getCycler(type) {
+                guard let value = cycler.next() as? T else {
+                    throw SwiftDBError.unexpected(
+                        "Generated values for key \(key.stringValue) were not of the expected type (\(type))"
+                    )
+                }
+                return value
             }
-            return value
+            throw ReflectionError.noValues(type)
         }
 
         private func decodeNumericValue<T: Decodable & Numeric>(_ type: T.Type, forKey key: Key)
@@ -157,12 +164,12 @@ enum Multifarious {
             return value
         }
 
-        private func getCycler(_ type: Any.Type) throws -> ValueCycler {
+        private func getCycler(_ type: Any.Type) -> ValueCycler? {
             if let cycler = cyclersByType[AnyType(type)] {
                 return cycler
             }
             guard let values = valuesByType[AnyType(type)] else {
-                throw ReflectionError.noValues(type)
+                return nil
             }
             let cycler = ValueCycler(values)
             cyclersByType[AnyType(type)] = cycler
