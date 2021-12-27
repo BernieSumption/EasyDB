@@ -12,7 +12,8 @@ enum ReflectionError: Error, CustomStringConvertible {
         case .invalidRecordType(let type, let message):
             return "\(type) can't be used as a record type: \(message)"
         case .keyPathNotFound(let type):
-            return "The provided KeyPath can't be mapped to a property of \(type) - note that array and dictionary subscript KeyPaths e.g. \\TypeName.myArray[0] are not supported"
+            return
+                "The provided KeyPath can't be mapped to a property of \(type) - note that array and dictionary subscript KeyPaths e.g. \\TypeName.myArray[0] are not supported"
         }
     }
 }

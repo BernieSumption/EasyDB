@@ -1,4 +1,5 @@
 import XCTest
+
 @testable import SwiftDB
 
 class KeyPathMapperTests: XCTestCase {

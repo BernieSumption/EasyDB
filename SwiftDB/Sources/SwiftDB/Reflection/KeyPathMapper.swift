@@ -1,8 +1,7 @@
-
 struct KeyPathMapper<T: Codable> {
     private let instances: [T]
     private let valuesToPropertyPath: [[JSON]: [String]]
-    
+
     init(_ type: T.Type) throws {
         instances = try Multifarious.instances(for: type)
         let jsonInstances = try instances.map({ try JSON(encoding: $0) })
@@ -12,7 +11,9 @@ struct KeyPathMapper<T: Codable> {
         let propertyPaths = first.propertyPaths
         let differing = jsonInstances.first(where: { Set($0.propertyPaths) != Set(propertyPaths) })
         if let differing = differing {
-            throw SwiftDBError.unexpected("Multifarious.instances have different structures, \(propertyPaths) and \(differing.propertyPaths)")
+            throw SwiftDBError.unexpected(
+                "Multifarious.instances have different structures, \(propertyPaths) and \(differing.propertyPaths)"
+            )
         }
         var valuesToPropertyPath = [[JSON]: [String]]()
         for propertyPath in propertyPaths {
@@ -29,7 +30,7 @@ struct KeyPathMapper<T: Codable> {
         }
         self.valuesToPropertyPath = valuesToPropertyPath
     }
-    
+
     func propertyPath<V: Encodable>(for keyPath: KeyPath<T, V>) throws -> [String] {
         let values = try instances.map {
             return try JSON(encoding: $0[keyPath: keyPath])

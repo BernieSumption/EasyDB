@@ -5,12 +5,16 @@ import Foundation
 enum Multifarious {
     static func instances<T: Decodable>(for type: T.Type) throws -> [T] {
         do {
-            let decoder = CountingDecoder()
+            let cyclers = Cyclers()
+            let decoder = CountingDecoder(cyclers)
             var instances = [T]()
-            while let instance = try decoder.nextInstance(T.self) {
-                instances.append(instance)
+            while true {
+                instances.append(try T(from: decoder))
+                cyclers.finishRow()
+                if cyclers.hasFinished {
+                    return instances
+                }
             }
-            return instances
         } catch InternalError.invalidRecordType(let message) {
             throw ReflectionError.invalidRecordType(type, message)
         }
@@ -23,34 +27,22 @@ enum Multifarious {
     private class CountingDecoder: Decoder {
         let codingPath = [CodingKey]()
         let userInfo = [CodingUserInfoKey: Any]()
+        private let cyclers: Cyclers
 
-        private var decodingContainer: Any?  // KeyedDecodingContainer
-        private var containerHasMoreInstances: (() -> Bool)?
+        init(_ cyclers: Cyclers) {
+            self.cyclers = cyclers
+        }
+
+        private var decodingContainer: Any?
 
         private(set) var hasMoreInstances = true
-
-        func nextInstance<T: Decodable>(_ type: T.Type) throws -> T? {
-            guard hasMoreInstances else {
-                return nil
-            }
-
-            let instance = try T(from: self)
-
-            guard let containerHasMoreInstances = containerHasMoreInstances else {
-                throw SwiftDBError.unexpected(
-                    "\(type)(from decoder: Decoder) did not call decoder.container(keyedBy:)")
-            }
-            hasMoreInstances = containerHasMoreInstances()
-            return instance
-        }
 
         func container<Key: CodingKey>(keyedBy type: Key.Type) throws -> KeyedDecodingContainer<
             Key
         > {
             guard let decodingContainer = self.decodingContainer else {
-                let decodingContainer = CountingContainer<Key>(self)
+                let decodingContainer = CountingContainer<Key>(self, cyclers)
                 self.decodingContainer = decodingContainer
-                self.containerHasMoreInstances = decodingContainer.hasMoreInstances
                 return KeyedDecodingContainer(decodingContainer)
             }
 
@@ -72,19 +64,15 @@ enum Multifarious {
         }
     }
 
-    private class CountingContainer<Key: CodingKey>: KeyedDecodingContainerProtocol {
-        private let decoder: CountingDecoder
+    private class Cyclers {
+        private var valuesByType = [AnyType: AnyValues]()
+        private var cyclersByType = [AnyType: ValueCycler]()
 
-        private var index = 0
-
-        let codingPath = [CodingKey]()
-
-        var valuesByType = [AnyType: AnyValues]()
-        var cyclersByType = [AnyType: ValueCycler]()
         let numericCycler = ValueCycler(AnyValues(NumericValues()))
 
-        init(_ decoder: CountingDecoder) {
-            self.decoder = decoder
+        private(set) var hasFinished = false
+
+        init() {
             addValues(ArrayOfValues<Bool>([false, true]))
             addValues(ArrayOfValues<String>(["a", "b", "c", "d", "e", "f", "g", "h"]))
             addValues(
@@ -109,20 +97,51 @@ enum Multifarious {
                 ]))
         }
 
-        func hasMoreInstances() -> Bool {
+        func finishRow() {
             numericCycler.nextRow()
-            var hasMore = !numericCycler.hasFinished
+            var hasFinished = numericCycler.hasFinished
             for cycler in cyclersByType.values {
                 cycler.nextRow()
                 if !cycler.hasFinished {
-                    hasMore = true
+                    hasFinished = false
                 }
             }
-            return hasMore
+            self.hasFinished = hasFinished
         }
 
         func addValues<V: Values, E>(_ values: V) where V.Element == E {
             valuesByType[AnyType(E.self)] = AnyValues(values)
+        }
+
+        func getCycler(_ type: Any.Type) -> ValueCycler? {
+            if let cycler = cyclersByType[AnyType(type)] {
+                return cycler
+            }
+            guard let values = valuesByType[AnyType(type)] else {
+                return nil
+            }
+            let cycler = ValueCycler(values)
+            cyclersByType[AnyType(type)] = cycler
+            return cycler
+        }
+    }
+
+    enum FinishRowResult {
+        case hasMore
+        case finished
+    }
+
+    private class CountingContainer<Key: CodingKey>: KeyedDecodingContainerProtocol {
+        private let decoder: CountingDecoder
+        private let cyclers: Cyclers
+
+        private var index = 0
+
+        let codingPath = [CodingKey]()
+
+        init(_ decoder: CountingDecoder, _ cyclers: Cyclers) {
+            self.decoder = decoder
+            self.cyclers = cyclers
         }
 
         var allKeys: [Key] {
@@ -140,7 +159,7 @@ enum Multifarious {
         }
 
         private func decodeValue<T: Decodable>(_ type: T.Type, forKey key: Key) throws -> T {
-            if let cycler = getCycler(type) {
+            if let cycler = cyclers.getCycler(type) {
                 guard let value = cycler.next() as? T else {
                     throw SwiftDBError.unexpected(
                         "Generated values for key \(key.stringValue) were not of the expected type (\(type))"
@@ -148,13 +167,15 @@ enum Multifarious {
                 }
                 return value
             }
+            Next up: delegte this to another decoder with codingPath set to codingPath + [key],
+            Also Multifarious -> MultifariousDecoder, CyclingDecoder -> MultifariousDecoderImpl
             throw ReflectionError.noValues(type)
         }
 
         private func decodeNumericValue<T: Decodable & Numeric>(_ type: T.Type, forKey key: Key)
             throws -> T
         {
-            let next = numericCycler.next()
+            let next = cyclers.numericCycler.next()
             guard let number = next as? Int8,
                 let value = T(exactly: number)
             else {
@@ -162,18 +183,6 @@ enum Multifarious {
                     "NumericValues produced number of the wrong type: \(Swift.type(of: next))")
             }
             return value
-        }
-
-        private func getCycler(_ type: Any.Type) -> ValueCycler? {
-            if let cycler = cyclersByType[AnyType(type)] {
-                return cycler
-            }
-            guard let values = valuesByType[AnyType(type)] else {
-                return nil
-            }
-            let cycler = ValueCycler(values)
-            cyclersByType[AnyType(type)] = cycler
-            return cycler
         }
 
         func decode(_ type: Bool.Type, forKey key: Key) throws -> Bool {
