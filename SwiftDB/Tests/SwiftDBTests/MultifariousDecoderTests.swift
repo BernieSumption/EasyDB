@@ -2,9 +2,9 @@ import XCTest
 
 @testable import SwiftDB
 
-final class MultifariousTests: XCTestCase {
+final class MultifariousDecoderTests: XCTestCase {
     func testTwoBools() throws {
-        let instances = try Multifarious.instances(for: TwoBools.self)
+        let instances = try MultifariousDecoder.instances(for: TwoBools.self)
         XCTAssertEqual(
             instances, [TwoBools(a: false, b: true)])
     }
@@ -13,7 +13,7 @@ final class MultifariousTests: XCTestCase {
     }
 
     func testThreeBools() throws {
-        let instances = try Multifarious.instances(for: ThreeBools.self)
+        let instances = try MultifariousDecoder.instances(for: ThreeBools.self)
         XCTAssertEqual(
             instances,
             [
@@ -26,7 +26,7 @@ final class MultifariousTests: XCTestCase {
     }
 
     func testFiveBools() throws {
-        let instances = try Multifarious.instances(for: FiveBools.self)
+        let instances = try MultifariousDecoder.instances(for: FiveBools.self)
         XCTAssertEqual(
             instances,
             [
@@ -49,7 +49,7 @@ final class MultifariousTests: XCTestCase {
     private let data1 = Data(repeating: 8, count: 10)
 
     func testMixed() throws {
-        let instances = try Multifarious.instances(for: Mixed.self)
+        let instances = try MultifariousDecoder.instances(for: Mixed.self)
         XCTAssertEqual(
             instances,
             [
@@ -93,7 +93,7 @@ final class MultifariousTests: XCTestCase {
     }
 
     func testNested() throws {
-        let instances = try Multifarious.instances(for: Nested.self)
+        let instances = try MultifariousDecoder.instances(for: Nested.self)
         XCTAssertEqual(
             instances,
             [

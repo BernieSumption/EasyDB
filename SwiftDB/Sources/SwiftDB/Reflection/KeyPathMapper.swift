@@ -3,7 +3,7 @@ struct KeyPathMapper<T: Codable> {
     private let valuesToPropertyPath: [[JSON]: [String]]
 
     init(_ type: T.Type) throws {
-        instances = try Multifarious.instances(for: type)
+        instances = try MultifariousDecoder.instances(for: type)
         let jsonInstances = try instances.map({ try JSON(encoding: $0) })
         guard let first = jsonInstances.first else {
             throw SwiftDBError.unexpected("Multifarious.instances was empty")
