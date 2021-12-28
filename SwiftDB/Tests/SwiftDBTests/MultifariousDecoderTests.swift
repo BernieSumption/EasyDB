@@ -135,9 +135,13 @@ final class MultifariousDecoderTests: XCTestCase {
             instances,
             [
                 .init(
-                    arr: [.init(b: false)],
-                    i: [1]
-                )
+                    arr: [.init(b: false), .init(b: true)],
+                    i: [0, 1]
+                ),
+                .init(
+                    arr: [.init(b: false), .init(b: false)],
+                    i: [1, 1]
+                ),
             ])
     }
     struct Arrays: Codable, Equatable {
@@ -155,22 +159,40 @@ final class MultifariousDecoderTests: XCTestCase {
             instances,
             [
                 .init(
-                    dict: [0: .init(b: true)],
-                    i: ["0": 1]
+                    sDict: ["0": .init(b: true)],
+                    iDict: [0: 1]
                 ),
                 .init(
-                    dict: [0: .init(b: false)],
-                    i: ["1": 1]
+                    sDict: ["0": .init(b: false)],
+                    iDict: [1: 1]
                 ),
             ])
     }
     struct Dictionaries: Codable, Equatable {
-        let dict: [Int: Sub1]
-        let i: [String: Int]
+        let sDict: [String: Sub1]
+        let iDict: [Int: Int]
 
         struct Sub1: Codable, Equatable {
             let b: Bool
         }
+    }
+
+    func testDateDictionaries() throws {
+        let instances = try MultifariousDecoder.instances(for: [Date: Int].self)
+        XCTAssertEqual(
+            instances,
+            [
+                [Date(timeIntervalSince1970: 0): 1]
+            ])
+    }
+
+    func testUUIDDictionaries() throws {
+        let instances = try MultifariousDecoder.instances(for: [UUID: Int].self)
+        XCTAssertEqual(
+            instances,
+            [
+                [UUID(uuid: (0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0)): 1]
+            ])
     }
 
     func testTopLevelScalar() throws {
@@ -180,6 +202,6 @@ final class MultifariousDecoderTests: XCTestCase {
 
     func testTopLevelArray() throws {
         let instances = try MultifariousDecoder.instances(for: [Int].self)
-        XCTAssertEqual(instances, [[0]])
+        XCTAssertEqual(instances, [[0, 1]])
     }
 }

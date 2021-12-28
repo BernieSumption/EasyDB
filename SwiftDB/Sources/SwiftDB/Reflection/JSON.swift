@@ -20,7 +20,6 @@ enum JSON: Hashable {
     }
 
     init(parsing data: Data) throws {
-        print(String(decoding: data, as: UTF8.self))
         let value = try JSONSerialization.jsonObject(with: data, options: .fragmentsAllowed)
         try self.init(fromParsedJson: value)
     }

@@ -25,6 +25,7 @@ private enum InternalError: Error {
     case invalidRecordType(String)
 }
 
+/// A `Decoder` that produces instances with values from a `MultifariousValues` instance
 private class MultifariousDecoderImpl: Decoder {
     private let values: MultifariousValues
     let codingPath: [CodingKey]
@@ -48,6 +49,7 @@ private class MultifariousDecoderImpl: Decoder {
     }
 }
 
+/// Keyed containers produce values for objects (structs and classes) and dictionaries.
 private struct KeyedContainer<Key: CodingKey>: KeyedDecodingContainerProtocol {
     private let decoder: MultifariousDecoderImpl
     private let values: MultifariousValues
@@ -108,6 +110,7 @@ private struct KeyedContainer<Key: CodingKey>: KeyedDecodingContainerProtocol {
     }
 }
 
+/// Unkeyed contains produce values for arrays and tuples
 private struct UnkeyedContainer: UnkeyedDecodingContainer {
     private let decoder: MultifariousDecoderImpl
     private let values: MultifariousValues
@@ -120,9 +123,11 @@ private struct UnkeyedContainer: UnkeyedDecodingContainer {
         self.codingPath = codingPath
     }
 
-    let count: Int? = 1
+    /// Unkeyed containers have 2 elements. This is because some types, e.g `[Date: String]`, expect a series
+    /// of key/value pairs encoded as alternating elements in an array
+    let count: Int? = 2
     var isAtEnd: Bool {
-        currentIndex > 0
+        currentIndex >= 2
     }
 
     private(set) var currentIndex: Int = 0
@@ -146,6 +151,10 @@ private struct UnkeyedContainer: UnkeyedDecodingContainer {
     }
 
     mutating func decode<T: Decodable>(_ type: T.Type) throws -> T {
+        if let value = values.next(type) {
+            currentIndex += 1
+            return value
+        }
         return try T(from: nextDecoder())
     }
 
@@ -194,7 +203,7 @@ internal struct MultifariousKey: CodingKey {
     }
 
     internal init(_ int: Int) {
-        self.stringValue = "Index \(int)"
+        self.stringValue = int.description
         self.intValue = int
     }
 }
