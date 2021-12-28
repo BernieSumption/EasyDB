@@ -9,7 +9,7 @@ enum MultifariousDecoder {
             let decoder = MultifariousDecoderImpl(values, codingPath: [])
             var instances = [T]()
             while true {
-                instances.append(try T(from: decoder))
+                instances.append(try decodeHelper(T.self, from: decoder))
                 values.nextRow()
                 if values.hasFinished {
                     return instances
@@ -84,7 +84,7 @@ private struct KeyedContainer<Key: CodingKey>: KeyedDecodingContainerProtocol {
         if let value = values.next(type) {
             return value
         }
-        return try T(from: decoderForKey(key))
+        return try decodeHelper(T.self, from: decoderForKey(key))
     }
 
     func nestedContainer<NestedKey: CodingKey>(keyedBy type: NestedKey.Type, forKey key: Key) throws
@@ -155,13 +155,24 @@ private struct UnkeyedContainer: UnkeyedDecodingContainer {
             currentIndex += 1
             return value
         }
-        return try T(from: nextDecoder())
+        return try decodeHelper(T.self, from: nextDecoder())
     }
 
     mutating private func nextDecoder() -> MultifariousDecoderImpl {
         let key = MultifariousKey(currentIndex)
         currentIndex += 1
         return MultifariousDecoderImpl(values, codingPath: self.codingPath + [key])
+    }
+}
+
+private func decodeHelper<T: Decodable, D: Decoder>(_ type: T.Type, from decoder: D) throws -> T {
+    do {
+        return try T(from: decoder)
+    } catch {
+        if error is ReflectionError || error is InternalError {
+            throw error  // Don't wrap our internal error types
+        }
+        throw ReflectionError.decodingError(type, error)
     }
 }
 

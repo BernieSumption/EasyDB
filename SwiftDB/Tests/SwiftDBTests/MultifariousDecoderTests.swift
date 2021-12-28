@@ -204,4 +204,29 @@ final class MultifariousDecoderTests: XCTestCase {
         let instances = try MultifariousDecoder.instances(for: [Int].self)
         XCTAssertEqual(instances, [[0, 1]])
     }
+
+    func testWrappedError() throws {
+        XCTAssertThrowsError(
+            try MultifariousDecoder.instances(for: Tmp.self)
+        ) { error in
+            XCTAssertEqual(
+                String(describing: error), "Error thrown from Sub(from: Decoder): my-error-message")
+        }
+    }
+    struct Tmp: Codable {
+        let s: Sub
+
+        struct Sub: Codable {
+            init(from: Decoder) throws {
+                throw Err.error
+            }
+        }
+        enum Err: Error, CustomStringConvertible {
+            case error
+            public var description: String {
+                "my-error-message"
+            }
+        }
+
+    }
 }
