@@ -77,7 +77,7 @@ enum JSON: Hashable {
     }
 }
 
-func valueAsBool(_ value: Any) -> Bool? {
+private func valueAsBool(_ value: Any) -> Bool? {
     guard let number = value as? NSNumber else {
         return nil
     }
