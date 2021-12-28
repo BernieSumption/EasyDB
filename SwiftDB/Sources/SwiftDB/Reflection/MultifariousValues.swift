@@ -34,6 +34,9 @@ class MultifariousValues {
         setSampleValues(zero: UInt64(0), one: UInt64(1))
         setSampleValues(zero: Decimal(0), one: Decimal(1))
         setSampleValues(
+            zero: URL(string: "data:,0")!,
+            one: URL(string: "data:,1")!)
+        setSampleValues(
             zero: UUID(uuid: (0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0)),
             one: UUID(uuid: (0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 1)))
         setSampleValues(
@@ -47,10 +50,18 @@ class MultifariousValues {
 
     func setSampleValues<T: Encodable>(zero: T, one: T) {
         assert(__debug__valuesEncodeDifferently(zero, one), "sample values must be different")
-        assert(__debug__valuesEncodeDifferently(zero, 1), "a sample value for zero must not encode as `1`!")
-        assert(__debug__valuesEncodeDifferently(zero, "1"), "a sample value for zero must not encode as `1`!")
-        assert(__debug__valuesEncodeDifferently(one, 0), "A sample value for one must not encode as `0`!")
-        assert(__debug__valuesEncodeDifferently(one, "0"), "A sample value for one must not encode as `0`!")
+        assert(
+            __debug__valuesEncodeDifferently(zero, 1),
+            "a sample value for zero must not encode as `1`!")
+        assert(
+            __debug__valuesEncodeDifferently(zero, "1"),
+            "a sample value for zero must not encode as `1`!")
+        assert(
+            __debug__valuesEncodeDifferently(one, 0),
+            "A sample value for one must not encode as `0`!")
+        assert(
+            __debug__valuesEncodeDifferently(one, "0"),
+            "A sample value for one must not encode as `0`!")
         typeToSamples[ObjectIdentifier(T.self)] = (zero, one)
     }
 
@@ -80,8 +91,9 @@ class MultifariousValues {
     }
 }
 
-
-private func __debug__valuesEncodeDifferently<T1: Encodable, T2: Encodable>(_ a: T1, _ b: T2) -> Bool {
+private func __debug__valuesEncodeDifferently<T1: Encodable, T2: Encodable>(_ a: T1, _ b: T2)
+    -> Bool
+{
     do {
         let a = try JSON(encoding: a)
         let b = try JSON(encoding: b)
@@ -90,4 +102,3 @@ private func __debug__valuesEncodeDifferently<T1: Encodable, T2: Encodable>(_ a:
         assert(false, "Error encoding values to check equality: \(error)")
     }
 }
-

@@ -39,81 +39,72 @@ final class MultifariousDecoderTests: XCTestCase {
         let a: Bool, b: Bool, c: Bool, d: Bool, e: Bool
     }
 
-    private let uuid0 = UUID(uuid: (0, 1, 0, 1, 0, 1, 0, 1, 0, 1, 0, 1, 0, 1, 0, 0))
-    private let uuid1 = UUID(uuid: (0, 1, 0, 1, 0, 1, 0, 1, 0, 1, 0, 1, 0, 1, 0, 1))
+    private let uuid0 = UUID(uuid: (0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0))
+    private let uuid1 = UUID(uuid: (0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 1))
 
-    private let date0 = Date(timeIntervalSince1970: 1_234_567_890)
-    private let date1 = Date(timeIntervalSince1970: 1_234_567_891)
+    private let date0 = Date(timeIntervalSince1970: 0)
+    private let date1 = Date(timeIntervalSince1970: 1)
 
-    private let data0 = Data(repeating: 9, count: 10)
-    private let data1 = Data(repeating: 8, count: 10)
+    private let data0 = Data(repeating: 0, count: 1)
+    private let data1 = Data(repeating: 1, count: 1)
 
     func testMixed() throws {
         let instances = try MultifariousDecoder.instances(for: Mixed.self)
         XCTAssertEqual(
             instances,
             [
-                Mixed(
-                    id: uuid0, id2: uuid1,
-                    date: date0, date2: date1,
-                    data: data0, data2: data1,
-                    s1: "a", s2: "b", b1: false, b2: true, b3: false, n1: 0, n2: 1, n3: 2, n4: 3,
-                    n5: 4, n6: 5, n7: 6, n8: 7, n9: 8, n10: 9, n11: 10, n12: 11, n13: 12,
-                    n14: 100_000, n15: 100_001),
-                Mixed(
-                    id: uuid0, id2: uuid0,
-                    date: date0, date2: date0,
-                    data: data0, data2: data0,
-                    s1: "a", s2: "a", b1: false, b2: false, b3: true, n1: 0, n2: 0, n3: 0, n4: 0,
-                    n5: 0, n6: 0, n7: 0, n8: 0, n9: 0, n10: 0, n11: 0, n12: 0, n13: 0, n14: 100_000,
-                    n15: 100_000),
+                Mixed(id: uuid0, s: "1", i: 0, d: 1),
+                Mixed(id: uuid0, s: "0", i: 1, d: 1),
             ])
     }
     struct Mixed: Decodable, Equatable {
-        let id: UUID, id2: UUID
-        let date: Date, date2: Date
-        let data: Data, data2: Data
-        let s1: String, s2: String
-        let b1: Bool, b2: Bool, b3: Bool
-        let n1: Double
-        let n2: Float
-        let n3: Int
-        let n4: Int8
-        let n5: Int16
-        let n6: Int32
-        let n7: Int64
-        let n8: UInt
-        let n9: UInt8
-        let n10: UInt16
-        let n11: UInt32
-        let n12: UInt64
-        let n13: UInt64
-        let n14: Decimal
-        let n15: Decimal
+        let id: UUID
+        let s: String
+        let i: UInt16
+        let d: Decimal
     }
 
     func testNested() throws {
         let instances = try MultifariousDecoder.instances(for: Nested.self)
         XCTAssertEqual(
-            instances,
+            instances[0...1],
             [
+                /// first instance values run 0, 1, 0, 1 etc
                 .init(
                     b: false,
                     s1: .init(
                         b: true,
                         o: .init(
                             b: false,
-                            f: 0,
-                            o: .init(b: 1)
+                            f: 1,
+                            o: .init(b: 0)
                         )
                     ),
                     s2: .init(
                         b: true,
-                        f: 2,
-                        o: .init(b: 3)
+                        f: 0,
+                        o: .init(b: 1)
                     ),
-                    s3: .init(b: 4)
-                )
+                    s3: .init(b: 0)
+                ),
+                /// second instance values run 0, 0, 1, 1, 0, 0, 1, 1 etc
+                .init(
+                    b: false,
+                    s1: .init(
+                        b: false,
+                        o: .init(
+                            b: true,
+                            f: 1,
+                            o: .init(b: 0)
+                        )
+                    ),
+                    s2: .init(
+                        b: false,
+                        f: 1,
+                        o: .init(b: 1)
+                    ),
+                    s3: .init(b: 0)
+                ),
             ])
     }
     struct Nested: Codable, Equatable {
@@ -136,5 +127,59 @@ final class MultifariousDecoderTests: XCTestCase {
         struct Sub3: Codable, Equatable {
             let b: Decimal
         }
+    }
+
+    func testArrays() throws {
+        let instances = try MultifariousDecoder.instances(for: Arrays.self)
+        XCTAssertEqual(
+            instances,
+            [
+                .init(
+                    arr: [.init(b: false)],
+                    i: [1]
+                )
+            ])
+    }
+    struct Arrays: Codable, Equatable {
+        let arr: [Sub1]
+        let i: [Int]
+
+        struct Sub1: Codable, Equatable {
+            let b: Bool
+        }
+    }
+
+    func testDictionaries() throws {
+        let instances = try MultifariousDecoder.instances(for: Dictionaries.self)
+        XCTAssertEqual(
+            instances,
+            [
+                .init(
+                    dict: [0: .init(b: true)],
+                    i: ["0": 1]
+                ),
+                .init(
+                    dict: [0: .init(b: false)],
+                    i: ["1": 1]
+                ),
+            ])
+    }
+    struct Dictionaries: Codable, Equatable {
+        let dict: [Int: Sub1]
+        let i: [String: Int]
+
+        struct Sub1: Codable, Equatable {
+            let b: Bool
+        }
+    }
+
+    func testTopLevelScalar() throws {
+        let instances = try MultifariousDecoder.instances(for: Int.self)
+        XCTAssertEqual(instances, [0])
+    }
+
+    func testTopLevelArray() throws {
+        let instances = try MultifariousDecoder.instances(for: [Int].self)
+        XCTAssertEqual(instances, [[0]])
     }
 }

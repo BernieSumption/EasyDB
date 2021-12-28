@@ -35,150 +35,166 @@ private class MultifariousDecoderImpl: Decoder {
         self.codingPath = codingPath
     }
 
-    private(set) var hasMoreInstances = true
-
     func container<Key: CodingKey>(keyedBy type: Key.Type) throws -> KeyedDecodingContainer<Key> {
         return KeyedDecodingContainer(KeyedContainer<Key>(self, values, codingPath: codingPath))
     }
 
     func unkeyedContainer() throws -> UnkeyedDecodingContainer {
-        throw InternalError.invalidRecordType(
-            "array-like (unkeyed) Decodable types are not supported")
+        return UnkeyedContainer(self, values, codingPath: codingPath)
     }
 
     func singleValueContainer() throws -> SingleValueDecodingContainer {
-        throw InternalError.invalidRecordType(
-            "single value Decodable types are not supported")
+        return SingleValueContainer(values, codingPath: codingPath)
     }
 }
 
-
-private class KeyedContainer<Key: CodingKey>: KeyedDecodingContainerProtocol {
+private struct KeyedContainer<Key: CodingKey>: KeyedDecodingContainerProtocol {
     private let decoder: MultifariousDecoderImpl
     private let values: MultifariousValues
     let codingPath: [CodingKey]
 
-    private var index = 0
-
-    init(_ decoder: MultifariousDecoderImpl, _ values: MultifariousValues, codingPath: [CodingKey]) {
+    init(_ decoder: MultifariousDecoderImpl, _ values: MultifariousValues, codingPath: [CodingKey])
+    {
         self.decoder = decoder
         self.values = values
         self.codingPath = codingPath
     }
 
     var allKeys: [Key] {
-        /// This is used when decoding types that do not know their keys in advance, like Dictionaries.
-        /// We return an empty array so all decoded Dictionaries will be empty.
-        return []
+        /// This is used when decoding dictionaries - pretend that we have one string key with a unique value
+        guard let value = values.next(String.self),
+            let key = Key(stringValue: value)
+        else {
+            return []
+        }
+        return [key]
     }
 
     func contains(_ key: Key) -> Bool {
-        true  // we have every key
+        true  // pretend we have every key
     }
 
     func decodeNil(forKey key: Key) throws -> Bool {
         false  // optional values are never nil
     }
 
-    private func decodeValue<T: Decodable>(_ type: T.Type, forKey key: Key) throws -> T {
-        guard let value = values.next(type) else {
-            throw ReflectionError.noValues(type)
-        }
-        return value
-    }
-
-    func decode(_ type: Bool.Type, forKey key: Key) throws -> Bool {
-        return try decodeValue(type, forKey: key)
-    }
-
-    func decode(_ type: String.Type, forKey key: Key) throws -> String {
-        return try decodeValue(type, forKey: key)
-    }
-
-    func decode(_ type: Double.Type, forKey key: Key) throws -> Double {
-        return try decodeValue(type, forKey: key)
-    }
-
-    func decode(_ type: Float.Type, forKey key: Key) throws -> Float {
-        return try decodeValue(type, forKey: key)
-    }
-
-    func decode(_ type: Int.Type, forKey key: Key) throws -> Int {
-        return try decodeValue(type, forKey: key)
-    }
-
-    func decode(_ type: Int8.Type, forKey key: Key) throws -> Int8 {
-        return try decodeValue(type, forKey: key)
-    }
-
-    func decode(_ type: Int16.Type, forKey key: Key) throws -> Int16 {
-        return try decodeValue(type, forKey: key)
-    }
-
-    func decode(_ type: Int32.Type, forKey key: Key) throws -> Int32 {
-        return try decodeValue(type, forKey: key)
-    }
-
-    func decode(_ type: Int64.Type, forKey key: Key) throws -> Int64 {
-        return try decodeValue(type, forKey: key)
-    }
-
-    func decode(_ type: UInt.Type, forKey key: Key) throws -> UInt {
-        return try decodeValue(type, forKey: key)
-    }
-
-    func decode(_ type: UInt8.Type, forKey key: Key) throws -> UInt8 {
-        return try decodeValue(type, forKey: key)
-    }
-
-    func decode(_ type: UInt16.Type, forKey key: Key) throws -> UInt16 {
-        return try decodeValue(type, forKey: key)
-    }
-
-    func decode(_ type: UInt32.Type, forKey key: Key) throws -> UInt32 {
-        return try decodeValue(type, forKey: key)
-    }
-
-    func decode(_ type: UInt64.Type, forKey key: Key) throws -> UInt64 {
-        return try decodeValue(type, forKey: key)
-    }
-
     func decode<T>(_ type: T.Type, forKey key: Key) throws -> T where T: Decodable {
-        return try decodeValue(type, forKey: key)
+        if let value = values.next(type) {
+            return value
+        }
+        return try T(from: decoderForKey(key))
     }
 
     func nestedContainer<NestedKey: CodingKey>(keyedBy type: NestedKey.Type, forKey key: Key) throws
         -> KeyedDecodingContainer<NestedKey>
     {
-        return decoderForKey(key).container(keyedBy: type)
+        return try decoderForKey(key).container(keyedBy: type)
     }
 
     func nestedUnkeyedContainer(forKey key: Key) throws -> UnkeyedDecodingContainer {
-        return decoderForKey(key).unkeyedContainer()
+        return try decoderForKey(key).unkeyedContainer()
     }
 
     func superDecoder() throws -> Decoder {
-        return decoderForKey(_JSONK).unkeyedContainer()
+        return decoderForKey(MultifariousKey("super"))
     }
 
     func superDecoder(forKey key: Key) throws -> Decoder {
-        fatalError("Not implemented")
+        return decoderForKey(key)
     }
-    
-    private func decoderForKey(_ key: K) throws -> MultifariousDecoderImpl {
+
+    private func decoderForKey<K: CodingKey>(_ key: K) -> MultifariousDecoderImpl {
         return MultifariousDecoderImpl(values, codingPath: self.codingPath + [key])
     }
 }
 
-private struct StringKey: CodingKey {
-    let intValue: Int? = nil
-    var stringValue: String
-    
-    init?(stringValue: String) {
-        self.stringValue = stringValue
+private struct UnkeyedContainer: UnkeyedDecodingContainer {
+    private let decoder: MultifariousDecoderImpl
+    private let values: MultifariousValues
+    let codingPath: [CodingKey]
+
+    init(_ decoder: MultifariousDecoderImpl, _ values: MultifariousValues, codingPath: [CodingKey])
+    {
+        self.decoder = decoder
+        self.values = values
+        self.codingPath = codingPath
     }
-    
-    init(_ stringValue: String) {
-        self.stringValue = stringValue
+
+    let count: Int? = 1
+    var isAtEnd: Bool {
+        currentIndex > 0
+    }
+
+    private(set) var currentIndex: Int = 0
+
+    func decodeNil() throws -> Bool {
+        return false
+    }
+
+    mutating func nestedContainer<NestedKey: CodingKey>(keyedBy type: NestedKey.Type) throws
+        -> KeyedDecodingContainer<NestedKey>
+    {
+        return try nextDecoder().container(keyedBy: type)
+    }
+
+    mutating func nestedUnkeyedContainer() throws -> UnkeyedDecodingContainer {
+        return try nextDecoder().unkeyedContainer()
+    }
+
+    mutating func superDecoder() throws -> Decoder {
+        return nextDecoder()
+    }
+
+    mutating func decode<T: Decodable>(_ type: T.Type) throws -> T {
+        return try T(from: nextDecoder())
+    }
+
+    mutating private func nextDecoder() -> MultifariousDecoderImpl {
+        let key = MultifariousKey(currentIndex)
+        currentIndex += 1
+        return MultifariousDecoderImpl(values, codingPath: self.codingPath + [key])
+    }
+}
+
+struct SingleValueContainer: SingleValueDecodingContainer {
+    private let values: MultifariousValues
+    let codingPath: [CodingKey]
+
+    init(_ values: MultifariousValues, codingPath: [CodingKey]) {
+        self.values = values
+        self.codingPath = codingPath
+    }
+
+    func decodeNil() -> Bool {
+        return false
+    }
+
+    func decode<T>(_ type: T.Type) throws -> T where T: Decodable {
+        guard let value = values.next(type) else {
+            throw ReflectionError.noValues(type)
+        }
+        return value
+    }
+}
+
+internal struct MultifariousKey: CodingKey {
+    public var stringValue: String
+    public var intValue: Int?
+
+    public init?(stringValue: String) {
+        self.init(stringValue)
+    }
+
+    public init?(intValue: Int) {
+        self.init(intValue)
+    }
+
+    public init(_ string: String) {
+        self.stringValue = string
+    }
+
+    internal init(_ int: Int) {
+        self.stringValue = "Index \(int)"
+        self.intValue = int
     }
 }

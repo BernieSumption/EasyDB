@@ -126,6 +126,7 @@ class MultifariousValuesTests: XCTestCase {
         XCTAssertEqual(first2Values(UInt32.self), [0, 1])
         XCTAssertEqual(first2Values(UInt64.self), [0, 1])
         XCTAssertEqual(first2Values(Decimal.self), [0, 1])
+        XCTAssertEqual(first2Values(URL.self), [URL(string: "data:,0")!, URL(string: "data:,1")!])
         XCTAssertEqual(
             first2Values(UUID.self),
             [
