@@ -26,7 +26,7 @@ private enum InternalError: Error {
 }
 
 /// A `Decoder` that produces instances with values from a `MultifariousValues` instance
-private class MultifariousDecoderImpl: Decoder {
+private struct MultifariousDecoderImpl: Decoder {
     private let values: MultifariousValues
     let codingPath: [CodingKey]
     let userInfo = [CodingUserInfoKey: Any]()

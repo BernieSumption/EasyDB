@@ -45,7 +45,6 @@ class MultifariousValues {
         setSampleValues(
             zero: Data(repeating: 0, count: 1),
             one: Data(repeating: 1, count: 1))
-        reset()
     }
 
     func setSampleValues<T: Encodable>(zero: T, one: T) {
@@ -82,12 +81,6 @@ class MultifariousValues {
             hasFinished = true
         }
         item = 0
-    }
-
-    func reset() {
-        item = 0
-        runLength = 1
-        hasFinished = false
     }
 }
 
