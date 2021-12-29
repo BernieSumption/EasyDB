@@ -1,6 +1,7 @@
 struct KeyPathMapper<T: Codable> {
     private let instances: [T]
     private let valuesToPropertyPath: [[JSON]: [String]]
+    private let cache = Cache()
 
     init(_ type: T.Type) throws {
         instances = try MultifariousDecoder.instances(for: type)
@@ -32,12 +33,20 @@ struct KeyPathMapper<T: Codable> {
     }
 
     func propertyPath<V: Encodable>(for keyPath: KeyPath<T, V>) throws -> [String] {
+        if let cached = cache.keyPathToPropertyPath[keyPath] {
+            return cached
+        }
         let values = try instances.map {
             return try JSON(encoding: $0[keyPath: keyPath])
         }
         guard let path = valuesToPropertyPath[values] else {
             throw ReflectionError.keyPathNotFound(T.self)
         }
+        cache.keyPathToPropertyPath[keyPath] = path
         return path
+    }
+
+    private class Cache {
+        var keyPathToPropertyPath = [PartialKeyPath<T>: [String]]()
     }
 }

@@ -2,7 +2,6 @@ import Foundation
 
 /// A representation of parsed JSON
 enum JSON: Hashable {
-
     case null
     case boolean(Bool)
     case number(Double)
