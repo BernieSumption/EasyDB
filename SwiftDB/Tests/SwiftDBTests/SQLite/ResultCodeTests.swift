@@ -4,7 +4,7 @@ import XCTest
 class ResultCodeTests: XCTestCase {
 
     func testExample() throws {
-        XCTAssertEqual("\(ResultCode.SQLITE_OK)", "0 (not an error)")
-        XCTAssertEqual("\(ResultCode.SQLITE_IOERR)", "10 (disk I/O error)")
+        XCTAssertEqual("\(ResultCode.OK)", "0 (not an error)")
+        XCTAssertEqual("\(ResultCode.IOERR)", "10 (disk I/O error)")
     }
 }
