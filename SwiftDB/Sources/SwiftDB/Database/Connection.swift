@@ -8,6 +8,7 @@ class Connection {
         var db: OpaquePointer?
         try checkOK(sqlite3_open(path, &db))
         self.db = try checkPointer(db, from: "sqlite3_open")
+        try prepare(sql: "PRAGMA encoding = \"UTF-8\"").step()
     }
 
     func prepare(sql: String) throws -> PreparedStatement {
@@ -26,7 +27,7 @@ class Connection {
             self.statement = try checkPointer(statement, from: "sqlite3_prepare_v2")
         }
 
-        func bindParameters(_ parameters: [Parameter] = []) throws {
+        func bindParameters(_ parameters: [Parameter]) throws {
             try checkOK(sqlite3_clear_bindings(statement))
 
             var index: Int32 = 1
@@ -35,12 +36,19 @@ class Connection {
                 case .double(let double):
                     sqlite3_bind_double(statement, index, double)
                 case .int(let int):
-                    sqlite3_bind_int(statement, index, int)
-                case .int64(let int64):
-                    sqlite3_bind_int64(statement, index, int64)
+                    sqlite3_bind_int64(statement, index, int)
                 case .null:
                     sqlite3_bind_null(statement, index)
                 case .text(let string):
+                    func foo(_ s: UnsafePointer<CChar>) {
+                        print(s[0])
+                        print(s[1])
+                        print(s[2])
+                        print(s[3])
+                        print("")
+                    }
+                    foo(string)
+                    
                     sqlite3_bind_text(statement, index, string, -1, nil)
                 }
                 index += 1
@@ -75,19 +83,35 @@ class Connection {
             case row
             case done
         }
-
-        func readInt(column: String) throws -> Int {
-            return Int(sqlite3_column_int(statement, try getIndex(column)))
+        
+        func readNull(column: String) throws -> Bool {
+            return sqlite3_column_type(statement, try getIndex(column)) == SQLITE_NULL
         }
 
-        func readInt64(column: String) throws -> Int64 {
+        func readInt(column: String) throws -> Int64 {
             return sqlite3_column_int64(statement, try getIndex(column))
         }
 
         func readText(column: String) throws -> String {
+            print("SQLITE_NULL: \(SQLITE_NULL)")
+            print("SQLITE_INTEGER: \(SQLITE_INTEGER)")
+            print("SQLITE_FLOAT: \(SQLITE_FLOAT)")
+            print("SQLITE_TEXT: \(SQLITE_TEXT)")
+            print("SQLITE_BLOB: \(SQLITE_BLOB)")
+            print(sqlite3_column_type(statement, try getIndex(column)))
+            
             guard let cString = sqlite3_column_text(statement, try getIndex(column)) else {
-                throw ConnectionError.null(column)
+                // For consistency with numbers, manufacture a default value for null.
+                // Callers should use readNull(column:) to check for null
+                return ""
             }
+            print(cString[0])
+            print(cString[1])
+            print(cString[2])
+            print(cString[3])
+            print(cString[4])
+            print(cString[5])
+            print(cString[6])
             return String(cString: cString)
         }
 
@@ -112,24 +136,23 @@ class Connection {
         }
     }
 
-    enum Parameter {
-        case double(Double)
-        case int(Int32)
-        case int64(Int64)
-        case null
-        case text(String)
-    }
-
 }
 
-func checkOK(_ code: CInt) throws {
+enum Parameter {
+    case double(Double)
+    case int(Int64)
+    case null
+    case text(String)
+}
+
+private func checkOK(_ code: CInt) throws {
     let resultCode = try ResultCode(code)
     if resultCode != .OK {
         throw resultCode
     }
 }
 
-func checkPointer(_ pointer: OpaquePointer?, from functionName: String) throws -> OpaquePointer {
+private func checkPointer(_ pointer: OpaquePointer?, from functionName: String) throws -> OpaquePointer {
     guard let pointer = pointer else {
         throw SwiftDBError.unexpected("expected \(functionName) to set a pointer")
     }
