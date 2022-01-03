@@ -8,7 +8,6 @@ class Connection {
         var db: OpaquePointer?
         try checkOK(sqlite3_open(path, &db))
         self.db = try checkPointer(db, from: "sqlite3_open")
-        try prepare(sql: "PRAGMA encoding = \"UTF-8\"").step()
     }
 
     func prepare(sql: String) throws -> PreparedStatement {
@@ -40,16 +39,7 @@ class Connection {
                 case .null:
                     sqlite3_bind_null(statement, index)
                 case .text(let string):
-                    func foo(_ s: UnsafePointer<CChar>) {
-                        print(s[0])
-                        print(s[1])
-                        print(s[2])
-                        print(s[3])
-                        print("")
-                    }
-                    foo(string)
-                    
-                    sqlite3_bind_text(statement, index, string, -1, nil)
+                    sqlite3_bind_text(statement, index, string, -1, SQLITE_TRANSIENT)
                 }
                 index += 1
             }
@@ -83,7 +73,7 @@ class Connection {
             case row
             case done
         }
-        
+
         func readNull(column: String) throws -> Bool {
             return sqlite3_column_type(statement, try getIndex(column)) == SQLITE_NULL
         }
@@ -93,25 +83,11 @@ class Connection {
         }
 
         func readText(column: String) throws -> String {
-            print("SQLITE_NULL: \(SQLITE_NULL)")
-            print("SQLITE_INTEGER: \(SQLITE_INTEGER)")
-            print("SQLITE_FLOAT: \(SQLITE_FLOAT)")
-            print("SQLITE_TEXT: \(SQLITE_TEXT)")
-            print("SQLITE_BLOB: \(SQLITE_BLOB)")
-            print(sqlite3_column_type(statement, try getIndex(column)))
-            
             guard let cString = sqlite3_column_text(statement, try getIndex(column)) else {
                 // For consistency with numbers, manufacture a default value for null.
                 // Callers should use readNull(column:) to check for null
                 return ""
             }
-            print(cString[0])
-            print(cString[1])
-            print(cString[2])
-            print(cString[3])
-            print(cString[4])
-            print(cString[5])
-            print(cString[6])
             return String(cString: cString)
         }
 
@@ -138,6 +114,9 @@ class Connection {
 
 }
 
+// https://stackoverflow.com/questions/26883131/sqlite-transient-undefined-in-swift
+let SQLITE_TRANSIENT = unsafeBitCast(-1, to: sqlite3_destructor_type.self)
+
 enum Parameter {
     case double(Double)
     case int(Int64)
@@ -152,7 +131,9 @@ private func checkOK(_ code: CInt) throws {
     }
 }
 
-private func checkPointer(_ pointer: OpaquePointer?, from functionName: String) throws -> OpaquePointer {
+private func checkPointer(_ pointer: OpaquePointer?, from functionName: String) throws
+    -> OpaquePointer
+{
     guard let pointer = pointer else {
         throw SwiftDBError.unexpected("expected \(functionName) to set a pointer")
     }
