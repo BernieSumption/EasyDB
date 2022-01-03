@@ -59,6 +59,10 @@ class ConnectionTests: XCTestCase {
         try insert(.text(""))
         XCTAssertEqual(try selectStmt.readText(column: "a"), "")
 
+        let someData = Data([1, 3, 0, 255, 200, 180, 21, 0, 7])
+        try insert(.blob(someData))
+        XCTAssertEqual(try selectStmt.readBlob(column: "a"), someData)
+
         try insert(.null)
         XCTAssertEqual(try selectStmt.readNull(column: "a"), true)
     }

@@ -33,13 +33,19 @@ class Connection {
             for parameter in parameters {
                 switch parameter {
                 case .double(let double):
-                    sqlite3_bind_double(statement, index, double)
+                    try checkOK(sqlite3_bind_double(statement, index, double))
                 case .int(let int):
-                    sqlite3_bind_int64(statement, index, int)
+                    try checkOK(sqlite3_bind_int64(statement, index, int))
                 case .null:
-                    sqlite3_bind_null(statement, index)
+                    try checkOK(sqlite3_bind_null(statement, index))
                 case .text(let string):
-                    sqlite3_bind_text(statement, index, string, -1, SQLITE_TRANSIENT)
+                    try checkOK(sqlite3_bind_text(statement, index, string, -1, SQLITE_TRANSIENT))
+                case .blob(let data):
+                    try data.withUnsafeBytes { bytes in
+                        try checkOK(sqlite3_bind_blob(
+                            statement, index, bytes.baseAddress, Int32(bytes.count),
+                            SQLITE_TRANSIENT))
+                    }
                 }
                 index += 1
             }
@@ -84,11 +90,18 @@ class Connection {
 
         func readText(column: String) throws -> String {
             guard let cString = sqlite3_column_text(statement, try getIndex(column)) else {
-                // For consistency with numbers, manufacture a default value for null.
-                // Callers should use readNull(column:) to check for null
                 return ""
             }
             return String(cString: cString)
+        }
+
+        func readBlob(column: String) throws -> Data {
+            let index = try getIndex(column)
+            guard let bytes = sqlite3_column_blob(statement, index) else {
+                return Data()
+            }
+            let count = Int(sqlite3_column_bytes(statement, index))
+            return Data(bytes: bytes, count: count)
         }
 
         func readDouble(column: String) throws -> Double {
@@ -122,6 +135,7 @@ enum Parameter {
     case int(Int64)
     case null
     case text(String)
+    case blob(Data)
 }
 
 private func checkOK(_ code: CInt) throws {
