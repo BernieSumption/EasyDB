@@ -24,32 +24,32 @@
 /// on how this works.
 struct KeyPathMapper<T: Codable> {
     private let instances: [T]
-    private let valuesToPropertyPath: [[JSON]: [String]]
+    private let valuesToPropertyPath: [[Encoded]: [String]]
     private let cache = Cache()
 
     init(_ type: T.Type) throws {
         instances = try MultifariousDecoder.instances(for: type)
-        let jsonInstances = try instances.map({ try JSON(encoding: $0) })
+        let jsonInstances = try instances.map({ try Encoded(encoding: $0) })
         guard let first = jsonInstances.first else {
-            throw SwiftDBError.unexpected("Multifarious.instances was empty")
+            throw SwiftDBError.unexpected(message: "Multifarious.instances was empty")
         }
         let propertyPaths = first.propertyPaths
         let differing = jsonInstances.first(where: { Set($0.propertyPaths) != Set(propertyPaths) })
         if let differing = differing {
-            throw SwiftDBError.unexpected(
+            throw SwiftDBError.unexpected(message:
                 "Multifarious.instances have different structures, \(propertyPaths) and \(differing.propertyPaths)"
             )
         }
-        var valuesToPropertyPath = [[JSON]: [String]]()
+        var valuesToPropertyPath = [[Encoded]: [String]]()
         for propertyPath in propertyPaths {
-            let allValues = try jsonInstances.map { json -> JSON in
+            let allValues = try jsonInstances.map { json -> Encoded in
                 guard let value = json.value(at: propertyPath) else {
-                    throw SwiftDBError.unexpected("Instance as no value at \(propertyPath)")
+                    throw SwiftDBError.unexpected(message: "Instance as no value at \(propertyPath)")
                 }
                 return value
             }
             if valuesToPropertyPath[allValues] != nil {
-                throw SwiftDBError.unexpected("Instances contain multiple \(allValues)")
+                throw SwiftDBError.unexpected(message: "Instances contain multiple \(allValues)")
             }
             valuesToPropertyPath[allValues] = propertyPath
         }
@@ -62,7 +62,7 @@ struct KeyPathMapper<T: Codable> {
             return cached
         }
         let values = try instances.map {
-            return try JSON(encoding: $0[keyPath: keyPath])
+            return try Encoded(encoding: $0[keyPath: keyPath])
         }
         guard let path = valuesToPropertyPath[values] else {
             throw ReflectionError.keyPathNotFound(T.self)

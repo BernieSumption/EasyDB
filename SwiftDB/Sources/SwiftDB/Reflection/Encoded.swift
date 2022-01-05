@@ -1,13 +1,14 @@
 import Foundation
 
-/// A representation of parsed JSON
-enum JSON: Hashable {
+/// The encoded representation of an `Encodable` type - essentially an in-memory representation
+/// of the JSON data structure produced by `JSONEncoder`
+enum Encoded: Hashable {
     case null
     case boolean(Bool)
     case number(Double)
     case string(String)
-    case array([JSON])
-    case object([String: JSON])
+    case array([Encoded])
+    case object([String: Encoded])
 
     init<T: Encodable>(encoding encodable: T) throws {
         let data = try JSONEncoder().encode(encodable)
@@ -25,9 +26,9 @@ enum JSON: Hashable {
 
     private init(fromParsedJson value: Any) throws {
         if let dict = value as? [String: Any] {
-            self = .object(try dict.mapValues { try JSON(fromParsedJson: $0) })
+            self = .object(try dict.mapValues { try Encoded(fromParsedJson: $0) })
         } else if let array = value as? [Any] {
-            self = .array(try array.map { try JSON(fromParsedJson: $0) })
+            self = .array(try array.map { try Encoded(fromParsedJson: $0) })
         } else if let bool = valueAsBool(value) {
             self = .boolean(bool)
         } else if let number = value as? Double {
@@ -37,7 +38,7 @@ enum JSON: Hashable {
         } else if value is NSNull {
             self = .null
         } else {
-            throw SwiftDBError.unexpected(
+            throw SwiftDBError.unexpected(message: 
                 "JSONSerialization.jsonObject produced unexpected type \(value), \(type(of: value))"
             )
         }
@@ -61,7 +62,7 @@ enum JSON: Hashable {
     }
 
     /// Return the `JSON` value found by descending into objects using the specified path of property names
-    func value<S: RandomAccessCollection>(at path: S) -> JSON? where S.Element == String {
+    func value<S: RandomAccessCollection>(at path: S) -> Encoded? where S.Element == String {
         guard let firstProperty = path.first else {
             return self
         }

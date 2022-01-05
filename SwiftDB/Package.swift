@@ -4,6 +4,9 @@ import PackageDescription
 
 let package = Package(
     name: "SwiftDB",
+    platforms: [
+        .iOS(.v15)
+    ],
     products: [
         .library(
             name: "SwiftDB",
@@ -13,15 +16,9 @@ let package = Package(
     dependencies: [
     ],
     targets: [
-        .systemLibrary(
-            name: "SQLite3",
-            providers: [
-                .apt(["libsqlite3-dev"])
-            ]
-        ),
         .target(
             name: "SwiftDB",
-            dependencies: ["SQLite3"]
+            dependencies: []
         ),
         .testTarget(
             name: "SwiftDBTests",

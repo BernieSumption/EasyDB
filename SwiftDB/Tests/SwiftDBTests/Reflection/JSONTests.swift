@@ -5,19 +5,19 @@ import XCTest
 class JSONTests: XCTestCase {
 
     func testParseSimpleValues() throws {
-        XCTAssertEqual(try JSON(parsing: "1"), JSON.number(1))
-        XCTAssertEqual(try JSON(parsing: "1.5"), JSON.number(1.5))
-        XCTAssertEqual(try JSON(parsing: "true"), JSON.boolean(true))
-        XCTAssertEqual(try JSON(parsing: "null"), JSON.null)
-        XCTAssertEqual(try JSON(parsing: "\"wotcha\""), JSON.string("wotcha"))
-        XCTAssertEqual(try JSON(parsing: "\"10\""), JSON.string("10"))
-        XCTAssertEqual(try JSON(parsing: "[]"), JSON.array([]))
-        XCTAssertEqual(try JSON(parsing: "{}"), JSON.object([:]))
+        XCTAssertEqual(try Encoded(parsing: "1"), Encoded.number(1))
+        XCTAssertEqual(try Encoded(parsing: "1.5"), Encoded.number(1.5))
+        XCTAssertEqual(try Encoded(parsing: "true"), Encoded.boolean(true))
+        XCTAssertEqual(try Encoded(parsing: "null"), Encoded.null)
+        XCTAssertEqual(try Encoded(parsing: "\"wotcha\""), Encoded.string("wotcha"))
+        XCTAssertEqual(try Encoded(parsing: "\"10\""), Encoded.string("10"))
+        XCTAssertEqual(try Encoded(parsing: "[]"), Encoded.array([]))
+        XCTAssertEqual(try Encoded(parsing: "{}"), Encoded.object([:]))
     }
 
     func testParseNestedValues() throws {
         XCTAssertEqual(
-            try JSON(
+            try Encoded(
                 parsing:
                     """
                     [
@@ -28,7 +28,7 @@ class JSONTests: XCTestCase {
                     ]
                     """
             ),
-            JSON.array([
+            Encoded.array([
                 .boolean(true),
                 .number(1),
                 .object([
@@ -45,7 +45,7 @@ class JSONTests: XCTestCase {
 
     func testParseCodable() throws {
         XCTAssertEqual(
-            try JSON(encoding: ParseCodable()),
+            try Encoded(encoding: ParseCodable()),
             .object([
                 "bool": .boolean(true),
                 "object": .object(["i": .number(1)]),
@@ -73,7 +73,7 @@ class JSONTests: XCTestCase {
     }
 
     func testPropertyPaths() throws {
-        let json = try JSON(
+        let json = try Encoded(
             parsing:
                 """
                 {
@@ -102,7 +102,7 @@ class JSONTests: XCTestCase {
     }
 
     func testValueAtPath() throws {
-        let json = JSON.object([
+        let json = Encoded.object([
             "b": .boolean(true),
             "o1": .object(["o11": .number(1)]),
             "o2": .object([

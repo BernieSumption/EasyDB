@@ -78,7 +78,7 @@ enum ResultCode: CInt, Error, CustomStringConvertible {
     init(_ validCode: CInt) throws {
         let primaryCode = validCode & 0xFF
         guard let resultCode = ResultCode(rawValue: primaryCode) else {
-            throw SwiftDBError.unexpected("SQLite returned invalid result code \(validCode)")
+            throw SwiftDBError.unexpected(message: "SQLite returned invalid result code \(validCode)")
         }
         self = resultCode
     }

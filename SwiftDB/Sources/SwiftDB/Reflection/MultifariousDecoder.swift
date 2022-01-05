@@ -37,11 +37,11 @@ private struct MultifariousDecoderImpl: Decoder {
     }
 
     func container<Key: CodingKey>(keyedBy type: Key.Type) throws -> KeyedDecodingContainer<Key> {
-        return KeyedDecodingContainer(KeyedContainer<Key>(self, values, codingPath: codingPath))
+        return KeyedDecodingContainer(KeyedContainer(values, codingPath: codingPath))
     }
 
     func unkeyedContainer() throws -> UnkeyedDecodingContainer {
-        return UnkeyedContainer(self, values, codingPath: codingPath)
+        return UnkeyedContainer(values, codingPath: codingPath)
     }
 
     func singleValueContainer() throws -> SingleValueDecodingContainer {
@@ -51,13 +51,11 @@ private struct MultifariousDecoderImpl: Decoder {
 
 /// Keyed containers produce values for objects (structs and classes) and dictionaries.
 private struct KeyedContainer<Key: CodingKey>: KeyedDecodingContainerProtocol {
-    private let decoder: MultifariousDecoderImpl
     private let values: MultifariousValues
     let codingPath: [CodingKey]
 
-    init(_ decoder: MultifariousDecoderImpl, _ values: MultifariousValues, codingPath: [CodingKey])
+    init(_ values: MultifariousValues, codingPath: [CodingKey])
     {
-        self.decoder = decoder
         self.values = values
         self.codingPath = codingPath
     }
@@ -112,13 +110,11 @@ private struct KeyedContainer<Key: CodingKey>: KeyedDecodingContainerProtocol {
 
 /// Unkeyed contains produce values for arrays and tuples
 private struct UnkeyedContainer: UnkeyedDecodingContainer {
-    private let decoder: MultifariousDecoderImpl
     private let values: MultifariousValues
     let codingPath: [CodingKey]
 
-    init(_ decoder: MultifariousDecoderImpl, _ values: MultifariousValues, codingPath: [CodingKey])
+    init(_ values: MultifariousValues, codingPath: [CodingKey])
     {
-        self.decoder = decoder
         self.values = values
         self.codingPath = codingPath
     }
