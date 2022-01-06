@@ -6,6 +6,7 @@ class StatementDecoderTests: XCTestCase {
     let c: Connection! = try? Connection(path: ":memory:")
     
     func testSelectAs<T: Decodable & Equatable>(_ sql: String, _ type: T.Type, _ expected: T) throws {
+        print("SQL: \(sql)")
         let s = try c.prepare(sql: sql)
         XCTAssertEqual(try StatementDecoder().decode(type, from: s), expected)
     }
@@ -16,8 +17,8 @@ class StatementDecoderTests: XCTestCase {
             try testSelectAs("SELECT 1", T.self, 1)
             // encoders are supposed to wrap integers to Int64 since sqlite can't store UInt64 natively
             let max: T = T.max > Int64.max ? T(Int64(truncatingIfNeeded: T.max)) : T.max
-            try testSelectAs(max.description, type, max)
-            try testSelectAs(T.min.description, type.self, T.min)
+            try testSelectAs("SELECT \(max.description)", type, max)
+            try testSelectAs("SELECT \(T.min.description)", type.self, T.min)
         }
         
         try testInteger(Int.self)
@@ -124,7 +125,7 @@ class StatementDecoderTests: XCTestCase {
                 15 AS d,
                 "16" AS s,
                 x'FF0600B3' AS data,
-                "2001-01-01T00:00:20Z" as date,
+                "2001-01-01T00:00:20Z" AS date,
                 '{"a":21,"d":"2001-01-01T00:00:20Z"}' AS sub
             """
             , MyCodable.self, value)
@@ -173,6 +174,27 @@ class StatementDecoderTests: XCTestCase {
     func testDecodeScalarArray() throws {
         try testSelectAs("SELECT 1 as foo", [Int].self, [1])
         try testSelectAs("SELECT 1 as foo UNION SELECT 2 as foo", [String].self, ["1", "2"])
+    }
+    
+    func testDecodeStructArray() throws {
+        try testSelectAs("SELECT 1 as i, 'foo' as s", [Row].self, [Row(i: 1, s: "foo")])
+        try testSelectAs(
+            """
+                SELECT 1 as i, 'foo' as s
+                UNION
+                SELECT 2 as i, 'bar' as s
+            """,
+            [Row].self,
+            [
+                Row(i: 1, s: "foo"),
+                Row(i: 2, s: "bar")
+            ]
+        )
+        
+        struct Row: Codable, Equatable {
+            let i: Int
+            let s: String
+        }
     }
     
     func testDecodeScalarArrays() throws {

@@ -78,7 +78,7 @@ private struct KeyedContainer<Key: CodingKey>: KeyedDecodingContainerProtocol {
         false  // optional values are never nil
     }
 
-    func decode<T>(_ type: T.Type, forKey key: Key) throws -> T where T: Decodable {
+    func decode<T: Decodable>(_ type: T.Type, forKey key: Key) throws -> T {
         if let value = values.next(type) {
             return value
         }
@@ -185,7 +185,7 @@ struct SingleValueContainer: SingleValueDecodingContainer {
         return false
     }
 
-    func decode<T>(_ type: T.Type) throws -> T where T: Decodable {
+    func decode<T: Decodable>(_ type: T.Type) throws -> T {
         guard let value = values.next(type) else {
             throw ReflectionError.noValues(type)
         }

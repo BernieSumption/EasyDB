@@ -1,7 +1,8 @@
 import Foundation
 
+/// Decodes a statement's results into a `Codable` type, making an effort to do something pretty
+/// sensible for any codable type.
 struct StatementDecoder {
-    
     func decode<T: Decodable>(_ type: T.Type, from statement: Statement) throws -> T {
         let _ = try statement.step()
         let decoder = StatementDecoderImpl(statement)
@@ -83,12 +84,12 @@ private struct SingleRowSingleColumnDecoderImpl: Decoder {
     
     /// Treat the value as a JSON-encoded string and decode it into a struct or dictionary
     func container<Key: CodingKey>(keyedBy type: Key.Type) throws -> KeyedDecodingContainer<Key> {
-        throw SwiftDBError.notImplemented(feature: "decoding arrays of arrays of objects e.g. [[MyStruct]].self")
+        throw SwiftDBError.notImplemented(feature: "decoding 2D arrays of objects e.g. [[MyStruct]].self")
     }
     
     /// Treat the value as a JSON-encoded string and decode it into an array
     func unkeyedContainer() throws -> UnkeyedDecodingContainer {
-        throw SwiftDBError.notImplemented(feature: "decoding more than two levels of array e.g. [[[Int]]].self")
+        throw SwiftDBError.notImplemented(feature: "decoding 3D array e.g. [[[T]]].self")
     }
     
     /// Decode the value into a scalar value
@@ -185,47 +186,44 @@ private struct SingleRowKeyedContainer<Key: CodingKey>: KeyedDecodingContainerPr
     private func decodeInteger<T: FixedWidthInteger>(forKey key: Key) throws -> T {
         let value64 = try statement.readInt(column: key.stringValue)
         guard let value: T = T(exactly: value64) else {
-            throw SwiftDBError.decodingError(
+            throw SwiftDBError.codingError(
                 message: "number value \(value64) doesn't fit exactly into a \(T.self)",
                 codingPath: codingPath)
         }
         return value
     }
     
-    func decode<T>(_ type: T.Type, forKey key: Key) throws -> T where T : Decodable {
+    func decode<T: Decodable>(_ type: T.Type, forKey key: Key) throws -> T {
+        // IMPORTANT: any special cases here need matching special cases
+        // in StatementEncoder.encode<T>(_:forKey:) and in other decoding methods
+        // in this file
         if type == Data.self {
             return try statement.readBlob(column: key.stringValue) as! T
         }
         let string = try decode(String.self, forKey: key)
-        if type == String.self {
-            return string as! T
-        }
-        if type == Date.self {
-            return try parseISODate(string, codingPath: codingPath) as! T
-        }
-        return try JSONColumn.decode(type, from: string)
+        return try decodeStringHelper(type, from: string, codingPath: codingPath)
     }
     
-    func nestedContainer<NestedKey>(keyedBy type: NestedKey.Type, forKey key: Key) throws -> KeyedDecodingContainer<NestedKey> where NestedKey : CodingKey {
-        throw SwiftDBError.decodingError(
+    func nestedContainer<NestedKey: CodingKey>(keyedBy type: NestedKey.Type, forKey key: Key) throws -> KeyedDecodingContainer<NestedKey> {
+        throw SwiftDBError.codingError(
             message: "Decodable types that use KeyedDecodingContainer.nestedContainer are not supported",
             codingPath: codingPath)
     }
     
     func nestedUnkeyedContainer(forKey key: Key) throws -> UnkeyedDecodingContainer {
-        throw SwiftDBError.decodingError(
+        throw SwiftDBError.codingError(
             message: "Decodable types that use KeyedDecodingContainer.nestedUnkeyedContainer are not supported",
             codingPath: codingPath)
     }
     
     func superDecoder() throws -> Decoder {
-        throw SwiftDBError.decodingError(
+        throw SwiftDBError.codingError(
             message: "Decodable types that use KeyedDecodingContainer.superDecoder (usually class types) are not supported",
             codingPath: codingPath)
     }
     
     func superDecoder(forKey key: Key) throws -> Decoder {
-        throw SwiftDBError.decodingError(
+        throw SwiftDBError.codingError(
             message: "Decodable types that use KeyedDecodingContainer.superDecoder(forKey:) (usually class types) are not supported",
             codingPath: codingPath)
     }
@@ -311,22 +309,22 @@ private struct SingleRowSingleValueContainer: SingleValueDecodingContainer {
     private func decodeInteger<T: FixedWidthInteger>() throws -> T {
         let value64 = try statement.readInt(column: column)
         guard let value: T = T(exactly: value64) else {
-            throw SwiftDBError.decodingError(
+            throw SwiftDBError.codingError(
                 message: "number value \(value64) doesn't fit into a \(T.self)",
                 codingPath: codingPath)
         }
         return value
     }
     
-    func decode<T>(_ type: T.Type) throws -> T where T : Decodable {
+    func decode<T: Decodable>(_ type: T.Type) throws -> T  {
+        // IMPORTANT: any special cases here need matching special cases
+        // in StatementEncoder.encode<T>(_:forKey:) and in other decoding methods
+        // in this file
         if type == Data.self {
             return try statement.readBlob(column: column) as! T
         }
         let string = try decode(String.self)
-        if type == Date.self {
-            return try parseISODate(string, codingPath: codingPath) as! T
-        }
-        return try JSONDecoder().decode(type, from: Data(string.utf8))
+        return try decodeStringHelper(type, from: string, codingPath: codingPath)
     }
 }
 
@@ -372,7 +370,7 @@ private class ManyRowsUnkeyedContainer: UnkeyedDecodingContainer {
     }
 
     func superDecoder() throws -> Decoder {
-        throw SwiftDBError.decodingError(
+        throw SwiftDBError.codingError(
             message: "Decodable types that use UnkeyedDecodingContainer.superDecoder (usually class types) are not supported",
             codingPath: codingPath)
     }
@@ -437,7 +435,7 @@ private class SingleRowUnkeyedContainer: UnkeyedDecodingContainer {
     }
 
     func superDecoder() throws -> Decoder {
-        throw SwiftDBError.decodingError(
+        throw SwiftDBError.codingError(
             message: "Decodable types that use UnkeyedDecodingContainer.superDecoder (usually class types) are not supported",
             codingPath: codingPath)
     }
@@ -453,23 +451,6 @@ private class SingleRowUnkeyedContainer: UnkeyedDecodingContainer {
             statement, column: index,
             codingPath: self.codingPath + [StatementKey(index)])
     }
-}
-
-
-private var iso8601Formatter: ISO8601DateFormatter = {
-    let formatter = ISO8601DateFormatter()
-    formatter.formatOptions = .withInternetDateTime
-    return formatter
-}()
-
-private func parseISODate(_ string: String, codingPath: [CodingKey]) throws -> Date {
-    guard let date = iso8601Formatter.date(from: string) else {
-        throw SwiftDBError.decodingError(
-            message: "Expected an ISO 8601 date string, got \"\(string)\"",
-            codingPath: codingPath
-        )
-    }
-    return date
 }
 
 private struct StatementKey: CodingKey {
@@ -492,4 +473,37 @@ private struct StatementKey: CodingKey {
         self.stringValue = int.description
         self.intValue = int
     }
+}
+
+private func decodeStringHelper<T: Decodable>(
+    _ type: T.Type,
+    from string: String,
+    codingPath: [CodingKey]
+) throws -> T  {
+    // IMPORTANT: any special cases here need matching special cases
+    // in StatementEncoder.encode<T>(_:forKey:) and in other decoding methods
+    // in this file
+    if type == String.self {
+        return string as! T
+    }
+    if type == Date.self {
+        return try parseISODate(string, codingPath: codingPath) as! T
+    }
+    return try JSONColumn.decode(type, from: string)
+}
+
+internal var iso8601Formatter: ISO8601DateFormatter = {
+    let formatter = ISO8601DateFormatter()
+    formatter.formatOptions = .withInternetDateTime
+    return formatter
+}()
+
+private func parseISODate(_ string: String, codingPath: [CodingKey]) throws -> Date {
+    guard let date = iso8601Formatter.date(from: string) else {
+        throw SwiftDBError.codingError(
+            message: "Expected an ISO 8601 date string, got \"\(string)\"",
+            codingPath: codingPath
+        )
+    }
+    return date
 }

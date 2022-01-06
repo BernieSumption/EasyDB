@@ -5,7 +5,9 @@ import Foundation
 class Statement {
     private let statement: OpaquePointer
     private var columnNameToIndex = [String: Int]()
+    private var parameterNameToIndex = [String: Int]()
     private var hasColumnNames = false
+    private let sql: String
     
     /// True if the most recent call to `step()` returned `.done`
     ///
@@ -18,37 +20,65 @@ class Statement {
     private(set) var hasRow = false
 
     init(_ db: OpaquePointer, _ sql: String) throws {
+        self.sql = sql
         var statement: OpaquePointer?
         try checkOK(sqlite3_prepare_v2(db, sql, -1, &statement, nil))
         self.statement = try checkPointer(statement, from: "sqlite3_prepare_v2")
     }
 
-    /// Bind parameters to the statement, clearing any previously bound parameters.
-    ///
-    /// The parameters will remain bound until the next call to `bind()`, even if the statement is `reset()`
+    /// Bind `N` parameters to the statement in positions `1..N`, clearing any previously bound parameters.
     func bind(_ parameters: [Parameter]) throws {
         try checkOK(sqlite3_clear_bindings(statement))
 
-        var index: Int32 = 1
+        var index: Int = 1
         for parameter in parameters {
-            switch parameter {
-            case .double(let double):
-                try checkOK(sqlite3_bind_double(statement, index, double))
-            case .int(let int):
-                try checkOK(sqlite3_bind_int64(statement, index, int))
-            case .null:
-                try checkOK(sqlite3_bind_null(statement, index))
-            case .text(let string):
-                try checkOK(sqlite3_bind_text(statement, index, string, -1, SQLITE_TRANSIENT))
-            case .blob(let data):
-                try data.withUnsafeBytes { bytes in
-                    try checkOK(sqlite3_bind_blob(
-                        statement, index, bytes.baseAddress, Int32(bytes.count),
-                        SQLITE_TRANSIENT))
-                }
-            }
+            try bind(parameter, to: index)
             index += 1
         }
+    }
+    
+    /// Bind a value to a parameter by index
+    func bind(_ parameter: Parameter, to index: Int) throws {
+        let index = Int32(index)
+        switch parameter {
+        case .double(let double):
+            try checkOK(sqlite3_bind_double(statement, index, double))
+        case .int(let int):
+            try checkOK(sqlite3_bind_int64(statement, index, int))
+        case .null:
+            try checkOK(sqlite3_bind_null(statement, index))
+        case .text(let string):
+            try checkOK(sqlite3_bind_text(statement, index, string, -1, SQLITE_TRANSIENT))
+        case .blob(let data):
+            try data.withUnsafeBytes { bytes in
+                try checkOK(sqlite3_bind_blob(
+                    statement, index, bytes.baseAddress, Int32(bytes.count),
+                    SQLITE_TRANSIENT))
+            }
+        }
+    }
+    
+    /// Bind a value to a parameter by index
+    func bind(_ parameter: Parameter, to name: String) throws {
+        try bind(parameter, to: getParameterIndex(name))
+    }
+    
+    /// Get the index of a named parameter
+    ///
+    /// - Throws: SwiftDBError.noSuchParameter if there is no parameter with that name
+    func getParameterIndex(_ name: String) throws -> Int {
+        if let index = parameterNameToIndex[name] {
+            return index
+        }
+        let index = Int(sqlite3_bind_parameter_index(statement, name))
+        guard index > 0 else {
+            if let cName = sqlite3_bind_parameter_name(statement, 1) {
+                print(String(cString: cName))
+            }
+            throw SwiftDBError.noSuchParameter(name: name)
+        }
+        parameterNameToIndex[name] = index
+        return index
     }
 
     /// Fetch the next row
@@ -91,7 +121,7 @@ class Statement {
     }
     
     func readNull(column name: String) throws -> Bool {
-        return try readNull(column: try getIndex(name))
+        return try readNull(column: try getColumnIndex(name))
     }
     
     func readNull(column index: Int) throws -> Bool {
@@ -100,7 +130,7 @@ class Statement {
     }
 
     func readInt(column name: String) throws -> Int64 {
-        return try readInt(column: try getIndex(name))
+        return try readInt(column: try getColumnIndex(name))
     }
     
     func readInt(column index: Int) throws -> Int64 {
@@ -109,7 +139,7 @@ class Statement {
     }
 
     func readText(column name: String) throws -> String {
-        return try readText(column: try getIndex(name))
+        return try readText(column: try getColumnIndex(name))
     }
     
     func readText(column index: Int) throws -> String {
@@ -122,7 +152,7 @@ class Statement {
     }
     
     func readBlob(column name: String) throws -> Data {
-        return try readBlob(column: try getIndex(name))
+        return try readBlob(column: try getColumnIndex(name))
     }
     
     func readBlob(column index: Int) throws -> Data {
@@ -135,7 +165,7 @@ class Statement {
     }
     
     func readDouble(column name: String) throws -> Double {
-        return try readDouble(column: try getIndex(name))
+        return try readDouble(column: try getColumnIndex(name))
     }
     
     func readDouble(column index: Int) throws -> Double {
@@ -155,7 +185,7 @@ class Statement {
         return columnNameToIndex[columnName] != nil
     }
 
-    private func getIndex(_ columnName: String) throws -> Int {
+    private func getColumnIndex(_ columnName: String) throws -> Int {
         guard let index = columnNameToIndex[columnName] else {
             throw SwiftDBError.noSuchColumn(columnName: columnName, availableColumns: columnNames)
         }
