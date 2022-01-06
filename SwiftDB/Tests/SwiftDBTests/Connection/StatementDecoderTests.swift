@@ -172,10 +172,22 @@ class StatementDecoderTests: XCTestCase {
     
     func testDecodeScalarArray() throws {
         try testSelectAs("SELECT 1 as foo", [Int].self, [1])
-        try testSelectAs("SELECT 1 as foo UNION SELECT 2 as foo", [Int].self, [1, 2])
+        try testSelectAs("SELECT 1 as foo UNION SELECT 2 as foo", [String].self, ["1", "2"])
     }
     
     func testDecodeScalarArrays() throws {
         try testSelectAs("SELECT 1 as foo, 2 as bar, 8 as baz", [[Int]].self, [[1, 2, 8]])
+        try testSelectAs(
+            """
+                SELECT 1 as foo, 2 as bar
+                UNION
+                SELECT 'snoz' as foo, 'plonk' as bar
+            """,
+            [[String]].self,
+            [
+                ["1", "2"],
+                ["snoz", "plonk"]
+            ]
+        )
     }
 }

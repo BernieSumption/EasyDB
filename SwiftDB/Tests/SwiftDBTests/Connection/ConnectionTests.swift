@@ -38,7 +38,7 @@ class ConnectionTests: XCTestCase {
 
         func insert(_ parameter: Parameter) throws {
             try insertStmt.reset()
-            try insertStmt.bindParameters([parameter])
+            try insertStmt.bind([parameter])
             XCTAssertEqual(try insertStmt.step(), .done)
             try selectStmt.reset()
             XCTAssertEqual(try selectStmt.step(), .row)

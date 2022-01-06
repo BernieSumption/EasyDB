@@ -4,7 +4,7 @@ struct StatementDecoder {
     
     func decode<T: Decodable>(_ type: T.Type, from statement: Statement) throws -> T {
         let _ = try statement.step()
-        let decoder = StatementDecoderImpl(statement, codingPath: [])
+        let decoder = StatementDecoderImpl(statement)
         if type == Data.self || type == Date.self  {
             return try decoder.singleValueContainer().decode(type)
         }
@@ -12,7 +12,36 @@ struct StatementDecoder {
     }
 }
 
-struct StatementDecoderImpl: Decoder {
+// MARK: Decoders
+
+/// The top-level decoder, decoding the result(s) of an SQL query
+private struct StatementDecoderImpl: Decoder {
+    private let statement: Statement
+    let codingPath = [CodingKey]() // always top level so empty coding path
+    let userInfo = [CodingUserInfoKey : Any]()
+    
+    init(_ statement: Statement) {
+        self.statement = statement
+    }
+    
+    /// Decode the first row of results into a struct or dictionary
+    func container<Key: CodingKey>(keyedBy type: Key.Type) throws -> KeyedDecodingContainer<Key> {
+        return KeyedDecodingContainer(SingleRowKeyedContainer(statement, codingPath: codingPath))
+    }
+    
+    /// Decode all rows in the response into an array, each row becoming an element in the array
+    func unkeyedContainer() throws -> UnkeyedDecodingContainer {
+        return ManyRowsUnkeyedContainer(statement, codingPath: [])
+    }
+    
+    /// Decode the first column of the first row into a scalar value
+    func singleValueContainer() throws -> SingleValueDecodingContainer {
+        return SingleRowSingleValueContainer(statement, column: 0, codingPath: codingPath)
+    }
+}
+
+/// The second-level decoder, decoding a row within the results
+private struct SingleRowDecoderImpl: Decoder {
     private let statement: Statement
     let codingPath: [CodingKey]
     let userInfo = [CodingUserInfoKey : Any]()
@@ -22,21 +51,56 @@ struct StatementDecoderImpl: Decoder {
         self.codingPath = codingPath
     }
     
+    /// Decode the row into a struct or dictionary
     func container<Key: CodingKey>(keyedBy type: Key.Type) throws -> KeyedDecodingContainer<Key> {
-        return KeyedDecodingContainer(StatementRowKeyedContainer(statement, codingPath: codingPath))
+        return KeyedDecodingContainer(SingleRowKeyedContainer(statement, codingPath: codingPath))
     }
     
+    /// Decode the row into an array, each column becoming an element in the array
     func unkeyedContainer() throws -> UnkeyedDecodingContainer {
-        Next up: if were already in a row (codingKeys.count > 0) return a StatementRowUnkeyedContainer
-        return StatementRowsContainer(statement, codingPath: [])
+        return SingleRowUnkeyedContainer(statement, codingPath: [])
     }
     
+    /// Decode the first column into a scalar value
     func singleValueContainer() throws -> SingleValueDecodingContainer {
-        return StatementRowToScalarContainer(statement, codingPath: codingPath)
+        return SingleRowSingleValueContainer(statement, column: 0, codingPath: codingPath)
     }
 }
 
-private struct StatementRowKeyedContainer<Key: CodingKey>: KeyedDecodingContainerProtocol {
+/// The third-level decoder, decoding a column value within a row within the results
+private struct SingleRowSingleColumnDecoderImpl: Decoder {
+    private let statement: Statement
+    private let column: Int
+    
+    let codingPath: [CodingKey]
+    let userInfo = [CodingUserInfoKey : Any]()
+    
+    init(_ statement: Statement, column: Int, codingPath: [CodingKey]) {
+        self.statement = statement
+        self.column = column
+        self.codingPath = codingPath
+    }
+    
+    /// Treat the value as a JSON-encoded string and decode it into a struct or dictionary
+    func container<Key: CodingKey>(keyedBy type: Key.Type) throws -> KeyedDecodingContainer<Key> {
+        throw SwiftDBError.notImplemented(feature: "decoding arrays of arrays of objects e.g. [[MyStruct]].self")
+    }
+    
+    /// Treat the value as a JSON-encoded string and decode it into an array
+    func unkeyedContainer() throws -> UnkeyedDecodingContainer {
+        throw SwiftDBError.notImplemented(feature: "decoding more than two levels of array e.g. [[[Int]]].self")
+    }
+    
+    /// Decode the value into a scalar value
+    func singleValueContainer() throws -> SingleValueDecodingContainer {
+        return SingleRowSingleValueContainer(statement, column: column, codingPath: codingPath)
+    }
+}
+
+// MARK: Containers
+
+/// Decodes one row of the results into a struct or dictionary using column names for keys
+private struct SingleRowKeyedContainer<Key: CodingKey>: KeyedDecodingContainerProtocol {
     private let statement: Statement
     
     let codingPath: [CodingKey]
@@ -165,40 +229,42 @@ private struct StatementRowKeyedContainer<Key: CodingKey>: KeyedDecodingContaine
             message: "Decodable types that use KeyedDecodingContainer.superDecoder(forKey:) (usually class types) are not supported",
             codingPath: codingPath)
     }
-    
 }
 
-struct StatementRowToScalarContainer: SingleValueDecodingContainer {
+/// Decodes one row of the results into a single value using the first column of the row
+private struct SingleRowSingleValueContainer: SingleValueDecodingContainer {
     private let statement: Statement
+    private let column: Int
     
     let codingPath: [CodingKey]
     
-    init(_ statement: Statement, codingPath: [CodingKey]) {
+    init(_ statement: Statement, column: Int, codingPath: [CodingKey]) {
         self.statement = statement
         self.codingPath = codingPath
+        self.column = column
     }
     
     func decodeNil() -> Bool {
-        guard let isNull = try? statement.readNull(column: 0) else {
+        guard let isNull = try? statement.readNull(column: column) else {
             return false
         }
         return isNull
     }
     
     func decode(_ type: Bool.Type) throws -> Bool {
-        try statement.readInt(column: 0) != 0
+        try statement.readInt(column: column) != 0
     }
     
     func decode(_ type: String.Type) throws -> String {
-        try statement.readText(column: 0)
+        try statement.readText(column: column)
     }
     
     func decode(_ type: Double.Type) throws -> Double {
-        return try statement.readDouble(column: 0)
+        return try statement.readDouble(column: column)
     }
     
     func decode(_ type: Float.Type) throws -> Float {
-        return Float(try statement.readDouble(column: 0))
+        return Float(try statement.readDouble(column: column))
     }
     
     func decode(_ type: Int.Type) throws -> Int {
@@ -218,7 +284,7 @@ struct StatementRowToScalarContainer: SingleValueDecodingContainer {
     }
     
     func decode(_ type: Int64.Type) throws -> Int64 {
-        return try statement.readInt(column: 0)
+        return try statement.readInt(column: column)
     }
     
     func decode(_ type: UInt.Type) throws -> UInt {
@@ -238,12 +304,12 @@ struct StatementRowToScalarContainer: SingleValueDecodingContainer {
     }
     
     func decode(_ type: UInt64.Type) throws -> UInt64 {
-        let value64 = try statement.readInt(column: 0)
+        let value64 = try statement.readInt(column: column)
         return UInt64(truncatingIfNeeded: value64)
     }
     
     private func decodeInteger<T: FixedWidthInteger>() throws -> T {
-        let value64 = try statement.readInt(column: 0)
+        let value64 = try statement.readInt(column: column)
         guard let value: T = T(exactly: value64) else {
             throw SwiftDBError.decodingError(
                 message: "number value \(value64) doesn't fit into a \(T.self)",
@@ -254,7 +320,7 @@ struct StatementRowToScalarContainer: SingleValueDecodingContainer {
     
     func decode<T>(_ type: T.Type) throws -> T where T : Decodable {
         if type == Data.self {
-            return try statement.readBlob(column: 0) as! T
+            return try statement.readBlob(column: column) as! T
         }
         let string = try decode(String.self)
         if type == Date.self {
@@ -264,18 +330,11 @@ struct StatementRowToScalarContainer: SingleValueDecodingContainer {
     }
 }
 
-var _id = 0
-
-/// Decodes multiple rows in a statement
-class StatementRowsContainer: UnkeyedDecodingContainer {
+/// Decodes all rows in the response into an array, each row becoming an element in the array
+private class ManyRowsUnkeyedContainer: UnkeyedDecodingContainer {
     private let statement: Statement
     private var needsStep = false
     private var errorFromIsAtEnd: Error? = nil
-    private let id: Int = {
-        let thisId = _id
-        _id += 1
-        return thisId
-    }()
     
     let codingPath: [CodingKey]
     
@@ -291,7 +350,7 @@ class StatementRowsContainer: UnkeyedDecodingContainer {
         do {
             try stepIfRequired()
         } catch {
-            // the API won't let us throw an error so we save it and throw it from the decode method when called
+            // the API won't let us throw an error so we save it to throw later
             errorFromIsAtEnd = error
             return false
         }
@@ -299,7 +358,7 @@ class StatementRowsContainer: UnkeyedDecodingContainer {
     }
     
     func decodeNil() throws -> Bool {
-        return false
+        return false // a row can't be null
     }
     
     func nestedContainer<NestedKey: CodingKey>(keyedBy type: NestedKey.Type) throws
@@ -313,14 +372,16 @@ class StatementRowsContainer: UnkeyedDecodingContainer {
     }
 
     func superDecoder() throws -> Decoder {
-        return try nextDecoder()
+        throw SwiftDBError.decodingError(
+            message: "Decodable types that use UnkeyedDecodingContainer.superDecoder (usually class types) are not supported",
+            codingPath: codingPath)
     }
 
     func decode<T: Decodable>(_ type: T.Type) throws -> T {
         return try T(from: nextDecoder())
     }
 
-    private func nextDecoder() throws -> StatementDecoderImpl {
+    private func nextDecoder() throws -> SingleRowDecoderImpl {
         if let error = errorFromIsAtEnd {
             throw error
         }
@@ -328,15 +389,69 @@ class StatementRowsContainer: UnkeyedDecodingContainer {
         needsStep = true
         let key = StatementKey(currentIndex)
         currentIndex += 1
-        return StatementDecoderImpl(statement, codingPath: self.codingPath + [key])
+        return SingleRowDecoderImpl(statement, codingPath: self.codingPath + [key])
     }
     
     private func stepIfRequired() throws {
         if needsStep {
-            print("Stepping \(id)")
             var _ = try statement.step()
             needsStep = false
         }
+    }
+}
+
+
+/// Decodes a single row into an array, each column becoming an element in the array
+private class SingleRowUnkeyedContainer: UnkeyedDecodingContainer {
+    private let statement: Statement
+    
+    let codingPath: [CodingKey]
+    let _count: Int
+    
+    init(_ statement: Statement, codingPath: [CodingKey]) {
+        self.statement = statement
+        self.codingPath = codingPath
+        self._count = statement.columnCount
+    }
+
+    private(set) var currentIndex: Int = 0
+    
+    var isAtEnd: Bool {
+        currentIndex >= _count
+    }
+    
+    var count: Int? { _count }
+    
+    func decodeNil() throws -> Bool {
+        return try statement.readNull(column: currentIndex)
+    }
+    
+    func nestedContainer<NestedKey: CodingKey>(keyedBy type: NestedKey.Type) throws
+        -> KeyedDecodingContainer<NestedKey>
+    {
+        return try nextDecoder().container(keyedBy: type)
+    }
+
+    func nestedUnkeyedContainer() throws -> UnkeyedDecodingContainer {
+        return try nextDecoder().unkeyedContainer()
+    }
+
+    func superDecoder() throws -> Decoder {
+        throw SwiftDBError.decodingError(
+            message: "Decodable types that use UnkeyedDecodingContainer.superDecoder (usually class types) are not supported",
+            codingPath: codingPath)
+    }
+
+    func decode<T: Decodable>(_ type: T.Type) throws -> T {
+        return try T(from: nextDecoder())
+    }
+
+    private func nextDecoder() throws -> SingleRowSingleColumnDecoderImpl {
+        let index = currentIndex
+        currentIndex += 1
+        return SingleRowSingleColumnDecoderImpl(
+            statement, column: index,
+            codingPath: self.codingPath + [StatementKey(index)])
     }
 }
 

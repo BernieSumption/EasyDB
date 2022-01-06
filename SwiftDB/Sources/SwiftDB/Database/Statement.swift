@@ -7,6 +7,14 @@ class Statement {
     private var columnNameToIndex = [String: Int]()
     private var hasColumnNames = false
     
+    /// True if the most recent call to `step()` returned `.done`
+    ///
+    /// Calling `step()` will throw an error if `isDone` is true
+    private(set) var isDone = false
+    
+    /// True if the most recent call to `step()` returned `.row`.
+    ///
+    /// Calling any of the `readXXX()` functions will throw an error if `hasRow` is false
     private(set) var hasRow = false
 
     init(_ db: OpaquePointer, _ sql: String) throws {
@@ -15,7 +23,10 @@ class Statement {
         self.statement = try checkPointer(statement, from: "sqlite3_prepare_v2")
     }
 
-    func bindParameters(_ parameters: [Parameter]) throws {
+    /// Bind parameters to the statement, clearing any previously bound parameters.
+    ///
+    /// The parameters will remain bound until the next call to `bind()`, even if the statement is `reset()`
+    func bind(_ parameters: [Parameter]) throws {
         try checkOK(sqlite3_clear_bindings(statement))
 
         var index: Int32 = 1
@@ -40,7 +51,14 @@ class Statement {
         }
     }
 
+    /// Fetch the next row
+    ///
+    /// - Returns: `.row` if there is data to be read or `.done` if the end of the query has been reached
+    /// - Throws: `SwiftDBError.noRow` if called again after returning `.done`
     func step() throws -> StepResult {
+        if isDone {
+            throw SwiftDBError.noRow
+        }
         let resultCode = try ResultCode(sqlite3_step(statement))
         switch resultCode {
         case .ROW:
@@ -64,8 +82,11 @@ class Statement {
         }
     }
 
+    /// The result of a call to `step()`
     enum StepResult {
+        /// There is a row with data to read
         case row
+        /// There are no more rows
         case done
     }
     
@@ -126,6 +147,10 @@ class Statement {
         return [String](columnNameToIndex.keys)
     }
     
+    var columnCount: Int {
+        return columnNameToIndex.count
+    }
+    
     func hasColumn(_ columnName: String) -> Bool {
         return columnNameToIndex[columnName] != nil
     }
@@ -145,6 +170,7 @@ class Statement {
 
     func reset() throws {
         hasRow = false
+        isDone = false
         try checkOK(sqlite3_reset(statement))
     }
 
