@@ -23,7 +23,7 @@ class StatementEncoderTests: XCTestCase {
     
     func testEncodeCodable() throws {
         let value = MyCodable(
-            i: 1, i8: 2, i16: 3, i32: 4, i64: 5, ui: 6, ui8: 7, ui16: 8, ui32: 9, ui64: 10,
+            i: 1, ioy: 1, ion: nil, i8: 2, i16: 3, i32: 4, i64: 5, ui: 6, ui8: 7, ui16: 8, ui32: 9, ui64: 10,
             f: 11.5, f16: 12.5, f32: 13.5, f64: 14.5, d: 15.5, s: "16", data: Data([255, 6, 0, 179]),
             date: Date(timeIntervalSinceReferenceDate: 20),
             sub: .init(d: Date(timeIntervalSinceReferenceDate: 20), a: 21))
@@ -31,6 +31,8 @@ class StatementEncoderTests: XCTestCase {
         let s = try c.prepare(sql: """
             SELECT
             :i AS i,
+            :ioy AS ioy,
+            :ion AS ion,
             :i8 AS i8,
             :i16 AS i16,
             :i32 AS i32,
@@ -56,6 +58,9 @@ class StatementEncoderTests: XCTestCase {
         let _ = try s.step()
         
         XCTAssertEqual(try s.readInt(column: "i"), 1)
+        XCTAssertEqual(try s.readNull(column: "ioy"), false)
+        XCTAssertEqual(try s.readInt(column: "ioy"), 1)
+        XCTAssertEqual(try s.readNull(column: "ion"), true)
         XCTAssertEqual(try s.readInt(column: "i8"), 2)
         XCTAssertEqual(try s.readInt(column: "i16"), 3)
         XCTAssertEqual(try s.readInt(column: "i32"), 4)
@@ -78,6 +83,8 @@ class StatementEncoderTests: XCTestCase {
     
     struct MyCodable: Codable, Equatable {
         let i: Int
+        let ioy: Int?
+        let ion: Int?
         let i8: Int8
         let i16: Int16
         let i32: Int32
@@ -101,6 +108,23 @@ class StatementEncoderTests: XCTestCase {
             let d: Date
             let a: Int
         }
+    }
+    
+    func testEncodeDictionary() throws {
+        let s = try c.prepare(sql: """
+            SELECT
+            :ioy AS ioy,
+            :ion AS ion
+        """)
+        
+        let value: [String: Int?] = ["ioy": 1, "ion": nil]
+        try StatementEncoder().encode(value, into: s)
+        
+        let _ = try s.step()
+        
+        XCTAssertEqual(try s.readNull(column: "ioy"), false)
+        XCTAssertEqual(try s.readInt(column: "ioy"), 1)
+        XCTAssertEqual(try s.readNull(column: "ion"), true)
     }
     
     func testEncodeCodableArray() throws {

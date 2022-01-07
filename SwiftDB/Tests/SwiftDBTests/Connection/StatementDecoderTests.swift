@@ -101,7 +101,7 @@ class StatementDecoderTests: XCTestCase {
     
     func testDecodeCodable() throws {
         let value = MyCodable(
-            i: 1, i8: 2, i16: 3, i32: 4, i64: 5, ui: 6, ui8: 7, ui16: 8, ui32: 9, ui64: 10,
+            i: 1, ioy: 1, ion: nil, i8: 2, i16: 3, i32: 4, i64: 5, ui: 6, ui8: 7, ui16: 8, ui32: 9, ui64: 10,
             f: 11.5, f16: 12.5, f32: 13.5, f64: 14.5, d: 15.5, s: "16", data: Data([255, 6, 0, 179]),
             date: Date(timeIntervalSinceReferenceDate: 20),
             sub: .init(d: Date(timeIntervalSinceReferenceDate: 20), a: 21))
@@ -109,6 +109,8 @@ class StatementDecoderTests: XCTestCase {
             """
                 SELECT
                 1 AS i,
+                1 AS ioy,
+                NULL AS ion,
                 2 AS i8,
                 3 AS i16,
                 4 AS i32,
@@ -133,6 +135,8 @@ class StatementDecoderTests: XCTestCase {
     
     struct MyCodable: Codable, Equatable {
         let i: Int
+        let ioy: Int?
+        let ion: Int?
         let i8: Int8
         let i16: Int16
         let i32: Int32
@@ -169,6 +173,8 @@ class StatementDecoderTests: XCTestCase {
         struct Sub: Codable, Equatable {
             let a: Int
         }
+        
+        try testSelectAs("SELECT 1 as foo, NULL as bar", [String: Int?].self, ["foo": 1, "bar": nil])
     }
     
     func testDecodeScalarArray() throws {

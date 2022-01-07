@@ -105,7 +105,10 @@ private struct NamedParameterEncodingContainer<Key: CodingKey>: KeyedEncodingCon
     mutating func encode<T: Encodable>(_ value: T, forKey key: Key) throws {
         // IMPORTANT: any special cases here need matching special cases
         // in StatementDecoder.decode<T>(_:forKey:)
-        if let value = value as? Data {
+        if let value = value as? _OptionalProtocol, value.isNil {
+            try encodeNil(forKey: key)
+        }
+        else if let value = value as? Data {
             try bind(.blob(value), to: key)
         }
         else if let value = value as? String {
@@ -242,6 +245,21 @@ private struct NotImplementedEncoder: Encoder {
         
         mutating func encodeNil() throws {
             throw SwiftDBError.notImplemented(feature: feature)
+        }
+    }
+}
+
+private protocol _OptionalProtocol {
+    var isNil: Bool { get }
+}
+
+extension Optional : _OptionalProtocol {
+    var isNil: Bool {
+        switch self {
+        case .none:
+            return true
+        default:
+            return false
         }
     }
 }

@@ -197,6 +197,11 @@ private struct SingleRowKeyedContainer<Key: CodingKey>: KeyedDecodingContainerPr
         // IMPORTANT: any special cases here need matching special cases
         // in StatementEncoder.encode<T>(_:forKey:) and in other decoding methods
         // in this file
+        if let type = type as? _OptionalProtocol.Type {
+            if try statement.readNull(column: key.stringValue) {
+                return type.nilValue as! T
+            }
+        }
         if type == Data.self {
             return try statement.readBlob(column: key.stringValue) as! T
         }
@@ -320,6 +325,11 @@ private struct SingleRowSingleValueContainer: SingleValueDecodingContainer {
         // IMPORTANT: any special cases here need matching special cases
         // in StatementEncoder.encode<T>(_:forKey:) and in other decoding methods
         // in this file
+        if let type = type as? _OptionalProtocol.Type {
+            if try statement.readNull(column: column) {
+                return type.nilValue as! T
+            }
+        }
         if type == Data.self {
             return try statement.readBlob(column: column) as! T
         }
@@ -506,4 +516,12 @@ private func parseISODate(_ string: String, codingPath: [CodingKey]) throws -> D
         )
     }
     return date
+}
+
+private protocol _OptionalProtocol {
+  static var nilValue: Self { get }
+}
+
+extension Optional : _OptionalProtocol {
+    static var nilValue: Self { return nil }
 }
