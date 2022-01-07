@@ -1,4 +1,4 @@
-import SQLite3
+import CSQLite
 import Foundation
 
 /// Wrapper around an SQLite C API `sqlite3_stmt` object providing a more Swifty API
@@ -22,7 +22,7 @@ class Statement {
     init(_ db: OpaquePointer, _ sql: String) throws {
         self.sql = sql
         var statement: OpaquePointer?
-        try checkOK(sqlite3_prepare_v2(db, sql, -1, &statement, nil))
+        try SwiftDB.checkOK(sqlite3_prepare_v2(db, sql, -1, &statement, nil), sql: sql)
         self.statement = try checkPointer(statement, from: "sqlite3_prepare_v2")
     }
 
@@ -206,6 +206,10 @@ class Statement {
 
     deinit {
         sqlite3_finalize(statement)
+    }
+    
+    private func checkOK(_ code: @autoclosure () -> CInt) throws {
+        try SwiftDB.checkOK(code(), sql: self.sql)
     }
 }
 

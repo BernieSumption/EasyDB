@@ -1,15 +1,27 @@
 import Foundation
-import SQLite3
+import CSQLite
+
+
+private let logErrors = true
+
+
+private var lastMessage: String?
+private func logCallback(_: UnsafeMutableRawPointer?, _ code: Int32, _ message: UnsafePointer<CChar>?) -> Void {
+    guard let message = message.map(String.init) else { return }
+    lastMessage = message
+    // TODO: move logging to options API
+    if logErrors {
+        print("\(ResultCode.nameForCode(code)) / \(message)")
+    }
+}
 
 class Connection {
-    private let db: OpaquePointer
+    internal let db: OpaquePointer
 
     init(path: String) throws {
+        registerErrorLogCallback(logCallback)
         var db: OpaquePointer?
-        func log() {
-            
-        }
-        try checkOK(sqlite3_open(path, &db))
+        try checkOK(sqlite3_open(path, &db), sql: nil)
         self.db = try checkPointer(db, from: "sqlite3_open")
     }
 
@@ -33,19 +45,29 @@ class Connection {
     }
 }
 
-internal func checkOK(_ code: CInt) throws {
-    let resultCode = try ResultCode(code)
-    if resultCode != .OK {
-        throw resultCode
+struct ConnectionError: Error, CustomStringConvertible {
+    let resultCode: ResultCode
+    let message: String?
+    let sql: String?
+    
+    var description: String {
+        "\(resultCode) (SQLite message: \(message ?? "none"); Query: \(sql ?? "none")"
     }
 }
 
-internal func checkPointer(_ pointer: OpaquePointer?, from functionName: String) throws
-    -> OpaquePointer
+
+internal func checkOK(_ code: @autoclosure () -> CInt, sql: String?) throws {
+    lastMessage = nil
+    let resultCode = try ResultCode(code())
+    if resultCode != .OK {
+        throw ConnectionError(resultCode: resultCode, message: lastMessage, sql: sql)
+    }
+}
+
+internal func checkPointer(_ pointer: OpaquePointer?, from functionName: String) throws -> OpaquePointer
 {
     guard let pointer = pointer else {
         throw SwiftDBError.unexpected(message: "expected \(functionName) to set a pointer")
     }
     return pointer
 }
-

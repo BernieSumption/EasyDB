@@ -1,5 +1,5 @@
 import Foundation
-import SQLite3
+import CSQLite
 
 private let codeNames: [CInt: String] = [
     0: "SQLITE_OK",
@@ -70,7 +70,7 @@ enum ResultCode: CInt, Error, CustomStringConvertible {
 
     public var description: String {
         let message = String(cString: sqlite3_errstr(rawValue))
-        let name = codeNames[rawValue] ?? "UNKNOWN CODE \(rawValue)"
+        let name = ResultCode.nameForCode(rawValue)
         return "\(name) (\(message))"
     }
 
@@ -81,5 +81,9 @@ enum ResultCode: CInt, Error, CustomStringConvertible {
             throw SwiftDBError.unexpected(message: "SQLite returned invalid result code \(validCode)")
         }
         self = resultCode
+    }
+    
+    static func nameForCode(_ code: CInt) -> String {
+        return codeNames[code] ?? "UNKNOWN CODE \(code)"
     }
 }
