@@ -102,7 +102,7 @@ class StatementDecoderTests: XCTestCase {
     func testDecodeCodable() throws {
         let value = MyCodable(
             i: 1, i8: 2, i16: 3, i32: 4, i64: 5, ui: 6, ui8: 7, ui16: 8, ui32: 9, ui64: 10,
-            f: 11, f16: 12, f32: 13, f64: 14, d: 15, s: "16", data: Data([255, 6, 0, 179]),
+            f: 11.5, f16: 12.5, f32: 13.5, f64: 14.5, d: 15.5, s: "16", data: Data([255, 6, 0, 179]),
             date: Date(timeIntervalSinceReferenceDate: 20),
             sub: .init(d: Date(timeIntervalSinceReferenceDate: 20), a: 21))
         try testSelectAs(
@@ -118,11 +118,11 @@ class StatementDecoderTests: XCTestCase {
                 8 AS ui16,
                 9 AS ui32,
                 10 AS ui64,
-                11 AS f,
-                12 AS f16,
-                13 AS f32,
-                14 AS f64,
-                15 AS d,
+                11.5 AS f,
+                12.5 AS f16,
+                13.5 AS f32,
+                14.5 AS f64,
+                15.5 AS d,
                 "16" AS s,
                 x'FF0600B3' AS data,
                 "2001-01-01T00:00:20Z" AS date,

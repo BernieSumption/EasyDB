@@ -24,7 +24,7 @@ class StatementEncoderTests: XCTestCase {
     func testEncodeCodable() throws {
         let value = MyCodable(
             i: 1, i8: 2, i16: 3, i32: 4, i64: 5, ui: 6, ui8: 7, ui16: 8, ui32: 9, ui64: 10,
-            f: 11, f16: 12, f32: 13, f64: 14, d: 15, s: "16", data: Data([255, 6, 0, 179]),
+            f: 11.5, f16: 12.5, f32: 13.5, f64: 14.5, d: 15.5, s: "16", data: Data([255, 6, 0, 179]),
             date: Date(timeIntervalSinceReferenceDate: 20),
             sub: .init(d: Date(timeIntervalSinceReferenceDate: 20), a: 21))
         
@@ -53,9 +53,27 @@ class StatementEncoderTests: XCTestCase {
         
         try StatementEncoder().encode(value, into: s)
         
-        let decoded = try StatementDecoder().decode(MyCodable.self, from: s)
+        let _ = try s.step()
         
-        XCTAssertEqual(decoded, value)
+        XCTAssertEqual(try s.readInt(column: "i"), 1)
+        XCTAssertEqual(try s.readInt(column: "i8"), 2)
+        XCTAssertEqual(try s.readInt(column: "i16"), 3)
+        XCTAssertEqual(try s.readInt(column: "i32"), 4)
+        XCTAssertEqual(try s.readInt(column: "i64"), 5)
+        XCTAssertEqual(try s.readInt(column: "ui"), 6)
+        XCTAssertEqual(try s.readInt(column: "ui8"), 7)
+        XCTAssertEqual(try s.readInt(column: "ui16"), 8)
+        XCTAssertEqual(try s.readInt(column: "ui32"), 9)
+        XCTAssertEqual(try s.readInt(column: "ui64"), 10)
+        XCTAssertEqual(try s.readDouble(column: "f"), 11.5)
+        XCTAssertEqual(try s.readDouble(column: "f16"), 12.5)
+        XCTAssertEqual(try s.readDouble(column: "f32"), 13.5)
+        XCTAssertEqual(try s.readDouble(column: "f64"), 14.5)
+        XCTAssertEqual(try s.readDouble(column: "d"), 15.5)
+        XCTAssertEqual(try s.readText(column: "s"), "16")
+        XCTAssertEqual(try s.readBlob(column: "data"), Data([255, 6, 0, 179]))
+        XCTAssertEqual(try s.readText(column: "date"), "2001-01-01T00:00:20Z")
+        XCTAssertEqual(try s.readText(column: "sub"), #"{"a":21,"d":"2001-01-01T00:00:20Z"}"#)
     }
     
     struct MyCodable: Codable, Equatable {
