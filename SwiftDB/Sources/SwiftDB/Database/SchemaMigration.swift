@@ -27,6 +27,55 @@ struct SchemaMigration {
             sql: "select name from pragma_table_info('foo') ORDER BY name")
     }
     
+    struct ColumnIndex {
+        var column: String
+        var direction: Direction?
+        var collation: String?
+        
+        init(
+            _ column: String,
+            direction: Direction? = nil,
+            collation: String? = nil
+        ) {
+            self.column = column
+            self.direction = direction
+            self.collation = collation
+        }
+        
+        internal var nameFragment: String {
+            var name = column
+            if let direction = direction {
+                name += "_\(direction.rawValue.lowercased())"
+            }
+            return name
+        }
+        
+        internal var sqlFragment: String {
+            var sql = "column_\(column)"
+            if let direction = direction {
+                sql += " \(direction.rawValue)"
+            }
+            return sql
+        }
+    }
+    
+    enum Direction: String {
+        case ascending = "ASC"
+        case descending = "DESC"
+    }
+    
+    func addIndex(table: String, column: ColumnIndex, unique: Bool = false) throws {
+        try addIndex(table: table, columns: [column], unique: unique)
+    }
+    
+    func addIndex(table: String, columns: [ColumnIndex], unique: Bool = false) throws {
+        assert(columns.count > 0, "at least one column required to create an index")
+        let name = "_swiftdb_" + columns.map(\.nameFragment).joined(separator: "_")
+        let createSql = unique ? "CREATE UNIQUE" : "CREATE"
+        let columnsSql = columns.map(\.sqlFragment).joined(separator: ", ")
+        try connection.execute(sql: "\(createSql) INDEX IF NOT EXISTS \(name) ON \(table) (\(columnsSql))")
+    }
+    
     /// Ensure that `table` exists and has the defined columns, adding and removing columns as necessary
     func migrate(table: String, columns: [String]) throws {
         try createIfNotExists(table: table, columns: columns)

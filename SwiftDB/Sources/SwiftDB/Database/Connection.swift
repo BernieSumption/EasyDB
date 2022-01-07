@@ -6,6 +6,9 @@ class Connection {
 
     init(path: String) throws {
         var db: OpaquePointer?
+        func log() {
+            
+        }
         try checkOK(sqlite3_open(path, &db))
         self.db = try checkPointer(db, from: "sqlite3_open")
     }

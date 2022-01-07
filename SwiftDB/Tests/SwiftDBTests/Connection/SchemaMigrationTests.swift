@@ -32,8 +32,7 @@ class SchemaMigrationTests: XCTestCase {
         // add and remove
         try sm.migrate(table: "foo", columns: ["a", "bar", "cat"])
         XCTAssertEqual(try sm.getColumns(table: "foo"), ["a", "bar", "cat"])
-        // existing data not removed
-        XCTAssertEqual(
+        XCTAssertEqual( // existing data not removed
             try c.execute([String: Int?].self, sql: "SELECT * FROM foo"),
             ["a": nil, "bar": 2, "cat": nil])
         
@@ -41,12 +40,10 @@ class SchemaMigrationTests: XCTestCase {
         try sm.migrate(table: "foo", columns: ["l"])
         XCTAssertEqual(try sm.getColumns(table: "foo"), ["l"])
     }
-
-    func testPerformanceExample() throws {
-        // This is an example of a performance test case.
-        self.measure {
-            // Put the code you want to measure the time of here.
-        }
+    
+    func testIndexModifications() throws {
+        try sm.createIfNotExists(table: "foo", columns: ["c", "d"])
+        try sm.addIndex(table: "foo", column: .init("c", direction: .ascending))
+        
     }
-
 }
