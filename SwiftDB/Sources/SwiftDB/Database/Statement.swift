@@ -86,9 +86,9 @@ class Statement {
         if isDone {
             throw SwiftDBError.noRow
         }
-        let resultCode = try ResultCode(sqlite3_step(statement))
+        let resultCode = sqlite3_step(statement)
         switch resultCode {
-        case .ROW:
+        case SQLITE_ROW:
             if !hasColumnNames {
                 let count = sqlite3_column_count(statement)
                 for index in 0..<count {
@@ -101,11 +101,12 @@ class Statement {
             }
             hasRow = true
             return .row
-        case .DONE:
+        case SQLITE_DONE:
             hasRow = false
             return .done
         default:
-            throw ConnectionError(resultCode: resultCode, sql: sql)
+            try checkOK(resultCode) // should always throw
+            throw SwiftDBError.unexpected(message: "Unexpected result code \(resultCode) returned from sqlite3_step()")
         }
     }
 
