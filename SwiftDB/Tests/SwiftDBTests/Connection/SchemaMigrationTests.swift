@@ -107,15 +107,19 @@ class SchemaMigrationTests: XCTestCase {
         
         try sm.ensureTableExists(table: "bar", columns: ["x", "y"])
         
+        // create one index
         try sm.migrateIndices(
             table: "bar",
             indices: [
                 Index([
-                    Index.Part(["x"]),
                     Index.Part(["x"])
                 ])
             ])
+        XCTAssertEqual(
+            try sm.getIndexNames(table: "bar"),
+            ["swiftdb_column_x"])
         
+        // create two indices on another table
         try sm.migrateIndices(
             table: "foo",
             indices: [
@@ -131,7 +135,7 @@ class SchemaMigrationTests: XCTestCase {
             try sm.getIndexNames(table: "foo"),
             ["swiftdb_column_b_asc", "swiftdb_column_b_column_a_desc"])
         
-        // remove "ascending" from "b" (should create a new index
+        // remove "ascending" from "b" (should create a new index)
         try sm.migrateIndices(
             table: "foo",
             indices: [
@@ -165,8 +169,31 @@ class SchemaMigrationTests: XCTestCase {
                     Index.Part(["c"])
                 ])
             ])
-        XCTAssertEqual(try sm.getIndexNames(table: "foo"), ["swiftdb_column_c"])
+        XCTAssertEqual(
+            try sm.getIndexNames(table: "foo"),
+            ["swiftdb_column_c"])
+        XCTAssertEqual(
+            try sm.getIndexNames(table: "bar"),
+            ["swiftdb_column_x"])
+    }
+    
+    func testQuotedNames() throws {
+        let tableName = "special\" -- ch.ar;[s"
+        let columnName = "w! -- \"onk;"
         
-        XCTAssertEqual(try sm.getIndexNames(table: "bar"), ["swiftdb_column_x_column_x"])
+        try sm.ensureTableExists(table: tableName, columns: [columnName])
+        XCTAssertEqual(try sm.getColumns(table: tableName) ,[columnName])
+        
+        // new set of indices
+        try sm.migrateIndices(
+            table: tableName,
+            indices: [
+                Index([
+                    Index.Part([columnName])
+                ])
+            ])
+        XCTAssertEqual(
+            try sm.getIndexNames(table: tableName),
+            ["swiftdb_column_" + columnName])
     }
 }

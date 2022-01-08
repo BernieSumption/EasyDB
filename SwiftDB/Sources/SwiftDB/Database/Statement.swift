@@ -105,7 +105,7 @@ class Statement {
             hasRow = false
             return .done
         default:
-            throw resultCode
+            throw ConnectionError(resultCode: resultCode, sql: sql)
         }
     }
 

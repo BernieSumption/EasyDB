@@ -48,11 +48,11 @@ class Connection {
 
 struct ConnectionError: Error, CustomStringConvertible {
     let resultCode: ResultCode
-    let message: String?
+    let message: String? = lastMessage
     let sql: String?
     
     var description: String {
-        "\(resultCode) (SQLite message: \(message ?? "none"); Query: \(sql ?? "none")"
+        "\(resultCode) (Last SQLite message: \(message ?? "none"); Query: \(sql ?? "none")"
     }
 }
 
@@ -61,7 +61,7 @@ internal func checkOK(_ code: @autoclosure () -> CInt, sql: String?) throws {
     lastMessage = nil
     let resultCode = try ResultCode(code())
     if resultCode != .OK {
-        throw ConnectionError(resultCode: resultCode, message: lastMessage, sql: sql)
+        throw ConnectionError(resultCode: resultCode, sql: sql)
     }
 }
 

@@ -12,18 +12,18 @@ struct SchemaMigration {
     /// Note: this method will not alter the columns of existing tables if they are different to `columns`
     func ensureTableExists(table: String, columns: [String]) throws {
         assert(columns.count > 0, "at least one column required to create a table")
-        let columnsSql = columns.joined(separator: ", ")
-        try connection.execute(sql: "CREATE TABLE IF NOT EXISTS \(table) (\(columnsSql))")
+        let columnsSql = columns.map(quote).joined(separator: ", ")
+        try connection.execute(sql: "CREATE TABLE IF NOT EXISTS \(quote(table)) (\(columnsSql))")
     }
     
     /// Alter `table` to add `column`
     func addColumn(table: String, column: String) throws {
-        try connection.execute(sql: "ALTER TABLE \(table) ADD COLUMN \(column)")
+        try connection.execute(sql: "ALTER TABLE \(quote(table)) ADD COLUMN \(quote(column))")
     }
     
     /// Alter `table` to drop `column`
     func dropColumn(table: String, column: String) throws {
-        try connection.execute(sql: "ALTER TABLE \(table) DROP COLUMN \(column)")
+        try connection.execute(sql: "ALTER TABLE \(quote(table)) DROP COLUMN \(quote(column))")
     }
     
     /// Return a list of column names on `table`
@@ -54,7 +54,7 @@ struct SchemaMigration {
     
     /// Remove an index from `table`
     func dropIndex(table: String, name: String) throws {
-        try connection.execute(sql: "DROP INDEX \(name)")
+        try connection.execute(sql: "DROP INDEX \(quote(name))")
     }
     
     func getIndexNames(table: String) throws -> [String] {
@@ -91,13 +91,14 @@ struct Index {
     
     var name: String {
         return "swiftdb_" + parts.map({ column in
+            let path = column.path.joined(separator: ".")
             switch column.direction {
             case .ascending:
-                return "column_\(column.path)_asc"
+                return "column_\(path)_asc"
             case .descending:
-                return "column_\(column.path)_desc"
+                return "column_\(path)_desc"
             case .none:
-                return "column_\(column.path)"
+                return "column_\(path)"
             }
         }).joined(separator: "_")
     }
@@ -105,7 +106,8 @@ struct Index {
     func createSQL(forTable: String) -> String {
         let createSql = (unique ? "CREATE UNIQUE" : "CREATE")
         let columnsSql = parts.map({ column in
-            var sql = column.path.joined(separator: ".")
+            // TODO: JSON expression when path.count > 1
+            var sql = quote(column.path.joined(separator: "."))
             switch column.direction {
             case .ascending:
                 sql += " ASC"
@@ -116,7 +118,7 @@ struct Index {
             }
             return sql
         }).joined(separator: ", ")
-        return "\(createSql) INDEX \(name) ON \(forTable) (\(columnsSql))"
+        return "\(createSql) INDEX \(quote(name)) ON \(quote(forTable)) (\(columnsSql))"
     }
     
     struct Part {
@@ -138,4 +140,6 @@ struct Index {
     }
 }
 
-
+private func quote(_ name: String) -> String {
+    return "\"" + name.replacingOccurrences(of: "\"", with: "\"\"") + "\""
+}
