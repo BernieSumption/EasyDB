@@ -12,7 +12,7 @@ class SchemaMigrationTests: XCTestCase {
     }
     
     func testTableModification() throws {
-        try sm.createIfNotExists(table: "foo", columns: ["a", "b"])
+        try sm.ensureTableExists(table: "foo", columns: ["a", "b"])
         XCTAssertEqual(try sm.getColumns(table: "foo"), ["a", "b"])
         
         try sm.addColumn(table: "foo", column: "f")
@@ -46,54 +46,127 @@ class SchemaMigrationTests: XCTestCase {
     }
     
     func testIndexModifications() throws {
-        try sm.createIfNotExists(table: "foo", columns: ["c", "d", "e"])
-        try sm.addIndex(table: "foo", Index(column: .init("d", .ascending)))
-        XCTAssertEqual(try sm.getIndexNames(table: "foo"), ["swiftdb_column_d_asc"])
+        try sm.ensureTableExists(table: "foo", columns: ["c", "d", "e"])
         
-        try sm.addIndex(table: "foo", Index(column: "c"))
-        XCTAssertEqual(try sm.getIndexNames(table: "foo"), ["swiftdb_column_c", "swiftdb_column_d_asc"])
+        // Add an index
+        try sm.addIndex(
+            table: "foo",
+            Index([
+                Index.Part(["d"], .ascending)
+            ])
+        )
+        XCTAssertEqual(
+            try sm.getIndexNames(table: "foo"),
+            ["swiftdb_column_d_asc"]
+        )
         
-        try sm.createIfNotExists(table: "bar", columns: ["x", "y"])
-        try sm.addIndex(table: "bar", Index(columns: ["x", .init("y", .descending)]))
-        XCTAssertEqual(try sm.getIndexNames(table: "foo"), ["swiftdb_column_c", "swiftdb_column_d_asc"])
-        XCTAssertEqual(try sm.getIndexNames(table: "bar"), ["swiftdb_column_x_column_y_desc"])
+        // add another
+        try sm.addIndex(
+            table: "foo",
+            Index([
+                Index.Part(["c"])
+            ])
+        )
+        XCTAssertEqual(
+            try sm.getIndexNames(table: "foo"),
+            ["swiftdb_column_c", "swiftdb_column_d_asc"]
+        )
         
+        // add an index on another table
+        try sm.ensureTableExists(table: "bar", columns: ["x", "y"])
+        try sm.addIndex(
+            table: "bar",
+            Index([
+                Index.Part(["x"]),
+                Index.Part(["y"], .descending)
+            ])
+        )
+        XCTAssertEqual(
+            try sm.getIndexNames(table: "foo"),
+            ["swiftdb_column_c", "swiftdb_column_d_asc"]
+        )
+        XCTAssertEqual(
+            try sm.getIndexNames(table: "bar"),
+            ["swiftdb_column_x_column_y_desc"]
+        )
+        
+        // drop an index
         try sm.dropIndex(table: "foo", name: "swiftdb_column_d_asc")
-        XCTAssertEqual(try sm.getIndexNames(table: "foo"), ["swiftdb_column_c"])
-        XCTAssertEqual(try sm.getIndexNames(table: "bar"), ["swiftdb_column_x_column_y_desc"])
+        XCTAssertEqual(
+            try sm.getIndexNames(table: "foo"),
+            ["swiftdb_column_c"]
+        )
+        XCTAssertEqual(
+            try sm.getIndexNames(table: "bar"),
+            ["swiftdb_column_x_column_y_desc"]
+        )
     }
     
     func testIndexMigration() throws {
-        try sm.migrateColumns(table: "foo", columns: ["a", "b", "c"])
+        try sm.ensureTableExists(table: "foo", columns: ["a", "b", "c"])
         
-        try sm.migrateColumns(table: "bar", columns: ["x", "y"])
-        try sm.migrateIndexes(table: "bar", indices: [.init(columns: ["x", "y"])])
+        try sm.ensureTableExists(table: "bar", columns: ["x", "y"])
         
-        try sm.migrateIndexes(table: "foo", indices: [
-            Index(column: .init("b", .ascending)),
-            Index(columns: ["b", .init("a", .descending)]),
-        ])
+        try sm.migrateIndices(
+            table: "bar",
+            indices: [
+                Index([
+                    Index.Part(["x"]),
+                    Index.Part(["x"])
+                ])
+            ])
+        
+        try sm.migrateIndices(
+            table: "foo",
+            indices: [
+                Index([
+                    Index.Part(["b"], .ascending)
+                ]),
+                Index([
+                    Index.Part(["b"]),
+                    Index.Part(["a"], .descending)
+                ]),
+            ])
         XCTAssertEqual(
             try sm.getIndexNames(table: "foo"),
             ["swiftdb_column_b_asc", "swiftdb_column_b_column_a_desc"])
         
         // remove "ascending" from "b" (should create a new index
-        try sm.migrateIndexes(table: "foo", indices: [
-            Index(column: .init("b")),
-            Index(columns: [.init("b"),.init("a", .descending)]),
+        try sm.migrateIndices(
+            table: "foo",
+            indices: [
+            Index([
+                Index.Part(["b"])
+            ]),
+            Index([
+                Index.Part(["b"]),
+                Index.Part(["a"], .descending)
+            ]),
         ])
         XCTAssertEqual(
             try sm.getIndexNames(table: "foo"),
             ["swiftdb_column_b", "swiftdb_column_b_column_a_desc"])
         
         // new set of indices
-        try sm.migrateIndexes(table: "foo", indices: [Index(column: "c")])
+        try sm.migrateIndices(
+            table: "foo",
+            indices: [
+                Index([
+                    Index.Part(["c"])
+                ])
+            ])
         XCTAssertEqual(try sm.getIndexNames(table: "foo"), ["swiftdb_column_c"])
                                                       
         // new set of indices
-        try sm.migrateIndexes(table: "foo", indices: [Index(column: "c")])
+        try sm.migrateIndices(
+            table: "foo",
+            indices: [
+                Index([
+                    Index.Part(["c"])
+                ])
+            ])
         XCTAssertEqual(try sm.getIndexNames(table: "foo"), ["swiftdb_column_c"])
         
-        XCTAssertEqual(try sm.getIndexNames(table: "bar"), ["swiftdb_column_x_column_y"])
+        XCTAssertEqual(try sm.getIndexNames(table: "bar"), ["swiftdb_column_x_column_x"])
     }
 }

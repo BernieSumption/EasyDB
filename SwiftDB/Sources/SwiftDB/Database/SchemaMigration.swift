@@ -7,20 +7,26 @@ struct SchemaMigration {
         self.connection = connection
     }
     
-    func createIfNotExists(table: String, columns: [String]) throws {
+    /// Create `table` if it does not already exist
+    ///
+    /// Note: this method will not alter the columns of existing tables if they are different to `columns`
+    func ensureTableExists(table: String, columns: [String]) throws {
         assert(columns.count > 0, "at least one column required to create a table")
         let columnsSql = columns.joined(separator: ", ")
         try connection.execute(sql: "CREATE TABLE IF NOT EXISTS \(table) (\(columnsSql))")
     }
     
+    /// Alter `table` to add `column`
     func addColumn(table: String, column: String) throws {
         try connection.execute(sql: "ALTER TABLE \(table) ADD COLUMN \(column)")
     }
     
+    /// Alter `table` to drop `column`
     func dropColumn(table: String, column: String) throws {
         try connection.execute(sql: "ALTER TABLE \(table) DROP COLUMN \(column)")
     }
     
+    /// Return a list of column names on `table`
     func getColumns(table: String) throws -> [String] {
         return try connection.execute(
             [String].self,
@@ -30,7 +36,7 @@ struct SchemaMigration {
     
     /// Ensure that `table` exists and has the defined columns, adding and removing columns as necessary
     func migrateColumns(table: String, columns: [String]) throws {
-        try createIfNotExists(table: table, columns: columns)
+        try ensureTableExists(table: table, columns: columns)
         let existing = Set(try getColumns(table: table))
         let expected = Set(columns)
         for add in expected.subtracting(existing) {
@@ -41,12 +47,14 @@ struct SchemaMigration {
         }
     }
     
+    /// Add an index to `table`
     func addIndex(table: String, _ index: Index) throws {
         try connection.execute(sql: index.createSQL(forTable: table))
     }
     
+    /// Remove an index from `table`
     func dropIndex(table: String, name: String) throws {
-        try connection.execute(sql: "DROP INDEX IF EXISTS \(name)")
+        try connection.execute(sql: "DROP INDEX \(name)")
     }
     
     func getIndexNames(table: String) throws -> [String] {
@@ -56,8 +64,8 @@ struct SchemaMigration {
             parameters: [.text(table)])
     }
     
-    /// Ensure that `table` exists and has the defined set of indices
-    func migrateIndexes(table: String, indices: [Index]) throws {
+    /// Ensure that `table` has the defined set of indices
+    func migrateIndices(table: String, indices: [Index]) throws {
         let existing = Set(try getIndexNames(table: table))
         let expected = Set(indices.map(\.name))
         let namesToDrop = existing.subtracting(expected)
@@ -72,36 +80,32 @@ struct SchemaMigration {
 }
 
 struct Index {
-    var columns: [Column]
+    var parts: [Part]
     var unique: Bool
     
-    init(columns: [Column], unique: Bool = false) {
-        assert(columns.count > 0, "at least one column required to create an index")
-        self.columns = columns
+    init(_ parts: [Part], unique: Bool = false) {
+        assert(parts.count > 0, "at least one parts required to create an index")
+        self.parts = parts
         self.unique = unique
     }
     
-    init(column: Column, unique: Bool = false) {
-        self.init(columns: [column], unique: unique)
-    }
-    
     var name: String {
-        return "swiftdb_" + columns.map({ column in
+        return "swiftdb_" + parts.map({ column in
             switch column.direction {
             case .ascending:
-                return "column_\(column.expression)_asc"
+                return "column_\(column.path)_asc"
             case .descending:
-                return "column_\(column.expression)_desc"
+                return "column_\(column.path)_desc"
             case .none:
-                return "column_\(column.expression)"
+                return "column_\(column.path)"
             }
         }).joined(separator: "_")
     }
     
     func createSQL(forTable: String) -> String {
         let createSql = (unique ? "CREATE UNIQUE" : "CREATE")
-        let columnsSql = columns.map({ column in
-            var sql = column.expression
+        let columnsSql = parts.map({ column in
+            var sql = column.path.joined(separator: ".")
             switch column.direction {
             case .ascending:
                 sql += " ASC"
@@ -112,23 +116,19 @@ struct Index {
             }
             return sql
         }).joined(separator: ", ")
-        return "\(createSql) INDEX IF NOT EXISTS \(name) ON \(forTable) (\(columnsSql))"
+        return "\(createSql) INDEX \(name) ON \(forTable) (\(columnsSql))"
     }
     
-    struct Column: ExpressibleByStringLiteral {
-        var expression: String
+    struct Part {
+        var path: [String]
         var direction: Direction?
         
         init(
-            _ column: String,
+            _ path: [String],
             _ direction: Direction? = nil
         ) {
-            self.expression = column
+            self.path = path
             self.direction = direction
-        }
-        
-        init(stringLiteral: String) {
-            self.init(stringLiteral)
         }
     }
     
