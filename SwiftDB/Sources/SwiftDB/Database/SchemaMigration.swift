@@ -12,18 +12,18 @@ struct SchemaMigration {
     /// Note: this method will not alter the columns of existing tables if they are different to `columns`
     func ensureTableExists(table: String, columns: [String]) throws {
         assert(columns.count > 0, "at least one column required to create a table")
-        let columnsSql = columns.map(quote).joined(separator: ", ")
-        try connection.execute(sql: "CREATE TABLE IF NOT EXISTS \(quote(table)) (\(columnsSql))")
+        let columnsSql = columns.map(quoteName).joined(separator: ", ")
+        try connection.execute(sql: "CREATE TABLE IF NOT EXISTS \(quoteName(table)) (\(columnsSql))")
     }
     
     /// Alter `table` to add `column`
     func addColumn(table: String, column: String) throws {
-        try connection.execute(sql: "ALTER TABLE \(quote(table)) ADD COLUMN \(quote(column))")
+        try connection.execute(sql: "ALTER TABLE \(quoteName(table)) ADD COLUMN \(quoteName(column))")
     }
     
     /// Alter `table` to drop `column`
     func dropColumn(table: String, column: String) throws {
-        try connection.execute(sql: "ALTER TABLE \(quote(table)) DROP COLUMN \(quote(column))")
+        try connection.execute(sql: "ALTER TABLE \(quoteName(table)) DROP COLUMN \(quoteName(column))")
     }
     
     /// Return a list of column names on `table`
@@ -54,7 +54,7 @@ struct SchemaMigration {
     
     /// Remove an index from `table`
     func dropIndex(table: String, name: String) throws {
-        try connection.execute(sql: "DROP INDEX \(quote(name))")
+        try connection.execute(sql: "DROP INDEX \(quoteName(name))")
     }
     
     func getIndexNames(table: String) throws -> [String] {
@@ -107,7 +107,7 @@ struct Index {
         let createSql = (unique ? "CREATE UNIQUE" : "CREATE")
         let columnsSql = parts.map({ column in
             // TODO: JSON expression when path.count > 1
-            var sql = quote(column.path.joined(separator: "."))
+            var sql = quoteName(column.path.joined(separator: "."))
             switch column.direction {
             case .ascending:
                 sql += " ASC"
@@ -118,7 +118,7 @@ struct Index {
             }
             return sql
         }).joined(separator: ", ")
-        return "\(createSql) INDEX \(quote(name)) ON \(quote(forTable)) (\(columnsSql))"
+        return "\(createSql) INDEX \(quoteName(name)) ON \(quoteName(forTable)) (\(columnsSql))"
     }
     
     struct Part {
@@ -140,6 +140,6 @@ struct Index {
     }
 }
 
-private func quote(_ name: String) -> String {
+private func quoteName(_ name: String) -> String {
     return "\"" + name.replacingOccurrences(of: "\"", with: "\"\"") + "\""
 }

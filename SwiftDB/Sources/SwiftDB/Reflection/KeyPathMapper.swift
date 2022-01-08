@@ -70,6 +70,10 @@ struct KeyPathMapper<T: Codable> {
         cache.keyPathToPropertyPath[keyPath] = path
         return path
     }
+    
+    var rootProperties: [String] {
+        [String](Set(valuesToPropertyPath.values.map(\.[0])))
+    }
 
     private class Cache {
         var keyPathToPropertyPath = [PartialKeyPath<T>: [String]]()

@@ -25,7 +25,7 @@ public enum SwiftDBError: Error, CustomStringConvertible {
         case .noSuchColumn(let name, let available):
             return "No column called \(name) in results (available columns: \(available.sorted()))"
         case .noSuchParameter(let name):
-            return "No name parameter called \(name) in query"
+            return "No parameter called \(name) in query"
         case .noRow:
             return "No row data is available to read"
         case .codingError(let message, let codingPath):

@@ -7,8 +7,9 @@ class CollectionTests: XCTestCase {
 
     func testSimpleCodable() throws {
         let c = try db.collection(Row.self)
+        try c.insert(Row(i: 4))
         
-        Next up: insert and retrieve!
+        Next up: c.select().fetchAll()
         
         struct Row: Codable {
             let i: Int

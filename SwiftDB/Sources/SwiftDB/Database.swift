@@ -3,7 +3,7 @@ import Foundation
 public class Database {
     private let path: String
     private let options: Options
-    private var migratedCollections = Set<ObjectIdentifier>()
+    private var collections = [ObjectIdentifier: Any]()
     
     public init(path: String, options: Options = Options.standard) {
         self.path = path
@@ -11,20 +11,19 @@ public class Database {
     }
     
     public func collection<T: Codable>(_ type: T.Type) throws -> Collection<T> {
-        if options.autoMigrate {
-            self.migrate(type, dropColumns: options.autoDropColumns)
-        }
-        return Collection(type, self)
-    }
-    
-    /// Create the table if required, and add missing columns
-    ///
-    /// - Parameter dropColumns: Remove unused columns. This frees up disk space, but is irreversible.
-    public func migrate<T: Codable>(_ type: T.Type, dropColumns: Bool = false) {
         let typeId = ObjectIdentifier(type)
-        if !migratedCollections.contains(typeId) {
-            migratedCollections.insert(typeId)
+        if let collection = collections[typeId] {
+            guard let collection = collection as? Collection<T> else {
+                throw SwiftDBError.unexpected(message: "cached collection has wrong type")
+            }
+            return collection
         }
+        let collection = try Collection(type, try getConnection())
+        if options.autoMigrate {
+            try collection.migrate(dropColumns: options.autoDropColumns)
+        }
+        collections[typeId] = collection
+        return collection
     }
     
     public struct Options {
@@ -37,6 +36,16 @@ public class Database {
         public var autoDropColumns = false
         
         public static let standard = Options()
+    }
+    
+    private var _connection: Connection?
+    private func getConnection() throws -> Connection {
+        if let c = _connection {
+            return c
+        }
+        let c = try Connection(path: path)
+        _connection = c
+        return c
     }
 }
 
