@@ -6,8 +6,9 @@ private let logErrors = true
 
 
 private var lastMessage: String?
-private func logCallback(_: UnsafeMutableRawPointer?, _ code: Int32, _ message: UnsafePointer<CChar>?) -> Void {
-    guard let message = message.map(String.init) else { return }
+private func logCallback(_: UnsafeMutableRawPointer?, _ code: Int32, _ cMessage: UnsafePointer<CChar>?) -> Void {
+    guard let cMessage = cMessage else { return }
+    let message = String(cString: cMessage)
     lastMessage = message
     // TODO: move logging to options API
     if logErrors {

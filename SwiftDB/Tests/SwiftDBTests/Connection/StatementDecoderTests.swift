@@ -6,7 +6,6 @@ class StatementDecoderTests: XCTestCase {
     let c: Connection! = try? Connection(path: ":memory:")
     
     func testSelectAs<T: Decodable & Equatable>(_ sql: String, _ type: T.Type, _ expected: T) throws {
-        print("SQL: \(sql)")
         let s = try c.prepare(sql: sql)
         XCTAssertEqual(try StatementDecoder().decode(type, from: s), expected)
     }
