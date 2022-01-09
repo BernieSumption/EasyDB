@@ -22,11 +22,6 @@ class StatementEncoderTests: XCTestCase {
     }
     
     func testEncodeCodable() throws {
-        let value = MyCodable(
-            i: 1, ioy: 1, ion: nil, i8: 2, i16: 3, i32: 4, i64: 5, ui: 6, ui8: 7, ui16: 8, ui32: 9, ui64: 10,
-            f: 11.5, f16: 12.5, f32: 13.5, f64: 14.5, d: 15.5, s: "16", data: Data([255, 6, 0, 179]),
-            date: Date(timeIntervalSinceReferenceDate: 20),
-            sub: .init(d: Date(timeIntervalSinceReferenceDate: 20), a: 21))
         
         let s = try c.prepare(sql: """
             SELECT
@@ -53,7 +48,7 @@ class StatementEncoderTests: XCTestCase {
             :sub AS sub
         """)
         
-        try StatementEncoder().encode(value, into: s)
+        try StatementEncoder().encode(KitchenSinkEntity.standard, into: s)
         
         let _ = try s.step()
         
@@ -79,35 +74,6 @@ class StatementEncoderTests: XCTestCase {
         XCTAssertEqual(try s.readBlob(column: "data"), Data([255, 6, 0, 179]))
         XCTAssertEqual(try s.readText(column: "date"), "2001-01-01T00:00:20Z")
         XCTAssertEqual(try s.readText(column: "sub"), #"{"a":21,"d":"2001-01-01T00:00:20Z"}"#)
-    }
-    
-    struct MyCodable: Codable, Equatable {
-        let i: Int
-        let ioy: Int?
-        let ion: Int?
-        let i8: Int8
-        let i16: Int16
-        let i32: Int32
-        let i64: Int64
-        let ui: UInt
-        let ui8: UInt8
-        let ui16: UInt16
-        let ui32: UInt32
-        let ui64: UInt64
-        let f: Float
-        let f16: Float16
-        let f32: Float32
-        let f64: Float64
-        let d: Double
-        let s: String
-        let data: Data
-        let date: Date
-        let sub: Sub
-        
-        struct Sub: Codable, Equatable {
-            let d: Date
-            let a: Int
-        }
     }
     
     func testEncodeDictionary() throws {
@@ -142,5 +108,40 @@ class StatementEncoderTests: XCTestCase {
             XCTAssertTrue(String(describing: error).contains("providing single parameter values"), String(describing: error))
         }
     }
+}
 
+
+struct KitchenSinkEntity: Codable, Equatable {
+    let i: Int
+    let ioy: Int?
+    let ion: Int?
+    let i8: Int8
+    let i16: Int16
+    let i32: Int32
+    let i64: Int64
+    let ui: UInt
+    let ui8: UInt8
+    let ui16: UInt16
+    let ui32: UInt32
+    let ui64: UInt64
+    let f: Float
+    let f16: Float16
+    let f32: Float32
+    let f64: Float64
+    let d: Double
+    let s: String
+    let data: Data
+    let date: Date
+    let sub: Sub
+    
+    struct Sub: Codable, Equatable {
+        let d: Date
+        let a: Int
+    }
+    
+    static let standard = KitchenSinkEntity(
+        i: 1, ioy: 1, ion: nil, i8: 2, i16: 3, i32: 4, i64: 5, ui: 6, ui8: 7, ui16: 8, ui32: 9, ui64: 10,
+        f: 11.5, f16: 12.5, f32: 13.5, f64: 14.5, d: 15.5, s: "16", data: Data([255, 6, 0, 179]),
+        date: Date(timeIntervalSinceReferenceDate: 20),
+        sub: .init(d: Date(timeIntervalSinceReferenceDate: 20), a: 21))
 }
