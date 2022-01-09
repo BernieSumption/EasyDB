@@ -8,8 +8,11 @@ class CollectionTests: XCTestCase {
     func testSimpleCodable() throws {
         let c = try db.collection(Row.self)
         try c.insert(Row(i: 4))
+        let row = try c.select().fetchOne()
         
-        struct Row: Codable {
+        XCTAssertEqual(row, Row(i: 4))
+        
+        struct Row: Codable, Equatable {
             let i: Int
         }
     }

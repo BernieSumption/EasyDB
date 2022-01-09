@@ -43,14 +43,27 @@ public class Collection<Row: Codable> {
         return statement
     }
     
-//    public var select: SelectBuilder {
-//        SelectBuilder(connection)
-//    }
+    public func select() -> SelectBuilder {
+        return SelectBuilder(self)
+    }
     
-}
+    public class SelectBuilder {
+        private let collection: Collection<Row>
         
-public struct SelectBuilder {
-    
+        internal init(_ collection: Collection<Row>) {
+            self.collection = collection
+        }
+        
+        public func fetchOne() throws -> Row? {
+            let sql = SQL()
+                .select()
+                .quotedNames(collection.columns)
+                .from(collection.table)
+                .text
+            let statement = try collection.connection.prepare(sql: sql)
+            let rows = try StatementDecoder().decode([Row].self, from: statement)
+            return rows.first
+        }
+    }
 }
-
 

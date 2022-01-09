@@ -4,6 +4,18 @@ class SQL: CustomStringConvertible {
     private(set) var text = ""
     var description: String { text }
     
+    func select() -> Self {
+        return raw("SELECT")
+    }
+    
+    func from(_ table: String) -> Self {
+        return raw("FROM").quotedName(table)
+    }
+    
+    func limit(_ limit: Int) -> Self {
+        return raw("LIMIT \(limit)")
+    }
+    
     func createTable(_ table: String, ifNotExists: Bool = false, columns: [String]) -> Self {
         return raw("CREATE TABLE")
             .raw("IF NOT EXISTS", if: ifNotExists)
@@ -44,13 +56,17 @@ class SQL: CustomStringConvertible {
         return raw(SQL.quoteName(name))
     }
     
+    func quotedNames(_ names: [String]) -> Self {
+        return raw(names.map(SQL.quoteName).joined(separator: ", "))
+    }
+    
     func namedParameter(_ name: String) -> Self {
         return raw(":").raw(name)
     }
     
-    func bracketed(quotedNames: [String]) -> Self {
+    func bracketed(quotedNames names: [String]) -> Self {
         return raw("(")
-            .raw(quotedNames.map(SQL.quoteName).joined(separator: ", "))
+            .quotedNames(names)
             .raw(")")
     }
     
