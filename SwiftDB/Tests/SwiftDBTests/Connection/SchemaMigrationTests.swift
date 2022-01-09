@@ -91,7 +91,7 @@ class SchemaMigrationTests: XCTestCase {
         )
         
         // drop an index
-        try sm.dropIndex(table: "foo", name: "swiftdb_column_d_asc")
+        try sm.dropIndex(name: "swiftdb_column_d_asc")
         XCTAssertEqual(
             try sm.getIndexNames(table: "foo"),
             ["swiftdb_column_c"]

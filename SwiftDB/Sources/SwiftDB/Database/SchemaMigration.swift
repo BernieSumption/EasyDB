@@ -12,18 +12,20 @@ struct SchemaMigration {
     /// Note: this method will not alter the columns of existing tables if they are different to `columns`
     func ensureTableExists(table: String, columns: [String]) throws {
         assert(columns.count > 0, "at least one column required to create a table")
-        let columnsSql = columns.map(quoteName).joined(separator: ", ")
-        try connection.execute(sql: "CREATE TABLE IF NOT EXISTS \(quoteName(table)) (\(columnsSql))")
+        let sql = SQL().createTable(table, ifNotExists: true, columns: columns).text
+        try connection.execute(sql: sql)
     }
     
     /// Alter `table` to add `column`
     func addColumn(table: String, column: String) throws {
-        try connection.execute(sql: "ALTER TABLE \(quoteName(table)) ADD COLUMN \(quoteName(column))")
+        let sql = SQL().alterTable(table).addColumn(column).text
+        try connection.execute(sql: sql)
     }
     
     /// Alter `table` to drop `column`
     func dropColumn(table: String, column: String) throws {
-        try connection.execute(sql: "ALTER TABLE \(quoteName(table)) DROP COLUMN \(quoteName(column))")
+        let sql = SQL().alterTable(table).dropColumn(column).text
+        try connection.execute(sql: sql)
     }
     
     /// Return a list of column names on `table`
@@ -49,12 +51,13 @@ struct SchemaMigration {
     
     /// Add an index to `table`
     func addIndex(table: String, _ index: Index) throws {
+        // TODO: table should be part of index, including putting table name in index name
         try connection.execute(sql: index.createSQL(forTable: table))
     }
     
     /// Remove an index from `table`
-    func dropIndex(table: String, name: String) throws {
-        try connection.execute(sql: "DROP INDEX \(quoteName(name))")
+    func dropIndex(name: String) throws {
+        try connection.execute(sql: SQL().dropIndex(name).text)
     }
     
     func getIndexNames(table: String) throws -> [String] {
@@ -66,13 +69,16 @@ struct SchemaMigration {
     
     /// Ensure that `table` has the defined set of indices
     func migrateIndices(table: String, indices: [Index]) throws {
-        let existing = Set(try getIndexNames(table: table))
-        let expected = Set(indices.map(\.name))
-        let namesToDrop = existing.subtracting(expected)
+        let existingNames = Set(try getIndexNames(table: table))
+        let expectedNames = Set(indices.map({ $0.name(forTable: table) }))
+        let namesToDrop = existingNames.subtracting(expectedNames)
         for name in namesToDrop  {
-            try dropIndex(table: table, name: name)
+            try dropIndex(name: name)
         }
-        let indicesToAdd = indices.filter({ !existing.contains($0.name) })
+        let indicesToAdd = indices.filter({ index in
+            let name = index.name(forTable: table)
+            return !existingNames.contains(name)
+        })
         for index in indicesToAdd {
             try addIndex(table: table, index)
         }
@@ -89,8 +95,8 @@ struct Index {
         self.unique = unique
     }
     
-    var name: String {
-        return "swiftdb_" + parts.map({ column in
+    func name(forTable table: String) -> String {
+        return "swiftdb_\(table)_" + parts.map({ column in
             let path = column.path.joined(separator: ".")
             switch column.direction {
             case .ascending:
@@ -103,11 +109,10 @@ struct Index {
         }).joined(separator: "_")
     }
     
-    func createSQL(forTable: String) -> String {
-        let createSql = (unique ? "CREATE UNIQUE" : "CREATE")
-        let columnsSql = parts.map({ column in
+    func createSQL(forTable table: String) -> String {
+        let columnsSql: [String] = parts.map({ column in
             // TODO: JSON expression when path.count > 1
-            var sql = quoteName(column.path.joined(separator: "."))
+            var sql = SQL.quoteName(column.path.joined(separator: "."))
             switch column.direction {
             case .ascending:
                 sql += " ASC"
@@ -117,8 +122,11 @@ struct Index {
                 break
             }
             return sql
-        }).joined(separator: ", ")
-        return "\(createSql) INDEX \(quoteName(name)) ON \(quoteName(forTable)) (\(columnsSql))"
+        })
+        return SQL()
+            .createIndex(name: name(forTable: table), on: table, unique: unique)
+            .bracketed(raw: columnsSql)
+            .text
     }
     
     struct Part {
@@ -138,8 +146,4 @@ struct Index {
         case ascending
         case descending
     }
-}
-
-private func quoteName(_ name: String) -> String {
-    return "\"" + name.replacingOccurrences(of: "\"", with: "\"\"") + "\""
 }
