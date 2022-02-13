@@ -1,7 +1,12 @@
 
-// TODO should be immutable struct where methods return new instances
-class SQL: CustomStringConvertible {
-    private(set) var text = ""
+
+struct SQL: CustomStringConvertible {
+    let text: String
+    
+    init(text: String = "") {
+        self.text = text
+    }
+    
     var description: String { text }
     
     func select() -> Self {
@@ -87,13 +92,14 @@ class SQL: CustomStringConvertible {
     }
     
     func raw(_ part: String, if condition: Bool = true) -> Self {
-        if text != "" {
-            text.append(" ")
+        var newText = text
+        if newText != "" {
+            newText.append(" ")
         }
         if condition {
-            text.append(part)
+            newText.append(part)
         }
-        return self
+        return SQL(text: newText)
     }
     
     static func quoteName(_ name: String) -> String {
