@@ -51,7 +51,6 @@ struct SchemaMigration {
     
     /// Add an index to `table`
     func addIndex(table: String, _ index: Index) throws {
-        // TODO: table should be part of index, including putting table name in index name
         try connection.execute(sql: index.createSQL(forTable: table))
     }
     

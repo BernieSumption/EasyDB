@@ -4,14 +4,38 @@ public class Collection<Row: Codable> {
     private let mapper: KeyPathMapper<Row>
     private let columns: [String]
     private let table: String
+    private let indices: [Index]
     
-    
-    internal init(_ type: Row.Type, _ connection: Connection) throws {
+    internal init(_ type: Row.Type, _ connection: Connection, _ options: [Option] = []) throws {
         self.connection = connection
         self.mapper = try KeyPathMapper(type)
-        // TODO: Options API to customise table names
         self.table = String(describing: Row.self)
         self.columns = mapper.rootProperties
+        
+        var indices = [Index]()
+        for option in options {
+            switch option {
+            case .tableName(let name):
+                self.table = name
+            case .index(let keyPath):
+                Next up: need to support keypath lookup for partial keypaths
+                indices.append(Index(
+                    mapper.propertyPath(for: keyPath),
+                    unique: false
+                ))
+            case .unique(let keyPath):
+                indices.append(Index(
+                    mapper.propertyPath(for: keyPath),
+                    unique: true
+                ))
+            }
+        }
+    }
+    
+    public enum Option {
+        case tableName(String)
+        case index(PartialKeyPath<Row>)
+        case unique(PartialKeyPath<Row>)
     }
     
     /// Create the table if required, and add missing columns
@@ -31,6 +55,7 @@ public class Collection<Row: Codable> {
     private var insertStatement: Statement?
     private func getInsertStatement() throws -> Statement {
         if let statement = insertStatement {
+            try statement.reset()
             return statement
         }
         let sql = SQL()
@@ -61,8 +86,19 @@ public class Collection<Row: Codable> {
                 .from(collection.table)
                 .text
             let statement = try collection.connection.prepare(sql: sql)
+            // TODO: should only query the first
             let rows = try StatementDecoder().decode([Row].self, from: statement)
             return rows.first
+        }
+        
+        public func fetchMany() throws -> [Row] {
+            let sql = SQL()
+                .select()
+                .quotedNames(collection.columns)
+                .from(collection.table)
+                .text
+            let statement = try collection.connection.prepare(sql: sql)
+            return try StatementDecoder().decode([Row].self, from: statement)
         }
     }
 }

@@ -10,7 +10,7 @@ public class Database {
         self.options = options
     }
     
-    public func collection<T: Codable>(_ type: T.Type) throws -> Collection<T> {
+    public func collection<T: Codable>(_ type: T.Type, _ collectionOptions: Collection<T>.Options? = nil) throws -> Collection<T> {
         let typeId = ObjectIdentifier(type)
         if let collection = collections[typeId] {
             guard let collection = collection as? Collection<T> else {
@@ -18,7 +18,7 @@ public class Database {
             }
             return collection
         }
-        let collection = try Collection(type, try getConnection())
+        let collection = try Collection(type, try getConnection(), collectionOptions)
         if options.autoMigrate {
             try collection.migrate(dropColumns: options.autoDropColumns)
         }
@@ -58,7 +58,7 @@ extension Database {
     public static var standardPath: String {
         return FileManager
             .default
-            .urls(for: .documentDirectory,in: .userDomainMask)[0]
+            .urls(for: .documentDirectory, in: .userDomainMask)[0]
             .appendingPathComponent("swiftdb.sqlite")
             .path
     }

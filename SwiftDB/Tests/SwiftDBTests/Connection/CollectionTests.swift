@@ -21,10 +21,24 @@ class CollectionTests: XCTestCase {
         try c.insert(KitchenSinkEntity.standard)
         let row = try c.select().fetchOne()
         XCTAssertEqual(row, KitchenSinkEntity.standard)
+    }
+    
+    func testMigrateData() throws {
+        let c = try db.collection(V1.self, .init(tableName: "x"))
+        try c.insert(V1(a: 4))
+        try c.insert(V1(a: 5))
         
-        struct Row: Codable, Equatable {
-            let i: Int
-        }
+        let c2 = try db.collection(V2.self, .init(tableName: "x"))
+        let rows = try c2.select().fetchMany()
+        XCTAssertEqual(rows, [V2(a: 4, b: nil), V2(a: 5, b: nil)])
+    }
+    
+    struct V1: Codable, Equatable {
+        var a: Int
+    }
+    struct V2: Codable, Equatable {
+        var a: Int
+        var b: String?
     }
 
 }

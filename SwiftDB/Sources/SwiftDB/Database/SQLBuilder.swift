@@ -1,5 +1,5 @@
 
-
+// TODO should be immutable struct where methods return new instances
 class SQL: CustomStringConvertible {
     private(set) var text = ""
     var description: String { text }
