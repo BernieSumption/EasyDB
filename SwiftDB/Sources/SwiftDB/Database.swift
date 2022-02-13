@@ -5,12 +5,16 @@ public class Database {
     private let options: Options
     private var collections = [ObjectIdentifier: Any]()
     
-    public init(path: String, options: Options = Options.standard) {
+    public init(path: String, options: Options = Options()) {
         self.path = path
         self.options = options
     }
     
-    public func collection<T: Codable>(_ type: T.Type, _ collectionOptions: Collection<T>.Options? = nil) throws -> Collection<T> {
+    public func collection<T: Codable>(_ type: T.Type, _ collectionOption: Collection<T>.Option) throws -> Collection<T> {
+        return try collection(type, [collectionOption])
+    }
+    
+    public func collection<T: Codable>(_ type: T.Type, _ collectionOptions: [Collection<T>.Option] = []) throws -> Collection<T> {
         let typeId = ObjectIdentifier(type)
         if let collection = collections[typeId] {
             guard let collection = collection as? Collection<T> else {
@@ -34,8 +38,15 @@ public class Database {
         
         /// Whether to drop columns while running automatic migrations. Has no effect without `autoMigrate`
         public var autoDropColumns = false
+
+        /// Print all executed SQL statements as they are executed
+        public var logSQL = false
         
-        public static let standard = Options()
+        public init(autoMigrate: Bool = true, autoDropColumns: Bool = false, logSQL: Bool = false) {
+            self.autoMigrate = autoMigrate
+            self.autoDropColumns = autoDropColumns
+            self.logSQL = logSQL
+        }
     }
     
     private var _connection: Connection?
@@ -43,7 +54,7 @@ public class Database {
         if let c = _connection {
             return c
         }
-        let c = try Connection(path: path)
+        let c = try Connection(path: path, logSQL: options.logSQL)
         _connection = c
         return c
     }

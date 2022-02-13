@@ -55,19 +55,24 @@ struct KeyPathMapper<T: Codable> {
         }
         self.valuesToPropertyPath = valuesToPropertyPath
     }
-
-    /// Given a KeyPath, return the path of key names that locate's the same value in the type's encoded representation
+    
+    /// Given a KeyPath, return the path of key names that locates the same value in the type's encoded representation
     func propertyPath<V: Encodable>(for keyPath: KeyPath<T, V>) throws -> [String] {
-        if let cached = cache.keyPathToPropertyPath[keyPath] {
+        return try propertyPath(
+            for: { try Encoded(encoding: $0[keyPath: keyPath]) },
+            cacheKey: keyPath)
+    }
+    
+    /// A type-erased version of `propertyPath(for:)`
+    func propertyPath(for getEncodedValue: (T) throws -> Encoded, cacheKey: AnyKeyPath) throws -> [String] {
+        if let cached = cache.keyPathToPropertyPath[cacheKey] {
             return cached
         }
-        let values = try instances.map {
-            return try Encoded(encoding: $0[keyPath: keyPath])
-        }
+        let values = try instances.map(getEncodedValue)
         guard let path = valuesToPropertyPath[values] else {
             throw ReflectionError.keyPathNotFound(T.self)
         }
-        cache.keyPathToPropertyPath[keyPath] = path
+        cache.keyPathToPropertyPath[cacheKey] = path
         return path
     }
     
@@ -76,6 +81,6 @@ struct KeyPathMapper<T: Codable> {
     }
 
     private class Cache {
-        var keyPathToPropertyPath = [PartialKeyPath<T>: [String]]()
+        var keyPathToPropertyPath = [AnyKeyPath: [String]]()
     }
 }

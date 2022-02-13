@@ -3,7 +3,7 @@ import XCTest
 @testable import SwiftDB
 
 class KeyPathMapperTests: XCTestCase {
-
+    
     func testFlat() throws {
         let mapper = try KeyPathMapper(Flat.self)
         XCTAssertEqual(try mapper.propertyPath(for: \.a), ["a"])

@@ -9,41 +9,63 @@ public class Collection<Row: Codable> {
     internal init(_ type: Row.Type, _ connection: Connection, _ options: [Option] = []) throws {
         self.connection = connection
         self.mapper = try KeyPathMapper(type)
-        self.table = String(describing: Row.self)
         self.columns = mapper.rootProperties
         
+        var table = String(describing: Row.self)
         var indices = [Index]()
         for option in options {
-            switch option {
+            switch option.kind {
             case .tableName(let name):
-                self.table = name
-            case .index(let keyPath):
-                Next up: need to support keypath lookup for partial keypaths
+                table = name
+            case .index(let getEncodedValue, let keyPath, let unique):
                 indices.append(Index(
-                    mapper.propertyPath(for: keyPath),
-                    unique: false
-                ))
-            case .unique(let keyPath):
-                indices.append(Index(
-                    mapper.propertyPath(for: keyPath),
-                    unique: true
+                    [
+                        Index.Part(
+                            try mapper.propertyPath(for: getEncodedValue, cacheKey: keyPath),
+                            .ascending
+                        )
+                    ],
+                    unique: unique
                 ))
             }
         }
+        self.table = table
+        self.indices = indices
     }
     
-    public enum Option {
-        case tableName(String)
-        case index(PartialKeyPath<Row>)
-        case unique(PartialKeyPath<Row>)
+    public struct Option {
+        let kind: Kind
+        
+        public static func tableName(_ name: String) -> Option {
+            return Option(kind: .tableName(name))
+        }
+        
+        public static func index<V: Codable>(_ keyPath: KeyPath<Row, V>) -> Option {
+            return Option(kind: .index(mapper(keyPath), keyPath, false))
+        }
+        
+        public static func unique<V: Codable>(_ keyPath: KeyPath<Row, V>) -> Option {
+            return Option(kind: .index(mapper(keyPath), keyPath, true))
+        }
+        
+        private static func mapper<V: Codable>(_ keyPath: KeyPath<Row, V>) -> (Row) throws -> Encoded {
+            return { try Encoded(encoding: $0[keyPath: keyPath]) }
+        }
+        
+        enum Kind {
+            case tableName(String)
+            case index((Row) throws -> Encoded, AnyKeyPath, Bool)
+        }
     }
+    
     
     /// Create the table if required, and add missing columns
     ///
     /// - Parameter dropColumns: Remove unused columns. This defaults to `false`
     public func migrate(dropColumns: Bool = false) throws {
         let migration = SchemaMigration(connection: connection)
-        try migration.ensureTableExists(table: table, columns: columns)
+        try migration.migrateColumns(table: table, columns: columns)
+        try migration.migrateIndices(table: table, indices: indices)
     }
     
     public func insert(_ row: Row) throws {
@@ -102,4 +124,3 @@ public class Collection<Row: Codable> {
         }
     }
 }
-

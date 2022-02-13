@@ -3,6 +3,7 @@ import Foundation
 
 /// Wrapper around an SQLite C API `sqlite3_stmt` object providing a more Swifty API
 class Statement {
+    private let db: OpaquePointer
     private let statement: OpaquePointer
     private var columnNameToIndex = [String: Int]()
     private var parameterNameToIndex = [String: Int]()
@@ -20,9 +21,10 @@ class Statement {
     private(set) var hasRow = false
 
     init(_ db: OpaquePointer, _ sql: String) throws {
+        self.db = db
         self.sql = sql
         var statement: OpaquePointer?
-        try SwiftDB.checkOK(sqlite3_prepare_v2(db, sql, -1, &statement, nil), sql: sql)
+        try SwiftDB.checkOK(sqlite3_prepare_v2(db, sql, -1, &statement, nil), sql: sql, db: db)
         self.statement = try checkPointer(statement, from: "sqlite3_prepare_v2")
     }
 
@@ -208,7 +210,7 @@ class Statement {
     }
     
     private func checkOK(_ code: @autoclosure () -> CInt) throws {
-        try SwiftDB.checkOK(code(), sql: self.sql)
+        try SwiftDB.checkOK(code(), sql: self.sql, db: db)
     }
 }
 

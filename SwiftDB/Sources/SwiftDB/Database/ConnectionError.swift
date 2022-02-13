@@ -1,10 +1,10 @@
 
-struct ConnectionError: Error, CustomStringConvertible {
-    let resultCode: ResultCode
-    let lastMessage: String?
-    let sql: String?
+public struct ConnectionError: Error, CustomStringConvertible {
+    public let resultCode: ResultCode
+    public let message: String?
+    public let sql: String?
     
-    var description: String {
-        "\(resultCode) (Last SQLite message: \(lastMessage ?? "none"); Query: \(sql ?? "none")"
+    public var description: String {
+        "\(resultCode) \(message ?? "(no message)"); while executing \"\(sql ?? "(no query)")\""
     }
 }

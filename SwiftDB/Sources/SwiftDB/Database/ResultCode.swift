@@ -35,7 +35,7 @@ private let codeNames: [CInt: String] = [
     101: "SQLITE_DONE",
 ]
 
-enum ResultCode: CInt, Error, CustomStringConvertible {
+public enum ResultCode: CInt, Error, CustomStringConvertible {
     case OK = 0
     case ERROR = 1
     case INTERNAL = 2

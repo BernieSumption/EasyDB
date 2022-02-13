@@ -1,16 +1,17 @@
 import Foundation
 import CSQLite
+import os
+
+private let log = Logger.init(subsystem: "SwiftDB", category: "sql")
 
 class Connection {
-    internal let db: OpaquePointer
+    let db: OpaquePointer
+    let logSQL: Bool
 
-    init(path: String) throws {
-        if !errorCallbackRegistered {
-            errorCallbackRegistered = true
-            registerErrorLogCallback(errorLogCallback)
-        }
+    init(path: String, logSQL: Bool = false) throws {
+        self.logSQL = logSQL
         var db: OpaquePointer?
-        try checkOK(sqlite3_open(path, &db), sql: nil)
+        try checkOK(sqlite3_open(path, &db), sql: nil, db: nil)
         self.db = try checkPointer(db, from: "sqlite3_open")
     }
 
@@ -28,30 +29,23 @@ class Connection {
     
     /// Compile and execute an SQL query that returns no results
     func execute(sql: String, parameters: [Parameter] = []) throws {
+        if logSQL {
+            log.info("Executing statement: \(sql, privacy: .public)")
+        }
         let statement = try prepare(sql: sql)
         try statement.bind(parameters)
         let _ = try statement.step()
     }
 }
 
-
-private var errorCallbackRegistered = false
-private var lastMessage: String?
-private func errorLogCallback(
-    _: UnsafeMutableRawPointer?,
-    _ code: Int32,
-    _ cMessage: UnsafePointer<CChar>?
-) -> Void {
-    guard let cMessage = cMessage else { return }
-    let message = String(cString: cMessage)
-    lastMessage = message
-}
-
-internal func checkOK(_ code: @autoclosure () -> CInt, sql: String?) throws {
-    lastMessage = nil
+internal func checkOK(_ code: @autoclosure () -> CInt, sql: String?, db: OpaquePointer?) throws {
     let resultCode = try ResultCode(code())
+    var message: String?
+    if let db = db {
+        message = String(cString: sqlite3_errmsg(db))
+    }
     if resultCode != .OK {
-        throw ConnectionError(resultCode: resultCode, lastMessage: lastMessage, sql: sql)
+        throw ConnectionError(resultCode: resultCode, message: message, sql: sql)
     }
 }
 
