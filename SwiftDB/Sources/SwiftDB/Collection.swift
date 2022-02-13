@@ -106,9 +106,9 @@ public class Collection<Row: Codable> {
                 .select()
                 .quotedNames(collection.columns)
                 .from(collection.table)
+                .limit(1)
                 .text
             let statement = try collection.connection.prepare(sql: sql)
-            // TODO: should only query the first
             let rows = try StatementDecoder().decode([Row].self, from: statement)
             return rows.first
         }
