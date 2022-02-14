@@ -13,8 +13,6 @@ struct StatementDecoder {
     }
 }
 
-// MARK: Decoders
-
 /// The top-level decoder, decoding the result(s) of an SQL query
 private struct StatementDecoderImpl: Decoder {
     private let statement: Statement
@@ -99,8 +97,6 @@ private struct SingleRowSingleColumnDecoderImpl: Decoder {
         return SingleRowSingleValueContainer(statement, column: column, codingPath: codingPath)
     }
 }
-
-// MARK: Containers
 
 /// Decodes one row of the results into a struct or dictionary using column names for keys
 private struct SingleRowKeyedContainer<Key: CodingKey>: KeyedDecodingContainerProtocol {

@@ -104,13 +104,13 @@ class MultifariousValuesTests: XCTestCase {
         XCTAssertEqual(mv.next(UInt8.self), 0)
         XCTAssertEqual(mv.next(Float32.self), 1)
     }
+    
+    func first2Values<T: Equatable>(_ type: T.Type) -> [T?] {
+        let mv = MultifariousValues()
+        return [mv.next(type), mv.next(type)]
+    }
 
     func testBuiltInTypes() throws {
-        func first2Values<T: Encodable & Equatable>(_ type: T.Type) -> [T?] {
-            let mv = MultifariousValues()
-            return [mv.next(type), mv.next(type)]
-        }
-
         XCTAssertEqual(first2Values(Bool.self), [false, true])
         XCTAssertEqual(first2Values(String.self), ["0", "1"])
         XCTAssertEqual(first2Values(Double.self), [0, 1])
@@ -146,5 +146,16 @@ class MultifariousValuesTests: XCTestCase {
                 Data(repeating: 1, count: 1),
             ])
     }
+    
+    func testCustomType() throws {
+        XCTAssertEqual(first2Values(Custom.self), [Custom(v: 10), Custom(v: -10)])
 
+        struct Custom: SampleValueSource, Codable, Equatable {
+            let v: Int
+
+            static func provideSampleValues(_ receiver: SampleValueReceiver) {
+                receiver.setSampleValues(Custom(v: 10), Custom(v: -10))
+            }
+        }
+    }
 }

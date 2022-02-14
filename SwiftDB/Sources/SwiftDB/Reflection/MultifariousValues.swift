@@ -1,5 +1,7 @@
 import Foundation
 
+private let sampleValues = SampleValues()
+
 /// Produces a grid of binary values where there are enough rows to ensure that each column is unique.
 /// For example if asked to produce five columns, there will be 3 rows:
 ///
@@ -15,8 +17,42 @@ class MultifariousValues {
     private var runLength = 1
     private(set) var hasFinished = false
 
-    private var typeToSamples = [ObjectIdentifier: (Any, Any)]()
+    func next<T>(_ type: T.Type) -> T? {
+        guard let samples = sampleValues.get(type) else {
+            return nil
+        }
+        let index = (item / runLength) % 2
+        item += 1
+        return index == 0 ? samples.0 : samples.1
+    }
+    
 
+    func nextRow() {
+        let didRollOver = runLength * 2 < item
+        if didRollOver {
+            runLength *= 2
+        } else {
+            hasFinished = true
+        }
+        item = 0
+    }
+}
+
+private func __debug__valuesEncodeDifferently<T1: Encodable, T2: Encodable>(_ a: T1, _ b: T2)
+    -> Bool
+{
+    do {
+        let a = try Encoded(encoding: a)
+        let b = try Encoded(encoding: b)
+        return a != b
+    } catch {
+        assert(false, "Error encoding values to check equality: \(error)")
+    }
+}
+
+private class SampleValues: SampleValueReceiver {
+    private var typeToSamples = [ObjectIdentifier: (Any, Any)]()
+    
     init() {
         setSampleValues(false, true)
         setSampleValues("0", "1")
@@ -46,7 +82,7 @@ class MultifariousValues {
             Data(repeating: 0, count: 1),
             Data(repeating: 1, count: 1))
     }
-
+    
     func setSampleValues<T: Encodable>(_ zero: T, _ one: T) {
         assert(__debug__valuesEncodeDifferently(zero, one), "sample values must be different")
         assert(
@@ -63,36 +99,32 @@ class MultifariousValues {
             "A sample value for one must not encode as `0`!")
         typeToSamples[ObjectIdentifier(T.self)] = (zero, one)
     }
-
-    func next<T>(_ type: T.Type) -> T? {
-        guard let values = typeToSamples[ObjectIdentifier(type)] as? (T, T) else {
+    
+    func get<T>(_ type: T.Type) -> (T, T)? {
+        if let cached = getFromCache(type) {
+            return cached
+        }
+        
+        guard let source = type as? SampleValueSource.Type else {
             return nil
         }
-        let index = (item / runLength) % 2
-        item += 1
-        return index == 0 ? values.0 : values.1
+        
+        source.provideSampleValues(self)
+        
+        let samples = getFromCache(type)
+        
+        assert(samples != nil, "\(type).provideSampleValues did not provide samples of the correct type")
+        
+        return samples
     }
-
-    func nextRow() {
-        let didRollOver = runLength * 2 < item
-        if didRollOver {
-            runLength *= 2
-        } else {
-            hasFinished = true
+    
+    private func getFromCache<T>(_ type: T.Type) -> (T, T)? {
+        let cacheRecord = typeToSamples[ObjectIdentifier(type)]
+        if let cached = cacheRecord as? (T, T) {
+            return cached
         }
-        item = 0
-    }
-}
-
-private func __debug__valuesEncodeDifferently<T1: Encodable, T2: Encodable>(_ a: T1, _ b: T2)
-    -> Bool
-{
-    do {
-        let a = try Encoded(encoding: a)
-        let b = try Encoded(encoding: b)
-        return a != b
-    } catch {
-        assert(false, "Error encoding values to check equality: \(error)")
+        assert(cacheRecord == nil, "cached samples are of wrong type")
+        return nil
     }
 }
 
