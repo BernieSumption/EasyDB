@@ -148,14 +148,14 @@ class MultifariousValuesTests: XCTestCase {
     }
     
     func testCustomType() throws {
-        XCTAssertEqual(first2Values(Custom.self), [Custom(v: 10), Custom(v: -10)])
+        XCTAssertEqual(first2Values(CustomType.self), [CustomType(v: 10), CustomType(v: -10)])
+    }
+    
+    struct CustomType: SampleValueSource, Codable, Equatable {
+        let v: Int
 
-        struct Custom: SampleValueSource, Codable, Equatable {
-            let v: Int
-
-            static func provideSampleValues(_ receiver: SampleValueReceiver) {
-                receiver.setSampleValues(Custom(v: 10), Custom(v: -10))
-            }
+        static func provideSampleValues(_ receiver: SampleValueReceiver) {
+            receiver.setSampleValues(CustomType(v: 10), CustomType(v: -10))
         }
     }
 }

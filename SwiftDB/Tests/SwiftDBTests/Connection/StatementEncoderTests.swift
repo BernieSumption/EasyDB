@@ -5,22 +5,6 @@ class StatementEncoderTests: XCTestCase {
     
     let c: Connection! = try? Connection(path: ":memory:")
     
-    func testTmp() throws {
-        let _ = try c.prepare(sql: "CREATE TABLE foo (a)").step()
-        let _ = try c.prepare(sql: "INSERT INTO foo (a) VALUES (1), (2), (3), (4)").step()
-        let s = try c.prepare(sql: "SELECT * FROM foo WHERE a > :foo")
-        
-        try StatementEncoder().encode(Args(foo: 2), into: s)
-        
-        XCTAssertEqual(try StatementDecoder().decode([Int].self, from: s), [3, 4])
-        
-        
-        
-        struct Args: Codable {
-            let foo: Int
-        }
-    }
-    
     func testEncodeCodable() throws {
         
         let s = try c.prepare(sql: """
@@ -102,7 +86,7 @@ class StatementEncoderTests: XCTestCase {
     }
     
     func testEncodeCodableScalars() throws {
-        let s = try c.prepare(sql: "SELECT ?, ?, ?")
+        let s = try c.prepare(sql: "SELECT ?")
         
         XCTAssertThrowsError(try StatementEncoder().encode(1, into: s)) { error in
             XCTAssertTrue(String(describing: error).contains("providing single parameter values"), String(describing: error))

@@ -27,7 +27,7 @@ private struct StatementEncoderImpl: Encoder {
     }
     
     func singleValueContainer() -> SingleValueEncodingContainer {
-        NotImplementedEncoder(feature: "providing single parameter values to a statement (currently you must use structs or dictionaries to bind named parameters instead)").singleValueContainer()
+        return NotImplementedEncoder(feature: "providing single parameter values to a statement (currently you must use structs or dictionaries to bind named parameters instead)").singleValueContainer()
     }
 }
 
