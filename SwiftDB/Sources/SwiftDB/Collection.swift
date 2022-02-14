@@ -74,6 +74,17 @@ public class Collection<Row: Codable> {
         var _ = try statement.step()
     }
     
+    public func execute(sql: String) throws {
+        let statement = try connection.prepare(sql: sql)
+        let _ = try statement.step()
+    }
+    
+    public func execute<T: Codable>(_ resultType: T.Type, sql: String) throws -> T {
+        let statement = try connection.prepare(sql: sql)
+        let _ = try statement.step()
+        return try StatementDecoder().decode(resultType, from: statement)
+    }
+    
     private var insertStatement: Statement?
     private func getInsertStatement() throws -> Statement {
         if let statement = insertStatement {
@@ -102,25 +113,21 @@ public class Collection<Row: Codable> {
         }
         
         public func fetchOne() throws -> Row? {
-            let sql = SQL()
-                .select()
-                .quotedNames(collection.columns)
-                .from(collection.table)
-                .limit(1)
-                .text
-            let statement = try collection.connection.prepare(sql: sql)
-            let rows = try StatementDecoder().decode([Row].self, from: statement)
+            let rows = try StatementDecoder().decode([Row].self, from: prepare(), maxRows: 1)
             return rows.first
         }
         
         public func fetchMany() throws -> [Row] {
+            return try StatementDecoder().decode([Row].self, from: prepare())
+        }
+        
+        private func prepare() throws -> Statement {
             let sql = SQL()
                 .select()
                 .quotedNames(collection.columns)
                 .from(collection.table)
                 .text
-            let statement = try collection.connection.prepare(sql: sql)
-            return try StatementDecoder().decode([Row].self, from: statement)
+            return try collection.connection.prepare(sql: sql)
         }
     }
 }

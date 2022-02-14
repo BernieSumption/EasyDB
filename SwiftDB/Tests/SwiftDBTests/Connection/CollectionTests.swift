@@ -58,5 +58,57 @@ class CollectionTests: XCTestCase {
             let foo: Int
         }
     }
+    
+    func testFetchOneReadsSingleRow() throws {
+        let c = try db.collection(Row.self)
+        
+        // create rows where reading row #2 will cause an error
+        try c.execute(sql: #"INSERT INTO Row (t) VALUES ('"OK"'), ('"error row 2 blocked"')"#)
+        
+        // check that reading all rows does indeed cause an error
+        XCTAssertThrowsError(try c.select().fetchMany()) { error in
+            XCTAssertEqual("\(error)", "error row 2 blocked")
+        }
+        
+        // this should not throw an error if we're lazily fetching rows and
+        // never try to decode row 2
+        let _ = try c.select().fetchOne()
+        
+        struct Row: Codable, Equatable {
+            let t: Throw
+        }
+    }
 
+}
+
+/// A decodable type that serialises to a single string and throws an error during decoding if the string starts with `"error"`
+struct Throw: Codable, Equatable {
+    let value: String
+    
+    init(_ value: String) {
+        self.value = value
+    }
+    
+    init(from decoder: Decoder) throws {
+        let container = try decoder.singleValueContainer()
+        value = try container.decode(String.self)
+        if value.starts(with: "error") {
+            throw Invalid(value)
+        }
+    }
+    
+    func encode(to encoder: Encoder) throws {
+        var container = encoder.singleValueContainer()
+        try container.encode(value)
+    }
+    
+    struct Invalid: Swift.Error, CustomDebugStringConvertible {
+        let message: String
+        
+        init(_ message: String) {
+            self.message = message
+        }
+        
+        var debugDescription: String { message }
+    }
 }

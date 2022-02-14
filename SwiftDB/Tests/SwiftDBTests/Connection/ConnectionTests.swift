@@ -66,5 +66,4 @@ class ConnectionTests: XCTestCase {
         try insert(.null)
         XCTAssertEqual(try selectStmt.readNull(column: "a"), true)
     }
-
 }

@@ -18,36 +18,36 @@ class MultifariousValues {
     private var typeToSamples = [ObjectIdentifier: (Any, Any)]()
 
     init() {
-        setSampleValues(zero: false, one: true)
-        setSampleValues(zero: "0", one: "1")
-        setSampleValues(zero: Double(0), one: Double(1))
-        setSampleValues(zero: Float(0), one: Float(1))
-        setSampleValues(zero: Int(0), one: Int(1))
-        setSampleValues(zero: Int8(0), one: Int8(1))
-        setSampleValues(zero: Int16(0), one: Int16(1))
-        setSampleValues(zero: Int32(0), one: Int32(1))
-        setSampleValues(zero: Int64(0), one: Int64(1))
-        setSampleValues(zero: UInt(0), one: UInt(1))
-        setSampleValues(zero: UInt8(0), one: UInt8(1))
-        setSampleValues(zero: UInt16(0), one: UInt16(1))
-        setSampleValues(zero: UInt32(0), one: UInt32(1))
-        setSampleValues(zero: UInt64(0), one: UInt64(1))
-        setSampleValues(zero: Decimal(0), one: Decimal(1))
+        setSampleValues(false, true)
+        setSampleValues("0", "1")
+        setSampleValues(Double(0), Double(1))
+        setSampleValues(Float(0), Float(1))
+        setSampleValues(Int(0), Int(1))
+        setSampleValues(Int8(0), Int8(1))
+        setSampleValues(Int16(0), Int16(1))
+        setSampleValues(Int32(0), Int32(1))
+        setSampleValues(Int64(0), Int64(1))
+        setSampleValues(UInt(0), UInt(1))
+        setSampleValues(UInt8(0), UInt8(1))
+        setSampleValues(UInt16(0), UInt16(1))
+        setSampleValues(UInt32(0), UInt32(1))
+        setSampleValues(UInt64(0), UInt64(1))
+        setSampleValues(Decimal(0), Decimal(1))
         setSampleValues(
-            zero: URL(string: "data:,0")!,
-            one: URL(string: "data:,1")!)
+            URL(string: "data:,0")!,
+            URL(string: "data:,1")!)
         setSampleValues(
-            zero: UUID(uuid: (0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0)),
-            one: UUID(uuid: (0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 1)))
+            UUID(uuid: (0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0)),
+            UUID(uuid: (0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 1)))
         setSampleValues(
-            zero: Date(timeIntervalSince1970: 0),
-            one: Date(timeIntervalSince1970: 1))
+            Date(timeIntervalSince1970: 0),
+            Date(timeIntervalSince1970: 1))
         setSampleValues(
-            zero: Data(repeating: 0, count: 1),
-            one: Data(repeating: 1, count: 1))
+            Data(repeating: 0, count: 1),
+            Data(repeating: 1, count: 1))
     }
 
-    func setSampleValues<T: Encodable>(zero: T, one: T) {
+    func setSampleValues<T: Encodable>(_ zero: T, _ one: T) {
         assert(__debug__valuesEncodeDifferently(zero, one), "sample values must be different")
         assert(
             __debug__valuesEncodeDifferently(zero, 1),
@@ -94,4 +94,17 @@ private func __debug__valuesEncodeDifferently<T1: Encodable, T2: Encodable>(_ a:
     } catch {
         assert(false, "Error encoding values to check equality: \(error)")
     }
+}
+
+/// A protocol for types that provide two sample values, allowing them to participate in codable structure discovery
+///
+/// Note: SwiftDB will attempt to automatically generate sample values for most codable types. Conform to this
+/// protocol only if the automatic process doesn't work. See [codable structure discovery](TODO: url)
+public protocol SampleValueSource {
+    static func provideSampleValues(_ receiver: SampleValueReceiver) -> Void
+}
+
+/// Used by `SampleValueSource` during [codable structure discovery](TODO: url)
+public protocol SampleValueReceiver {
+    func setSampleValues<T: Encodable>(_ zero: T, _ one: T)
 }
