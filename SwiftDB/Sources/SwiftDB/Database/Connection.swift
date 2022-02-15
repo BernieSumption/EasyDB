@@ -21,14 +21,14 @@ class Connection {
     }
     
     /// Compile and execute an SQL query, decoding the results into an instance of `T`
-    func execute<T: Decodable>(_ resultType: T.Type, sql: String, parameters: [Parameter] = []) throws -> T {
+    func execute<T: Decodable>(_ resultType: T.Type, sql: String, parameters: [ParameterValue] = []) throws -> T {
         let statement = try prepare(sql: sql)
         try statement.bind(parameters)
-        return try StatementDecoder().decode(resultType, from: statement)
+        return try StatementDecoder.decode(resultType, from: statement)
     }
     
     /// Compile and execute an SQL query that returns no results
-    func execute(sql: String, parameters: [Parameter] = []) throws {
+    func execute(sql: String, parameters: [ParameterValue] = []) throws {
         if logSQL {
             log.info("Executing statement: \(sql, privacy: .public)")
         }

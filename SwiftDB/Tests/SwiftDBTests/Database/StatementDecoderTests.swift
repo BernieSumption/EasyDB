@@ -7,7 +7,7 @@ class StatementDecoderTests: XCTestCase {
     
     func testSelectAs<T: Decodable & Equatable>(_ sql: String, _ type: T.Type, _ expected: T) throws {
         let s = try c.prepare(sql: sql)
-        XCTAssertEqual(try StatementDecoder().decode(type, from: s), expected)
+        XCTAssertEqual(try StatementDecoder.decode(type, from: s), expected)
     }
 
     func testDecodeSingleIntegers() throws {

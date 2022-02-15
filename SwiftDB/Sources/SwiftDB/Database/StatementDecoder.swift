@@ -3,7 +3,7 @@ import Foundation
 /// Decodes a statement's results into a `Codable` type, making an effort to do something pretty
 /// sensible for any codable type.
 struct StatementDecoder {
-    func decode<T: Decodable>(_ type: T.Type, from statement: Statement, maxRows: Int? = nil) throws -> T {
+    static func decode<T: Decodable>(_ type: T.Type, from statement: Statement, maxRows: Int? = nil) throws -> T {
         let _ = try statement.step()
         let decoder = StatementDecoderImpl(statement, maxRows: maxRows)
         if type == Data.self || type == Date.self  {
@@ -59,7 +59,7 @@ private struct SingleRowDecoderImpl: Decoder {
     
     /// Decode the row into an array, each column becoming an element in the array
     func unkeyedContainer() throws -> UnkeyedDecodingContainer {
-        return SingleRowUnkeyedContainer(statement, codingPath: [])
+        return SingleRowUnkeyedContainer(statement, codingPath: codingPath)
     }
     
     /// Decode the first column into a scalar value

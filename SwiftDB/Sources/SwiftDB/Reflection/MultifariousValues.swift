@@ -47,6 +47,7 @@ private func __debug__valuesEncodeDifferently<T1: Encodable, T2: Encodable>(_ a:
         return a != b
     } catch {
         assert(false, "Error encoding values to check equality: \(error)")
+        return false
     }
 }
 

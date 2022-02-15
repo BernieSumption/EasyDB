@@ -32,7 +32,7 @@ class StatementEncoderTests: XCTestCase {
             :sub AS sub
         """)
         
-        try StatementEncoder().encode(KitchenSinkEntity.standard, into: s)
+        try StatementEncoder.encode(KitchenSinkEntity.standard, into: s)
         
         let _ = try s.step()
         
@@ -68,7 +68,7 @@ class StatementEncoderTests: XCTestCase {
         """)
         
         let value: [String: Int?] = ["ioy": 1, "ion": nil]
-        try StatementEncoder().encode(value, into: s)
+        try StatementEncoder.encode(value, into: s)
         
         let _ = try s.step()
         
@@ -80,7 +80,7 @@ class StatementEncoderTests: XCTestCase {
     func testEncodeCodableArray() throws {
         let s = try c.prepare(sql: "SELECT ?, ?, ?")
         
-        XCTAssertThrowsError(try StatementEncoder().encode([1, 2, 3], into: s)) { error in
+        XCTAssertThrowsError(try StatementEncoder.encode([1, 2, 3], into: s)) { error in
             XCTAssertTrue(String(describing: error).contains("providing arrays of parameter values"))
         }
     }
@@ -88,7 +88,7 @@ class StatementEncoderTests: XCTestCase {
     func testEncodeCodableScalars() throws {
         let s = try c.prepare(sql: "SELECT ?")
         
-        XCTAssertThrowsError(try StatementEncoder().encode(1, into: s)) { error in
+        XCTAssertThrowsError(try StatementEncoder.encode(1, into: s)) { error in
             XCTAssertTrue(String(describing: error).contains("providing single parameter values"), String(describing: error))
         }
     }

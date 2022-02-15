@@ -70,7 +70,7 @@ public class Collection<Row: Codable> {
     
     public func insert(_ row: Row) throws {
         let statement = try getInsertStatement()
-        try StatementEncoder().encode(row, into: statement)
+        try StatementEncoder.encode(row, into: statement)
         var _ = try statement.step()
     }
     
@@ -82,7 +82,7 @@ public class Collection<Row: Codable> {
     public func execute<T: Codable>(_ resultType: T.Type, sql: String) throws -> T {
         let statement = try connection.prepare(sql: sql)
         let _ = try statement.step()
-        return try StatementDecoder().decode(resultType, from: statement)
+        return try StatementDecoder.decode(resultType, from: statement)
     }
     
     private var insertStatement: Statement?
@@ -113,12 +113,12 @@ public class Collection<Row: Codable> {
         }
         
         public func fetchOne() throws -> Row? {
-            let rows = try StatementDecoder().decode([Row].self, from: prepare(), maxRows: 1)
+            let rows = try StatementDecoder.decode([Row].self, from: prepare(), maxRows: 1)
             return rows.first
         }
         
         public func fetchMany() throws -> [Row] {
-            return try StatementDecoder().decode([Row].self, from: prepare())
+            return try StatementDecoder.decode([Row].self, from: prepare())
         }
         
         private func prepare() throws -> Statement {
