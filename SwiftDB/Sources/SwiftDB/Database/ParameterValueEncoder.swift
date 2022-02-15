@@ -21,10 +21,8 @@ struct ParameterValueEncoder {
     
     static func encode<T: Encodable>(_ value: T) throws -> ParameterValue {
         
-        // This looks inefficient, but since T is known at compile time all non-matching
-        // conditions will be eliminated by the compiler
-        if T.self == Date.self    { return ParameterValue(value as! Date) }
-        if T.self == Data.self    { return ParameterValue(value as! Data) }
+        // This looks inefficient, but since T is known at compile time all
+        // non-matching conditions will be eliminated by the compiler
         if T.self == Bool.self    { return ParameterValue(value as! Bool) }
         if T.self == String.self  { return ParameterValue(value as! String) }
         if T.self == Double.self  { return ParameterValue(value as! Double) }
@@ -41,15 +39,21 @@ struct ParameterValueEncoder {
         if T.self == UInt32.self  { return ParameterValue(value as! UInt32) }
         if T.self == UInt64.self  { return ParameterValue(value as! UInt64) }
         
+        // TODO: extract into Protocol
+        if T.self == Date.self    { return ParameterValue(value as! Date) }
+        if T.self == Data.self    { return ParameterValue(value as! Data) }
+        
+        var result: ParameterValue?
         do {
-            let encoder = ParameterValueEncoderImpl()
+            let encoder = ParameterValueEncoderImpl(result: { result = $0 })
             try value.encode(to: encoder)
-            throw SwiftDBError.codingError(
-                message: "\(T.self) did not send any data to the encoder",
-                codingPath: [])
-        } catch EncodeResult.result(let value) {
-            return value
-        } catch EncodeResult.useJsonEncoder {
+            guard let result = result else {
+                throw SwiftDBError.codingError(
+                    message: "\(T.self) did not send any data to the encoder",
+                    codingPath: [])
+            }
+            return result
+        } catch is UseJsonEncoder {
             let jsonData = try jsonEncoder.encode(value)
             return .text(String(decoding: jsonData, as: UTF8.self))
         }
@@ -57,37 +61,38 @@ struct ParameterValueEncoder {
 }
 
 private struct ParameterValueEncoderImpl: Encoder {
+    var result: (ParameterValue) -> Void
+    
     var codingPath = [CodingKey]()
     var userInfo = [CodingUserInfoKey : Any]()
     
     func container<Key>(keyedBy type: Key.Type) -> KeyedEncodingContainer<Key> where Key : CodingKey {
-        return NotImplementedEncoder(error: EncodeResult.useJsonEncoder).container(keyedBy: type)
+        return NotImplementedEncoder(error: UseJsonEncoder()).container(keyedBy: type)
     }
     
     func unkeyedContainer() -> UnkeyedEncodingContainer {
-        return NotImplementedEncoder(error: EncodeResult.useJsonEncoder).unkeyedContainer()
+        return NotImplementedEncoder(error: UseJsonEncoder()).unkeyedContainer()
     }
     
     func singleValueContainer() -> SingleValueEncodingContainer {
-        return SingleValueContainer()
+        return SingleValueContainer(result: result)
     }
     
     struct SingleValueContainer: SingleValueEncodingContainer {
+        var result: (ParameterValue) -> Void
+        
         let codingPath = [CodingKey]()
         let userInfo = [CodingUserInfoKey : Any]()
         
         mutating func encodeNil() throws {
-            throw EncodeResult.result(.null)
+            result(.null)
         }
         
         mutating func encode<T: Encodable>(_ value: T) throws {
-            let encoded = try ParameterValueEncoder.encode(value)
-            throw EncodeResult.result(encoded)
+            result(try ParameterValueEncoder.encode(value))
         }
     }
 }
 
-private enum EncodeResult: Error {
-    case useJsonEncoder
-    case result(ParameterValue)
-}
+/// An Error thrown to indicate that we should use `JSONEncoder` to encode this value
+private struct UseJsonEncoder: Error {}

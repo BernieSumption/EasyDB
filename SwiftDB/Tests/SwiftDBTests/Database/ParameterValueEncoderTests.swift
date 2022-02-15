@@ -23,8 +23,6 @@ class ParameterValueEncoderTests: XCTestCase {
         
         let optionalIntPresent: Int? = 2
         assertEncode(optionalIntPresent, .int(2))
-        
-        
     }
     
     func testEncodeUUID() {
