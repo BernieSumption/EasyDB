@@ -29,7 +29,7 @@ class Statement {
     }
 
     /// Bind `N` parameters to the statement in positions `1..N`, clearing any previously bound parameters.
-    func bind(_ parameters: [ParameterValue]) throws {
+    func bind(_ parameters: [DatabaseValue]) throws {
         try checkOK(sqlite3_clear_bindings(statement))
 
         var index: Int = 1
@@ -40,7 +40,7 @@ class Statement {
     }
     
     /// Bind a value to a parameter by index
-    func bind(_ parameter: ParameterValue, to index: Int) throws {
+    func bind(_ parameter: DatabaseValue, to index: Int) throws {
         let index = Int32(index)
         switch parameter {
         case .double(let double):
@@ -61,7 +61,7 @@ class Statement {
     }
     
     /// Bind a value to a parameter by index
-    func bind(_ parameter: ParameterValue, to name: String) throws {
+    func bind(_ parameter: DatabaseValue, to name: String) throws {
         try bind(parameter, to: getParameterIndex(name))
     }
     

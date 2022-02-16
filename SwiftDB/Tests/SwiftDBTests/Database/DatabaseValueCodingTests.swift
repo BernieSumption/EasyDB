@@ -1,10 +1,10 @@
 import XCTest
 @testable import SwiftDB
 
-class ParameterValueEncoderTests: XCTestCase {
+class DatabaseValueCodingTests: XCTestCase {
     
-    func assertEncode<T: Encodable>(_ value: T, _ encoded: ParameterValue) {
-        XCTAssertEqual(try ParameterValueEncoder.encode(value), encoded)
+    func assertEncode<T: Encodable>(_ value: T, _ encoded: DatabaseValue) {
+        XCTAssertEqual(try DatabaseValueEncoder.encode(value), encoded)
     }
 
     func testEncodeBuiltInTypes() {

@@ -36,7 +36,7 @@ class ConnectionTests: XCTestCase {
         let insertStmt = try c.prepare(sql: "INSERT INTO tmp VALUES (?)")
         let selectStmt = try c.prepare(sql: "SELECT a FROM tmp ORDER BY rowid DESC LIMIT 1")
 
-        func insert(_ parameter: ParameterValue) throws {
+        func insert(_ parameter: DatabaseValue) throws {
             try insertStmt.reset()
             try insertStmt.bind([parameter])
             XCTAssertEqual(try insertStmt.step(), .done)
