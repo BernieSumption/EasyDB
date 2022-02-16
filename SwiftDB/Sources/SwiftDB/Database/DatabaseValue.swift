@@ -6,19 +6,14 @@ enum DatabaseValue: Equatable {
     case null
     case text(String)
     case blob(Data)
-    
+
     init(_ value: Bool) {
         self = .int(value ? 1 : 0)
     }
     func decode(as: Bool.Type) throws -> Bool {
-        let value = try decode(as: Int64.self)
-        switch value {
-        case 0: return false
-        case 1: return true
-        default: throw DatabaseValueError("expected 0 or 1 got \(value)")
-        }
+        return try decode(as: Int64.self) != 0
     }
-    
+
     init(_ value: String) {
         self = .text(value)
     }
@@ -28,7 +23,7 @@ enum DatabaseValue: Equatable {
         }
         return value
     }
-    
+
     init<T: BinaryFloatingPoint>(_ value: T) {
         self = .double(Double(value))
     }
@@ -38,35 +33,33 @@ enum DatabaseValue: Equatable {
         }
         return T(value)
     }
-    
+
     init<T: BinaryInteger>(_ value: T) {
+        // allow 64 bit unsigned integers to overflow into SQLite's signed 64 bit storage
         self = .int(Int64(truncatingIfNeeded: value))
     }
-    func decode<T: BinaryInteger>(as: T.Type) throws -> T {
+    func decode<T: FixedWidthInteger>(as: T.Type) throws -> T {
         guard case .int(let value) = self else {
             throw DatabaseValueError("expected int got \(self)")
         }
-        guard let value = T(exactly: value) else {
-            throw DatabaseValueError("\(value) out of range for \(T.self)")
-        }
-        return value
+        // reverse the overflow of unsigned 64 bit types
+        return T(truncatingIfNeeded: value)
     }
-    
+
     // TODO: move to protocol
     init(_ value: Date) {
         let encoded = iso8601Formatter.string(from: value)
-            .trimmingCharacters(in: .letters) // remove time zone
         self = .text(encoded)
     }
     func decode(as: Date.Type) throws -> Date {
         let value = try decode(as: String.self)
         guard let date = iso8601Formatter.date(from: value) else {
-            var displayValue = value.count > 30 ? value.prefix(30) + "..." : value
+            let displayValue = value.count > 30 ? value.prefix(30) + "..." : value
             throw DatabaseValueError("\"\(displayValue)\" is not an ISO 8601 date/time")
         }
         return date
     }
-    
+
     // TODO: move to protocol
     init(_ value: Data) {
         self = .blob(value)
@@ -81,7 +74,7 @@ enum DatabaseValue: Equatable {
 
 struct DatabaseValueError: Error, CustomStringConvertible {
     let description: String
-    
+
     init(_ description: String) {
         self.description = description
     }

@@ -3,40 +3,50 @@ import XCTest
 
 class DatabaseValueCodingTests: XCTestCase {
     
-    func assertEncode<T: Encodable>(_ value: T, _ encoded: DatabaseValue) {
-        XCTAssertEqual(try DatabaseValueEncoder.encode(value), encoded)
+    func check<T: Codable & Equatable>(_ value: T, _ expected: DatabaseValue) throws {
+        let encoded = try DatabaseValueEncoder.encode(value)
+        XCTAssertEqual(encoded, expected)
+        let decoded = try DatabaseValueDecoder.decode(T.self, from: encoded)
+        XCTAssertEqual(decoded, value)
+    }
+    
+    func checkAll<T: Codable & Equatable>(_ value: T, _ expected: DatabaseValue) throws {
+        try check(value, expected)
+        let optionalPresent: T? = value
+        try check(optionalPresent, expected)
+        let optionalAbsent: T? = nil
+        try check(optionalAbsent, .null)
+        let optional2Present: T?? = value
+        try check(optional2Present, expected)
+        let optional2Absent: T?? = nil
+        try check(optional2Absent, .null)
     }
 
-    func testEncodeBuiltInTypes() {
-        assertEncode(Int32(10), .int(10))
-        assertEncode(UInt64(10), .int(10))
-        assertEncode(Float16(10.5), .double(10.5))
-        assertEncode(Double(10.5), .double(10.5))
-        assertEncode("foo", .text("foo"))
-        let optionalStringNil: String? = nil
-        assertEncode(optionalStringNil, .null)
-        let optionalStringPresent: String? = "here"
-        assertEncode(optionalStringPresent, .text("here"))
-        
-        let optionalStringPresent2: Optional<String?> = "here"
-        assertEncode(optionalStringPresent2, .text("here"))
-        
-        let optionalIntPresent: Int? = 2
-        assertEncode(optionalIntPresent, .int(2))
+    func testEncodeBuiltInTypes() throws {
+        try checkAll(Int8(-5), .int(-5))
+        try checkAll(Int32(10), .int(10))
+        try checkAll(UInt64(UInt64.max), .int(-1)) // unsigned 64 bit integer stored with overflow
+        try checkAll(Float16(10.5), .double(10.5))
+        try checkAll(Double(10.5), .double(10.5))
+        try checkAll("foo", .text("foo"))
+        try checkAll(["a", "b"], .text(#"["a","b"]"#))
+        try checkAll(#"["a","b"]"#, .text(#"["a","b"]"#))
+        try checkAll(["a": 1, "b": 2], .text(#"{"a":1,"b":2}"#))
+        try checkAll(#"{"a":1,"b":2}"#, .text(#"{"a":1,"b":2}"#))
     }
     
-    func testEncodeUUID() {
+    func testEncodeUUID() throws {
         let uuid = UUID(uuid: (0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 1))
-        assertEncode(uuid, .text("00000000-0000-0000-0000-000000000001"))
+        try check(uuid, .text("00000000-0000-0000-0000-000000000001"))
     }
     
-    func testEncodeDate() {
+    func testEncodeDate() throws {
         let uuid = Date(timeIntervalSinceReferenceDate: 20)
-        assertEncode(uuid, .text("2001-01-01T00:00:20"))
+        try check(uuid, .text("2001-01-01T00:00:20Z"))
     }
     
-    func testEncodeData() {
+    func testEncodeData() throws {
         let data = Data(repeating: 12, count: 1)
-        assertEncode(data, .blob(data))
+        try check(data, .blob(data))
     }
 }

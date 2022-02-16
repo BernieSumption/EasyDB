@@ -19,11 +19,11 @@ enum DatabaseValueDecoder {
         if T.self == UInt16.self  { return try value.decode(as: UInt16.self) as! T }
         if T.self == UInt32.self  { return try value.decode(as: UInt32.self) as! T }
         if T.self == UInt64.self  { return try value.decode(as: UInt64.self) as! T }
-        
+
         // TODO: extract into Protocol
         if T.self == Date.self    { return try value.decode(as: Date.self) as! T }
         if T.self == Data.self    { return try value.decode(as: Data.self) as! T }
-        
+
         do {
             let decoder = DatabaseValueDecoderImpl(value: value)
             return try T(from: decoder)
@@ -36,33 +36,33 @@ enum DatabaseValueDecoder {
 
 private struct DatabaseValueDecoderImpl: Decoder {
     let value: DatabaseValue
-    
+
     let codingPath = [CodingKey]()
     let userInfo = [CodingUserInfoKey : Any]()
-    
+
     func container<Key: CodingKey>(keyedBy type: Key.Type) throws -> KeyedDecodingContainer<Key> {
         throw Result.useJsonDecoder
     }
-    
+
     func unkeyedContainer() throws -> UnkeyedDecodingContainer {
         throw Result.useJsonDecoder
     }
-    
+
     func singleValueContainer() throws -> SingleValueDecodingContainer {
         return SingleValueContainer(value: value)
     }
-    
+
     struct SingleValueContainer: SingleValueDecodingContainer {
-        
+
         let value: DatabaseValue
-        
+
         let codingPath = [CodingKey]()
         let userInfo = [CodingUserInfoKey : Any]()
-        
+
         func decodeNil() -> Bool {
             return value == .null
         }
-        
+
         func decode<T: Decodable>(_ type: T.Type) throws -> T {
             return try DatabaseValueDecoder.decode(T.self, from: value)
         }
