@@ -1,13 +1,13 @@
 import Foundation
 
-enum DatabaseValue: Equatable, CustomStringConvertible {
+public enum DatabaseValue: Equatable, CustomStringConvertible {
     case double(Double)
     case int(Int64)
     case null
     case text(String)
     case blob(Data)
     
-    var description: String {
+    public var description: String {
         switch self {
         case .double: return "double"
         case .int: return "int"
@@ -79,29 +79,11 @@ enum DatabaseValue: Equatable, CustomStringConvertible {
         }
     }
 
-    // TODO: move to protocol
-    init(_ value: Date) {
-        let encoded = iso8601Formatter.string(from: value)
-        self = .text(encoded)
+    init(_ value: DatabaseValueConvertible) {
+        self = value.databaseValue
     }
-    func decode(as: Date.Type) throws -> Date {
-        let value = try decode(as: String.self)
-        guard let date = iso8601Formatter.date(from: value) else {
-            let displayValue = value.count > 30 ? value.prefix(30) + "..." : value
-            throw DatabaseValueError("\"\(displayValue)\" is not an ISO 8601 date/time")
-        }
-        return date
-    }
-
-    // TODO: move to protocol
-    init(_ value: Data) {
-        self = .blob(value)
-    }
-    func decode(as: Data.Type) throws -> Data {
-        guard case .blob(let value) = self else {
-            throw DatabaseValueError("expected blob got \(self)")
-        }
-        return value
+    func decode<T: DatabaseValueConvertible>(as: T.Type) throws -> T {
+        return try T(from: self)
     }
 }
 

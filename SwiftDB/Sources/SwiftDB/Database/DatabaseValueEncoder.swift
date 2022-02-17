@@ -25,10 +25,6 @@ struct DatabaseValueEncoder {
         if T.self == UInt32.self  { return DatabaseValue(value as! UInt32) }
         if T.self == UInt64.self  { return DatabaseValue(value as! UInt64) }
         
-        // TODO: extract into Protocol
-        if T.self == Date.self    { return DatabaseValue(value as! Date) }
-        if T.self == Data.self    { return DatabaseValue(value as! Data) }
-        
         do {
             let encoder = DatabaseValueEncoderImpl()
             try value.encode(to: encoder)

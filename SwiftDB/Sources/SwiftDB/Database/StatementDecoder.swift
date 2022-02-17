@@ -35,9 +35,10 @@ private struct StatementDecoderImpl: Decoder {
         return ManyRowsUnkeyedContainer(statement, codingPath: [], maxRows: maxRows)
     }
     
-    /// Decode the first column of the first row into a scalar value
+    /// Decode the first column of the first row into a single value
     func singleValueContainer() throws -> SingleValueDecodingContainer {
-        return SingleRowSingleValueContainer(statement, column: 0, codingPath: codingPath)
+        let value = try statement.read(column: 0)
+        return try DatabaseValueDecoder.singleValueContainer(value, codingPath: codingPath)
     }
 }
 
@@ -64,7 +65,8 @@ private struct SingleRowDecoderImpl: Decoder {
     
     /// Decode the first column into a scalar value
     func singleValueContainer() throws -> SingleValueDecodingContainer {
-        return SingleRowSingleValueContainer(statement, column: 0, codingPath: codingPath)
+        let value = try statement.read(column: 0)
+        return try DatabaseValueDecoder.singleValueContainer(value, codingPath: codingPath)
     }
 }
 
@@ -94,7 +96,8 @@ private struct SingleRowSingleColumnDecoderImpl: Decoder {
     
     /// Decode the value into a scalar value
     func singleValueContainer() throws -> SingleValueDecodingContainer {
-        return SingleRowSingleValueContainer(statement, column: column, codingPath: codingPath)
+        let value = try statement.read(column: column)
+        return try DatabaseValueDecoder.singleValueContainer(value, codingPath: codingPath)
     }
 }
 
@@ -150,32 +153,6 @@ private struct SingleRowKeyedContainer<Key: CodingKey>: KeyedDecodingContainerPr
         throw SwiftDBError.codingError(
             message: "Decodable types that use KeyedDecodingContainer.superDecoder(forKey:) (usually class types) are not supported",
             codingPath: codingPath)
-    }
-}
-
-/// Decodes one row of the results into a single value using the first column of the row
-private struct SingleRowSingleValueContainer: SingleValueDecodingContainer {
-    private let statement: Statement
-    private let column: Int
-    
-    let codingPath: [CodingKey]
-    
-    init(_ statement: Statement, column: Int, codingPath: [CodingKey]) {
-        self.statement = statement
-        self.codingPath = codingPath
-        self.column = column
-    }
-    
-    func decodeNil() -> Bool {
-        guard let isNull = try? statement.readNull(column: column) else {
-            return false
-        }
-        return isNull
-    }
-    
-    func decode<T: Decodable>(_ type: T.Type) throws -> T  {
-        let value = try statement.read(column: column)
-        return try DatabaseValueDecoder.decode(type, from: value)
     }
 }
 
@@ -329,28 +306,4 @@ private struct StatementKey: CodingKey {
         self.stringValue = int.description
         self.intValue = int
     }
-}
-
-internal var iso8601Formatter: ISO8601DateFormatter = {
-    let formatter = ISO8601DateFormatter()
-    formatter.formatOptions = .withInternetDateTime
-    return formatter
-}()
-
-private func parseISODate(_ string: String, codingPath: [CodingKey]) throws -> Date {
-    guard let date = iso8601Formatter.date(from: string) else {
-        throw SwiftDBError.codingError(
-            message: "Expected an ISO 8601 date string, got \"\(string)\"",
-            codingPath: codingPath
-        )
-    }
-    return date
-}
-
-private protocol _OptionalProtocol {
-  static var nilValue: Self { get }
-}
-
-extension Optional : _OptionalProtocol {
-    static var nilValue: Self { return nil }
 }
