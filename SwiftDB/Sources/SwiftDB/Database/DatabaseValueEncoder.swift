@@ -25,6 +25,10 @@ struct DatabaseValueEncoder {
         if T.self == UInt32.self  { return DatabaseValue(value as! UInt32) }
         if T.self == UInt64.self  { return DatabaseValue(value as! UInt64) }
         
+        if let value = value as? DatabaseValueConvertible {
+            return value.databaseValue
+        }
+        
         do {
             let encoder = DatabaseValueEncoderImpl()
             try value.encode(to: encoder)

@@ -19,6 +19,10 @@ enum DatabaseValueDecoder {
         if T.self == UInt16.self  { return try value.decode(as: UInt16.self) as! T }
         if T.self == UInt32.self  { return try value.decode(as: UInt32.self) as! T }
         if T.self == UInt64.self  { return try value.decode(as: UInt64.self) as! T }
+        
+        if let type = type as? DatabaseValueConvertible.Type {
+            return try type.fromDatabaseValue(value) as! T
+        }
 
         do {
             let decoder = DatabaseValueDecoderImpl(value: value, codingPath: [])

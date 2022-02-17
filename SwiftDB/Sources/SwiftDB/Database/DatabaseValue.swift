@@ -83,7 +83,11 @@ public enum DatabaseValue: Equatable, CustomStringConvertible {
         self = value.databaseValue
     }
     func decode<T: DatabaseValueConvertible>(as: T.Type) throws -> T {
-        return try T(from: self)
+        let instance = try T.fromDatabaseValue(self)
+        guard let instance = instance as? T else {
+            throw DatabaseValueError("expected fromDatabaseValue to return \(T.self), got \(type(of: instance))")
+        }
+        return instance
     }
 }
 
