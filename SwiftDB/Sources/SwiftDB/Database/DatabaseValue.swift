@@ -1,11 +1,21 @@
 import Foundation
 
-enum DatabaseValue: Equatable {
+enum DatabaseValue: Equatable, CustomStringConvertible {
     case double(Double)
     case int(Int64)
     case null
     case text(String)
     case blob(Data)
+    
+    var description: String {
+        switch self {
+        case .double: return "double"
+        case .int: return "int"
+        case .null: return "null"
+        case .text: return "text"
+        case .blob: return "blob"
+        }
+    }
 
     init(_ value: Bool) {
         self = .int(value ? 1 : 0)
@@ -18,20 +28,30 @@ enum DatabaseValue: Equatable {
         self = .text(value)
     }
     func decode(as: String.Type) throws -> String {
-        guard case .text(let value) = self else {
-            throw DatabaseValueError("expected string got \(self)")
+        switch self {
+        case .text(let value):
+            return value
+        case .double(let value):
+            return String(value)
+        case .int(let value):
+            return String(value)
+        case .blob, .null:
+            throw DatabaseValueError("expected text got \(self)")
         }
-        return value
     }
 
     init<T: BinaryFloatingPoint>(_ value: T) {
         self = .double(Double(value))
     }
     func decode<T: BinaryFloatingPoint>(as: T.Type) throws -> T {
-        guard case .double(let value) = self else {
+        switch self {
+        case .double(let value):
+            return T(value)
+        case .int(let value):
+            return T(value)
+        case .blob, .null, .text:
             throw DatabaseValueError("expected double got \(self)")
         }
-        return T(value)
     }
 
     init<T: BinaryInteger>(_ value: T) {
@@ -39,11 +59,24 @@ enum DatabaseValue: Equatable {
         self = .int(Int64(truncatingIfNeeded: value))
     }
     func decode<T: FixedWidthInteger>(as: T.Type) throws -> T {
-        guard case .int(let value) = self else {
+        switch self {
+        case .double(let value):
+            guard let value = T(exactly: value) else {
+                throw DatabaseValueError("could not exactly represent \(value) as \(T.self)")
+            }
+            return value
+        case .int(let value):
+            if T.self == UInt64.self || T.self == UInt.self {
+                // reverse the overflow applied at encoding time
+                return T(truncatingIfNeeded: value)
+            }
+            guard let value = T(exactly: value) else {
+                throw DatabaseValueError("could not exactly represent \(value) as \(T.self)")
+            }
+            return value
+        case .blob, .null, .text:
             throw DatabaseValueError("expected int got \(self)")
         }
-        // reverse the overflow of unsigned 64 bit types
-        return T(truncatingIfNeeded: value)
     }
 
     // TODO: move to protocol

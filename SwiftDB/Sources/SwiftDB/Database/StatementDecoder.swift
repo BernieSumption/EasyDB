@@ -123,88 +123,9 @@ private struct SingleRowKeyedContainer<Key: CodingKey>: KeyedDecodingContainerPr
         return try statement.readNull(column: key.stringValue)
     }
     
-    func decode(_ type: Bool.Type, forKey key: Key) throws -> Bool {
-        try statement.readInt(column: key.stringValue) != 0
-    }
-    
-    func decode(_ type: String.Type, forKey key: Key) throws -> String {
-        try statement.readText(column: key.stringValue)
-    }
-    
-    func decode(_ type: Double.Type, forKey key: Key) throws -> Double {
-        return try statement.readDouble(column: key.stringValue)
-    }
-    
-    func decode(_ type: Float.Type, forKey key: Key) throws -> Float {
-        return Float(try statement.readDouble(column: key.stringValue))
-    }
-    
-    func decode(_ type: Int.Type, forKey key: Key) throws -> Int {
-        return try decodeInteger(forKey: key)
-    }
-    
-    func decode(_ type: Int8.Type, forKey key: Key) throws -> Int8 {
-        return try decodeInteger(forKey: key)
-    }
-    
-    func decode(_ type: Int16.Type, forKey key: Key) throws -> Int16 {
-        return try decodeInteger(forKey: key)
-    }
-    
-    func decode(_ type: Int32.Type, forKey key: Key) throws -> Int32 {
-        return try decodeInteger(forKey: key)
-    }
-    
-    func decode(_ type: Int64.Type, forKey key: Key) throws -> Int64 {
-        return try statement.readInt(column: key.stringValue)
-    }
-    
-    func decode(_ type: UInt.Type, forKey key: Key) throws -> UInt {
-        return UInt(try decode(UInt64.self, forKey: key))
-    }
-    
-    func decode(_ type: UInt8.Type, forKey key: Key) throws -> UInt8 {
-        return try decodeInteger(forKey: key)
-    }
-    
-    func decode(_ type: UInt16.Type, forKey key: Key) throws -> UInt16 {
-        return try decodeInteger(forKey: key)
-    }
-    
-    func decode(_ type: UInt32.Type, forKey key: Key) throws -> UInt32 {
-        return try decodeInteger(forKey: key)
-    }
-    
-    func decode(_ type: UInt64.Type, forKey key: Key) throws -> UInt64 {
-        // for UInt64 we let the value overflow, because that's the only way of storing a UInt64 in sqlite
-        let value64 = try statement.readInt(column: key.stringValue)
-        return UInt64(truncatingIfNeeded: value64)
-    }
-    
-    private func decodeInteger<T: FixedWidthInteger>(forKey key: Key) throws -> T {
-        let value64 = try statement.readInt(column: key.stringValue)
-        guard let value: T = T(exactly: value64) else {
-            throw SwiftDBError.codingError(
-                message: "number value \(value64) doesn't fit exactly into a \(T.self)",
-                codingPath: codingPath)
-        }
-        return value
-    }
-    
     func decode<T: Decodable>(_ type: T.Type, forKey key: Key) throws -> T {
-        // IMPORTANT: any special cases here need matching special cases
-        // in StatementEncoder.encode<T>(_:forKey:) and in other decoding methods
-        // in this file
-        if let type = type as? _OptionalProtocol.Type {
-            if try statement.readNull(column: key.stringValue) {
-                return type.nilValue as! T
-            }
-        }
-        if type == Data.self {
-            return try statement.readBlob(column: key.stringValue) as! T
-        }
-        let string = try decode(String.self, forKey: key)
-        return try decodeStringHelper(type, from: string, codingPath: codingPath)
+        let value = try statement.read(column: key.stringValue)
+        return try DatabaseValueDecoder.decode(type, from: value)
     }
     
     func nestedContainer<NestedKey: CodingKey>(keyedBy type: NestedKey.Type, forKey key: Key) throws -> KeyedDecodingContainer<NestedKey> {
@@ -252,87 +173,9 @@ private struct SingleRowSingleValueContainer: SingleValueDecodingContainer {
         return isNull
     }
     
-    func decode(_ type: Bool.Type) throws -> Bool {
-        try statement.readInt(column: column) != 0
-    }
-    
-    func decode(_ type: String.Type) throws -> String {
-        try statement.readText(column: column)
-    }
-    
-    func decode(_ type: Double.Type) throws -> Double {
-        return try statement.readDouble(column: column)
-    }
-    
-    func decode(_ type: Float.Type) throws -> Float {
-        return Float(try statement.readDouble(column: column))
-    }
-    
-    func decode(_ type: Int.Type) throws -> Int {
-        return try decodeInteger()
-    }
-    
-    func decode(_ type: Int8.Type) throws -> Int8 {
-        return try decodeInteger()
-    }
-    
-    func decode(_ type: Int16.Type) throws -> Int16 {
-        return try decodeInteger()
-    }
-    
-    func decode(_ type: Int32.Type) throws -> Int32 {
-        return try decodeInteger()
-    }
-    
-    func decode(_ type: Int64.Type) throws -> Int64 {
-        return try statement.readInt(column: column)
-    }
-    
-    func decode(_ type: UInt.Type) throws -> UInt {
-        return try decodeInteger()
-    }
-    
-    func decode(_ type: UInt8.Type) throws -> UInt8 {
-        return try decodeInteger()
-    }
-    
-    func decode(_ type: UInt16.Type) throws -> UInt16 {
-        return try decodeInteger()
-    }
-    
-    func decode(_ type: UInt32.Type) throws -> UInt32 {
-        return try decodeInteger()
-    }
-    
-    func decode(_ type: UInt64.Type) throws -> UInt64 {
-        let value64 = try statement.readInt(column: column)
-        return UInt64(truncatingIfNeeded: value64)
-    }
-    
-    private func decodeInteger<T: FixedWidthInteger>() throws -> T {
-        let value64 = try statement.readInt(column: column)
-        guard let value: T = T(exactly: value64) else {
-            throw SwiftDBError.codingError(
-                message: "number value \(value64) doesn't fit into a \(T.self)",
-                codingPath: codingPath)
-        }
-        return value
-    }
-    
     func decode<T: Decodable>(_ type: T.Type) throws -> T  {
-        // IMPORTANT: any special cases here need matching special cases
-        // in StatementEncoder.encode<T>(_:forKey:) and in other decoding methods
-        // in this file
-        if let type = type as? _OptionalProtocol.Type {
-            if try statement.readNull(column: column) {
-                return type.nilValue as! T
-            }
-        }
-        if type == Data.self {
-            return try statement.readBlob(column: column) as! T
-        }
-        let string = try decode(String.self)
-        return try decodeStringHelper(type, from: string, codingPath: codingPath)
+        let value = try statement.read(column: column)
+        return try DatabaseValueDecoder.decode(type, from: value)
     }
 }
 
@@ -486,23 +329,6 @@ private struct StatementKey: CodingKey {
         self.stringValue = int.description
         self.intValue = int
     }
-}
-
-private func decodeStringHelper<T: Decodable>(
-    _ type: T.Type,
-    from string: String,
-    codingPath: [CodingKey]
-) throws -> T  {
-    // IMPORTANT: any special cases here need matching special cases
-    // in StatementEncoder.encode<T>(_:forKey:) and in other decoding methods
-    // in this file
-    if type == String.self {
-        return string as! T
-    }
-    if type == Date.self {
-        return try parseISODate(string, codingPath: codingPath) as! T
-    }
-    return try JSONColumn.decode(type, from: string)
 }
 
 internal var iso8601Formatter: ISO8601DateFormatter = {

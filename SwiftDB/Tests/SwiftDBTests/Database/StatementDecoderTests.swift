@@ -5,51 +5,85 @@ class StatementDecoderTests: XCTestCase {
     
     let c: Connection! = try? Connection(path: ":memory:")
     
-    func testSelectAs<T: Decodable & Equatable>(_ sql: String, _ type: T.Type, _ expected: T) throws {
+    func selectAs<T: Decodable & Equatable>(_ sql: String, _ type: T.Type) throws -> T {
         let s = try c.prepare(sql: sql)
-        XCTAssertEqual(try StatementDecoder.decode(type, from: s), expected)
+        return try StatementDecoder.decode(type, from: s)
     }
 
-    func testDecodeSingleIntegers() throws {
-        
-        func testInteger<T: Decodable & Equatable & FixedWidthInteger>(_ type: T.Type) throws {
-            try testSelectAs("SELECT 1", T.self, 1)
-            // encoders are supposed to wrap integers to Int64 since sqlite can't store UInt64 natively
-            let max: T = T.max > Int64.max ? T(Int64(truncatingIfNeeded: T.max)) : T.max
-            try testSelectAs("SELECT \(max.description)", type, max)
-            try testSelectAs("SELECT \(T.min.description)", type.self, T.min)
+    func testSelectAs<T: Decodable & Equatable>(_ sql: String, _ type: T.Type, _ expected: T) {
+        XCTAssertEqual(try selectAs(sql, type), expected)
+    }
+    
+    func testSelectError<T: Decodable & Equatable>(_ sql: String, _ type: T.Type, _ message: String) {
+        XCTAssertThrowsError(try selectAs(sql, type)) { error in
+            XCTAssertEqual(String(describing: error), message)
+        }
+    }
+
+    func testDecodeIntegers() throws {
+        func testInteger<T: Decodable & Equatable & FixedWidthInteger>(_ type: T.Type) {
+            testSelectAs("SELECT 1", T.self, 1)
+            testSelectAs("SELECT \(T.max)", type, T.max)
+            testSelectAs("SELECT \(T.min)", type.self, T.min)
         }
         
-        try testInteger(Int.self)
-        try testInteger(Int8.self)
-        try testInteger(Int16.self)
-        try testInteger(Int32.self)
-        try testInteger(Int64.self)
-        try testInteger(UInt8.self)
-        try testInteger(UInt16.self)
-        try testInteger(UInt32.self)
+        testInteger(Int.self)
+        testInteger(Int8.self)
+        testInteger(Int16.self)
+        testInteger(Int32.self)
+        testInteger(Int64.self)
+        testInteger(UInt8.self)
+        testInteger(UInt16.self)
+        testInteger(UInt32.self)
+        
+        testSelectError("SELECT 12345", Int8.self, "could not exactly represent 12345 as Int8")
     }
     
-    func testDecodeSingleFloats() throws {
-        try testSelectAs("SELECT 1", Float.self, 1)
-        try testSelectAs("SELECT -1000.123", Float.self, -1000.123)
-        try testSelectAs("SELECT 1", Float32.self, 1)
-        try testSelectAs("SELECT -1000.123", Float32.self, -1000.123)
-        try testSelectAs("SELECT 1", Float64.self, 1)
-        try testSelectAs("SELECT -1000.123", Float64.self, -1000.123)
-        try testSelectAs("SELECT 1", Double.self, 1)
-        try testSelectAs("SELECT -1000.123", Double.self, -1000.123)
-        try testSelectAs("SELECT 1", Float16.self, 1)
-        try testSelectAs("SELECT -1000.123", Float16.self, -1000.123)
+    func testDecodeConversionsToInteger() throws {
+        testSelectAs("SELECT 1.0", Int.self, 1)
+        
+        testSelectError("SELECT 1.7", Int.self, "could not exactly represent 1.7 as Int")
+        testSelectError("SELECT NULL", Int.self, "expected int got null")
+        testSelectError("SELECT 'foo'", Int.self, "expected int got text")
+        testSelectError("SELECT x'12'", Int.self, "expected int got blob")
     }
     
-    func testDecodeSingleString() throws {
-        try testSelectAs("SELECT ''", String.self, "")
-        try testSelectAs("SELECT 'Unicode 统一码 😘'", String.self, "Unicode 统一码 😘")
+    func testDecodeDouble() throws {
+        testSelectAs("SELECT 1.0", Float.self, 1)
+        testSelectAs("SELECT -1000.123", Float.self, -1000.123)
+        testSelectAs("SELECT 1.0", Float32.self, 1)
+        testSelectAs("SELECT -1000.123", Float32.self, -1000.123)
+        testSelectAs("SELECT 1.0", Float64.self, 1)
+        testSelectAs("SELECT -1000.123", Float64.self, -1000.123)
+        testSelectAs("SELECT 1.0", Double.self, 1)
+        testSelectAs("SELECT -1000.123", Double.self, -1000.123)
+        testSelectAs("SELECT 1.0", Float16.self, 1)
+        testSelectAs("SELECT -1000.123", Float16.self, -1000.123)
+    }
+    
+    func testDecodeConversionsToDouble() throws {
+        testSelectAs("SELECT 1", Double.self, 1)
+        
+        testSelectError("SELECT NULL", Double.self, "expected double got null")
+        testSelectError("SELECT 'foo'", Double.self, "expected double got text")
+        testSelectError("SELECT x'12'", Double.self, "expected double got blob")
+    }
+    
+    func testDecodeString() throws {
+        testSelectAs("SELECT ''", String.self, "")
+        testSelectAs("SELECT 'Unicode 统一码 😘'", String.self, "Unicode 统一码 😘")
+    }
+    
+    func testDecodeConversionsToString() throws {
+        testSelectAs("SELECT 1", String.self, "1")
+        testSelectAs("SELECT 1.0", String.self, "1.0")
+        
+        testSelectError("SELECT NULL", String.self, "expected text got null")
+        testSelectError("SELECT x'12'", String.self, "expected text got blob")
     }
     
     func testDecodeSingleCodable() throws {
-        try testSelectAs(
+        testSelectAs(
             #"SELECT '{"a": 2, "b": "foo", "data": "ERIT"}'"#,
             MySingleCodable.self,
             MySingleCodable(a: 2, b: "foo", data: Data([17, 18, 19]))
@@ -79,19 +113,19 @@ class StatementDecoderTests: XCTestCase {
     }
     
     func testDecodeSingleData() throws {
-        try testSelectAs("SELECT x''", Data.self, Data())
-        try testSelectAs("SELECT x'FF0600B3'", Data.self, Data([255, 6, 0, 179]))
+        testSelectAs("SELECT x''", Data.self, Data())
+        testSelectAs("SELECT x'FF0600B3'", Data.self, Data([255, 6, 0, 179]))
     }
     
     func testDecodeSingleDate() throws {
-        try testSelectAs("SELECT '2001-01-01T00:00:20Z'", Date.self, Date(timeIntervalSinceReferenceDate: 20))
+        testSelectAs("SELECT '2001-01-01T00:00:20Z'", Date.self, Date(timeIntervalSinceReferenceDate: 20))
     }
     
     func testDecodeSingleOptionals() throws {
-        try testSelectAs("SELECT NULL", Int?.self, nil)
-        try testSelectAs("SELECT 4", Int?.self, 4)
-        try testSelectAs("SELECT NULL", MySingleCodable?.self, nil)
-        try testSelectAs(
+        testSelectAs("SELECT NULL", Int?.self, nil)
+        testSelectAs("SELECT 4", Int?.self, 4)
+        testSelectAs("SELECT NULL", MySingleCodable?.self, nil)
+        testSelectAs(
             #"SELECT '{"a": 2, "b": "foo", "data": "ERIT"}'"#,
             MySingleCodable?.self,
             MySingleCodable(a: 2, b: "foo", data: Data([17, 18, 19]))
@@ -99,7 +133,7 @@ class StatementDecoderTests: XCTestCase {
     }
     
     func testDecodeCodable() throws {
-        try testSelectAs(
+        testSelectAs(
             """
                 SELECT
                 1 AS i,
@@ -128,9 +162,9 @@ class StatementDecoderTests: XCTestCase {
     }
     
     func testDecodeDictionary() throws {
-        try testSelectAs("SELECT 1 as foo, 2 as bar", [String: Int].self, ["foo": 1, "bar": 2])
-        try testSelectAs("SELECT 1 as foo, '🎉' as bar", [String: String].self, ["foo": "1", "bar": "🎉"])
-        try testSelectAs(
+        testSelectAs("SELECT 1 as foo, 2 as bar", [String: Int].self, ["foo": 1, "bar": 2])
+        testSelectAs("SELECT 'x' as foo, '🎉' as bar", [String: String].self, ["foo": "x", "bar": "🎉"])
+        testSelectAs(
             #"SELECT '{"a":1}' as foo, '{"a":2}' as bar"#,
             [String: Sub].self,
             ["foo": Sub(a: 1), "bar": Sub(a: 2)])
@@ -139,17 +173,17 @@ class StatementDecoderTests: XCTestCase {
             let a: Int
         }
         
-        try testSelectAs("SELECT 1 as foo, NULL as bar", [String: Int?].self, ["foo": 1, "bar": nil])
+        testSelectAs("SELECT 1 as foo, NULL as bar", [String: Int?].self, ["foo": 1, "bar": nil])
     }
     
     func testDecodeScalarArray() throws {
-        try testSelectAs("SELECT 1 as foo", [Int].self, [1])
-        try testSelectAs("SELECT 1 as foo UNION SELECT 2 as foo", [String].self, ["1", "2"])
+        testSelectAs("SELECT 1 as foo", [Int].self, [1])
+        testSelectAs("SELECT 1 as foo UNION SELECT 2 as foo", [String].self, ["1", "2"])
     }
     
     func testDecodeStructArray() throws {
-        try testSelectAs("SELECT 1 as i, 'foo' as s", [Row].self, [Row(i: 1, s: "foo")])
-        try testSelectAs(
+        testSelectAs("SELECT 1 as i, 'foo' as s", [Row].self, [Row(i: 1, s: "foo")])
+        testSelectAs(
             """
                 SELECT 1 as i, 'foo' as s
                 UNION
@@ -169,8 +203,8 @@ class StatementDecoderTests: XCTestCase {
     }
     
     func testDecodeScalarArrays() throws {
-        try testSelectAs("SELECT 1 as foo, 2 as bar, 8 as baz", [[Int]].self, [[1, 2, 8]])
-        try testSelectAs(
+        testSelectAs("SELECT 1 as foo, 2 as bar, 8 as baz", [[Int]].self, [[1, 2, 8]])
+        testSelectAs(
             """
                 SELECT 1 as foo, 2 as bar
                 UNION

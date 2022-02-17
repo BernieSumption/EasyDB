@@ -63,7 +63,7 @@ class CollectionTests: XCTestCase {
         let c = try db.collection(Row.self)
         
         // create rows where reading row #2 will cause an error
-        try c.execute(sql: #"INSERT INTO Row (t) VALUES ('"OK"'), ('"error row 2 blocked"')"#)
+        try c.execute(sql: #"INSERT INTO Row (t) VALUES ('OK'), ('error row 2 blocked')"#)
         
         // check that reading all rows does indeed cause an error
         XCTAssertThrowsError(try c.select().fetchMany()) { error in
@@ -92,6 +92,7 @@ struct Throw: Codable, Equatable {
     init(from decoder: Decoder) throws {
         let container = try decoder.singleValueContainer()
         value = try container.decode(String.self)
+        print(value)
         if value.starts(with: "error") {
             throw Invalid(value)
         }

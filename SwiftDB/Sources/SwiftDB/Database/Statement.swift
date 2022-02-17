@@ -121,6 +121,43 @@ class Statement {
         case done
     }
     
+    func read(column name: String) throws -> DatabaseValue {
+        return try read(column: try getColumnIndex(name))
+    }
+    
+    func read(column index: Int) throws -> DatabaseValue {
+        try checkRowAvailable()
+        let index = Int32(index)
+        let type = sqlite3_column_type(statement, index)
+        
+        switch type {
+        case SQLITE_INTEGER:
+            return .int(sqlite3_column_int64(statement, index))
+            
+        case SQLITE_FLOAT:
+            return .double(sqlite3_column_double(statement, index))
+            
+        case SQLITE_TEXT:
+            guard let cString = sqlite3_column_text(statement, index) else {
+                return .text("")
+            }
+            return .text(String(cString: cString))
+            
+        case SQLITE_BLOB:
+            guard let bytes = sqlite3_column_blob(statement, index) else {
+                return .blob(Data())
+            }
+            let count = Int(sqlite3_column_bytes(statement, index))
+            return .blob(Data(bytes: bytes, count: count))
+            
+        case SQLITE_NULL:
+            return .null
+            
+        default:
+            throw SwiftDBError.unexpected(message: "sqlite3_column_type returned unknown code \(type)")
+        }
+    }
+    
     func readNull(column name: String) throws -> Bool {
         return try readNull(column: try getColumnIndex(name))
     }
@@ -128,50 +165,6 @@ class Statement {
     func readNull(column index: Int) throws -> Bool {
         try checkRowAvailable()
         return sqlite3_column_type(statement, Int32(index)) == SQLITE_NULL
-    }
-
-    func readInt(column name: String) throws -> Int64 {
-        return try readInt(column: try getColumnIndex(name))
-    }
-    
-    func readInt(column index: Int) throws -> Int64 {
-        try checkRowAvailable()
-        return sqlite3_column_int64(statement, Int32(index))
-    }
-
-    func readText(column name: String) throws -> String {
-        return try readText(column: try getColumnIndex(name))
-    }
-    
-    func readText(column index: Int) throws -> String {
-        try checkRowAvailable()
-        guard let cString = sqlite3_column_text(statement, Int32(index)) else {
-            return ""
-        }
-        let s = String(cString: cString)
-        return s
-    }
-    
-    func readBlob(column name: String) throws -> Data {
-        return try readBlob(column: try getColumnIndex(name))
-    }
-    
-    func readBlob(column index: Int) throws -> Data {
-        try checkRowAvailable()
-        guard let bytes = sqlite3_column_blob(statement, Int32(index)) else {
-            return Data()
-        }
-        let count = Int(sqlite3_column_bytes(statement, Int32(index)))
-        return Data(bytes: bytes, count: count)
-    }
-    
-    func readDouble(column name: String) throws -> Double {
-        return try readDouble(column: try getColumnIndex(name))
-    }
-    
-    func readDouble(column index: Int) throws -> Double {
-        try checkRowAvailable()
-        return sqlite3_column_double(statement, Int32(index))
     }
     
     var columnNames: [String] {
