@@ -107,6 +107,7 @@ private struct NamedParameterEncodingContainer<Key: CodingKey>: KeyedEncodingCon
     mutating func encode<T: Encodable>(_ value: T, forKey key: Key) throws {
         // IMPORTANT: any special cases here need matching special cases
         // in StatementDecoder.decode<T>(_:forKey:)
+        // TODO: remove
         if let value = value as? _OptionalProtocol, value.isNil {
             try encodeNil(forKey: key)
         }
@@ -146,6 +147,7 @@ private struct NamedParameterEncodingContainer<Key: CodingKey>: KeyedEncodingCon
     
 }
 
+// TODO: Remove
 private protocol _OptionalProtocol {
     var isNil: Bool { get }
 }

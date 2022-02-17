@@ -21,7 +21,7 @@ enum DatabaseValueDecoder {
         if T.self == UInt64.self  { return try value.decode(as: UInt64.self) as! T }
         
         if let type = type as? DatabaseValueConvertible.Type {
-            return try type.fromDatabaseValue(value) as! T
+            return try type.init(from: value) as! T
         }
 
         do {

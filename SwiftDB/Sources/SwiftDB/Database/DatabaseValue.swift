@@ -78,16 +78,24 @@ public enum DatabaseValue: Equatable, CustomStringConvertible {
             throw DatabaseValueError("expected int got \(self)")
         }
     }
+    
+    init(_ value: Data) {
+        self = .blob(value)
+    }
+    func decode(as: Data.Type) throws -> Data {
+        switch self {
+        case .blob(let value):
+            return value
+        case .text, .int, .double, .null:
+            throw DatabaseValueError("expected data got \(self)")
+        }
+    }
 
     init(_ value: DatabaseValueConvertible) {
         self = value.databaseValue
     }
     func decode<T: DatabaseValueConvertible>(as: T.Type) throws -> T {
-        let instance = try T.fromDatabaseValue(self)
-        guard let instance = instance as? T else {
-            throw DatabaseValueError("expected fromDatabaseValue to return \(T.self), got \(type(of: instance))")
-        }
-        return instance
+        return try T(from: self)
     }
 }
 
