@@ -92,6 +92,16 @@ class StatementEncoderTests: XCTestCase {
             XCTAssertTrue(String(describing: error).contains("providing single parameter values"), String(describing: error))
         }
     }
+    
+    func testEncodeDate() throws {
+        let s = try c.prepare(sql: "SELECT :date as date")
+        
+        let date = Date(timeIntervalSinceReferenceDate: 20)
+        try StatementEncoder.encode(["date": date], into: s)
+        
+        let _ = try s.step()
+        XCTAssertEqual(try s.read(column: "date"), .text("2001-01-01T00:00:20Z"))
+    }
 }
 
 
