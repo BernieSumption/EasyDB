@@ -32,16 +32,19 @@ class DatabaseValueCodingTests: XCTestCase {
     func testEncodeUUID() throws {
         let uuid = UUID(uuid: (0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 1))
         try testBuiltInType(uuid, .text("00000000-0000-0000-0000-000000000001"))
+        try testStructure(uuid, #""00000000-0000-0000-0000-000000000001""#)
     }
     
     func testEncodeDate() throws {
-        let uuid = Date(timeIntervalSinceReferenceDate: 20)
-        try testBuiltInType(uuid, .text("2001-01-01T00:00:20Z"))
+        let date = Date(timeIntervalSinceReferenceDate: 20)
+        try testBuiltInType(date, .text("2001-01-01T00:00:20Z"))
+        try testStructure(date, #""2001-01-01T00:00:20Z""#)
     }
     
     func testEncodeData() throws {
-        let data = Data(repeating: 12, count: 1)
+        let data = Data([0x12, 0x34])
         try testBuiltInType(data, .blob(data))
+        try testStructure(data, #""EjQ=""#)
     }
     
 }
