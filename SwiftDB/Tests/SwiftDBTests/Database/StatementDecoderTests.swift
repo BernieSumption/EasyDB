@@ -128,8 +128,7 @@ class StatementDecoderTests: XCTestCase {
         testSelectAs(
             #"SELECT '{"a": 2, "b": "foo", "data": "ERIT"}'"#,
             MySingleCodable?.self,
-            MySingleCodable(a: 2, b: "foo", data: Data([17, 18, 19]))
-        )
+            MySingleCodable(a: 2, b: "foo", data: Data([17, 18, 19])))
     }
     
     func testDecodeCodable() throws {
@@ -157,8 +156,9 @@ class StatementDecoderTests: XCTestCase {
                 x'FF0600B3' AS data,
                 "2001-01-01T00:00:20Z" AS date,
                 '{"a":21,"d":"2001-01-01T00:00:20Z"}' AS sub
-            """
-            , KitchenSinkEntity.self, KitchenSinkEntity.standard)
+            """,
+            KitchenSinkEntity.self,
+            KitchenSinkEntity.standard)
     }
     
     func testDecodeDictionary() throws {
