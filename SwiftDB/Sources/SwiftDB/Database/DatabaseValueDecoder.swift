@@ -4,22 +4,21 @@ enum DatabaseValueDecoder {
     static func decode<T: Decodable>(_ type: T.Type, from value: DatabaseValue) throws -> T {
         // This looks inefficient, but since T is known at compile time all
         // non-matching conditions will be eliminated by the compiler
-        if T.self == Bool.self    { return try value.decode(as: Bool.self) as! T }
-        if T.self == String.self  { return try value.decode(as: String.self) as! T }
-        if T.self == Double.self  { return try value.decode(as: Double.self) as! T }
-        if T.self == Float.self   { return try value.decode(as: Float.self) as! T }
-        if T.self == Float16.self { return try value.decode(as: Float16.self) as! T }
-        if T.self == Int.self     { return try value.decode(as: Int.self) as! T }
-        if T.self == Int8.self    { return try value.decode(as: Int8.self) as! T }
-        if T.self == Int16.self   { return try value.decode(as: Int16.self) as! T }
-        if T.self == Int32.self   { return try value.decode(as: Int32.self) as! T }
-        if T.self == Int64.self   { return try value.decode(as: Int64.self) as! T }
-        if T.self == UInt.self    { return try value.decode(as: UInt.self) as! T }
-        if T.self == UInt8.self   { return try value.decode(as: UInt8.self) as! T }
-        if T.self == UInt16.self  { return try value.decode(as: UInt16.self) as! T }
-        if T.self == UInt32.self  { return try value.decode(as: UInt32.self) as! T }
-        if T.self == UInt64.self  { return try value.decode(as: UInt64.self) as! T }
-        if T.self == Data.self    { return try value.decode(as: Data.self) as! T }
+        if T.self == Bool.self    { return try value.as(Bool.self) as! T }
+        if T.self == String.self  { return try value.as(String.self) as! T }
+        if T.self == Double.self  { return try value.as(Double.self) as! T }
+        if T.self == Float.self   { return try value.as(Float.self) as! T }
+        if T.self == Float16.self { return try value.as(Float16.self) as! T }
+        if T.self == Int.self     { return try value.as(Int.self) as! T }
+        if T.self == Int8.self    { return try value.as(Int8.self) as! T }
+        if T.self == Int16.self   { return try value.as(Int16.self) as! T }
+        if T.self == Int32.self   { return try value.as(Int32.self) as! T }
+        if T.self == Int64.self   { return try value.as(Int64.self) as! T }
+        if T.self == UInt.self    { return try value.as(UInt.self) as! T }
+        if T.self == UInt8.self   { return try value.as(UInt8.self) as! T }
+        if T.self == UInt16.self  { return try value.as(UInt16.self) as! T }
+        if T.self == UInt32.self  { return try value.as(UInt32.self) as! T }
+        if T.self == UInt64.self  { return try value.as(UInt64.self) as! T }
         
         if let type = type as? DatabaseValueConvertible.Type {
             return try type.init(from: value) as! T
@@ -29,7 +28,7 @@ enum DatabaseValueDecoder {
             let decoder = DatabaseValueDecoderImpl(value: value, codingPath: [])
             return try T(from: decoder)
         } catch Result.useJsonDecoder {
-            let jsonString = try value.decode(as: String.self)
+            let jsonString = try value.as(String.self)
             return try jsonDecoder.decode(T.self, from: Data(jsonString.utf8))
         }
     }

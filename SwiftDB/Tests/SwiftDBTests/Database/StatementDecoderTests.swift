@@ -4,21 +4,6 @@ import XCTest
 class StatementDecoderTests: XCTestCase {
     
     let c: Connection! = try? Connection(path: ":memory:")
-    
-    func selectAs<T: Decodable & Equatable>(_ sql: String, _ type: T.Type) throws -> T {
-        let s = try c.prepare(sql: sql)
-        return try StatementDecoder.decode(type, from: s)
-    }
-
-    func testSelectAs<T: Decodable & Equatable>(_ sql: String, _ type: T.Type, _ expected: T) {
-        XCTAssertEqual(try selectAs(sql, type), expected)
-    }
-    
-    func testSelectError<T: Decodable & Equatable>(_ sql: String, _ type: T.Type, _ message: String) {
-        XCTAssertThrowsError(try selectAs(sql, type)) { error in
-            XCTAssertEqual(String(describing: error), message)
-        }
-    }
 
     func testDecodeIntegers() throws {
         func testInteger<T: Decodable & Equatable & FixedWidthInteger>(_ type: T.Type) {
@@ -216,5 +201,23 @@ class StatementDecoderTests: XCTestCase {
                 ["snoz", "plonk"]
             ]
         )
+    }
+}
+
+extension StatementDecoderTests {
+    
+    func selectAs<T: Decodable & Equatable>(_ sql: String, _ type: T.Type) throws -> T {
+        let s = try c.prepare(sql: sql)
+        return try StatementDecoder.decode(type, from: s)
+    }
+
+    func testSelectAs<T: Decodable & Equatable>(_ sql: String, _ type: T.Type, _ expected: T) {
+        XCTAssertEqual(try selectAs(sql, type), expected)
+    }
+    
+    func testSelectError<T: Decodable & Equatable>(_ sql: String, _ type: T.Type, _ message: String) {
+        XCTAssertThrowsError(try selectAs(sql, type)) { error in
+            XCTAssertEqual(String(describing: error), message)
+        }
     }
 }

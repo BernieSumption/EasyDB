@@ -3,7 +3,6 @@ import Foundation
 
 /// Encodes a value by binding its properties to named parameters of a query
 struct StatementEncoder {
-    
     static func encode<T: Encodable>(_ value: T, into statement: Statement) throws {
         try value.encode(to: StatementEncoderImpl(statement))
     }
@@ -48,81 +47,8 @@ private struct NamedParameterEncodingContainer<Key: CodingKey>: KeyedEncodingCon
         try bind(.null, to: key)
     }
     
-    mutating func encode(_ value: Bool, forKey key: Key) throws {
-        try bind(DatabaseValue(value), to: key)
-    }
-    
-    mutating func encode(_ value: String, forKey key: Key) throws {
-        try bind(DatabaseValue(value), to: key)
-    }
-    
-    mutating func encode(_ value: Double, forKey key: Key) throws {
-        try bind(DatabaseValue(value), to: key)
-    }
-    
-    mutating func encode(_ value: Float, forKey key: Key) throws {
-        try bind(DatabaseValue(value), to: key)
-    }
-    
-    mutating func encode(_ value: Int, forKey key: Key) throws {
-        try bind(DatabaseValue(value), to: key)
-    }
-    
-    mutating func encode(_ value: Int8, forKey key: Key) throws {
-        try bind(DatabaseValue(value), to: key)
-    }
-    
-    mutating func encode(_ value: Int16, forKey key: Key) throws {
-        try bind(DatabaseValue(value), to: key)
-    }
-    
-    mutating func encode(_ value: Int32, forKey key: Key) throws {
-        try bind(DatabaseValue(value), to: key)
-    }
-    
-    mutating func encode(_ value: Int64, forKey key: Key) throws {
-        try bind(DatabaseValue(value), to: key)
-    }
-    
-    mutating func encode(_ value: UInt, forKey key: Key) throws {
-        try bind(DatabaseValue(value), to: key)
-    }
-    
-    mutating func encode(_ value: UInt8, forKey key: Key) throws {
-        try bind(DatabaseValue(value), to: key)
-    }
-    
-    mutating func encode(_ value: UInt16, forKey key: Key) throws {
-        try bind(DatabaseValue(value), to: key)
-    }
-    
-    mutating func encode(_ value: UInt32, forKey key: Key) throws {
-        try bind(DatabaseValue(value), to: key)
-    }
-    
-    mutating func encode(_ value: UInt64, forKey key: Key) throws {
-        try bind(DatabaseValue(value), to: key)
-    }
-    
     mutating func encode<T: Encodable>(_ value: T, forKey key: Key) throws {
-        // IMPORTANT: any special cases here need matching special cases
-        // in StatementDecoder.decode<T>(_:forKey:)
-        // TODO: remove
-        if let value = value as? _OptionalProtocol, value.isNil {
-            try encodeNil(forKey: key)
-        }
-        else if let value = value as? Data {
-            try bind(DatabaseValue(value), to: key)
-        }
-        else if let value = value as? String {
-            try bind(DatabaseValue(value), to: key)
-        }
-        else if let value = value as? Date {
-            try bind(DatabaseValue(value), to: key)
-        }
-        else {
-            try bind(DatabaseValueEncoder.encode(value), to: key)
-        }
+        try bind(DatabaseValueEncoder.encode(value), to: key)
     }
     
     mutating func nestedContainer<NestedKey: CodingKey>(keyedBy keyType: NestedKey.Type, forKey key: Key) -> KeyedEncodingContainer<NestedKey> {
@@ -145,20 +71,4 @@ private struct NamedParameterEncodingContainer<Key: CodingKey>: KeyedEncodingCon
         try statement.bind(value, to: ":\(key.stringValue)")
     }
     
-}
-
-// TODO: Remove
-private protocol _OptionalProtocol {
-    var isNil: Bool { get }
-}
-
-extension Optional : _OptionalProtocol {
-    var isNil: Bool {
-        switch self {
-        case .none:
-            return true
-        default:
-            return false
-        }
-    }
 }

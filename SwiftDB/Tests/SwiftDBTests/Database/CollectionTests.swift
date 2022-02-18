@@ -24,14 +24,14 @@ class CollectionTests: XCTestCase {
     }
     
     func testMigrateData() throws {
-        let c = try db.collection(V1.self, [.tableName("x")])
-        try c.insert(V1(a: 4))
-        try c.insert(V1(a: 5))
+        let v1c = try db.collection(V1.self, [.tableName("x")])
+        try v1c.insert(V1(a: 4))
+        try v1c.insert(V1(a: 5))
         
-        let c2 = try db.collection(V2.self, [.tableName("x")])
+        let v2c = try db.collection(V2.self, [.tableName("x")])
         
-        try c2.insert(V2(a: 6, b: "yo"))
-        let rows = try c2.select().fetchMany()
+        try v2c.insert(V2(a: 6, b: "yo"))
+        let rows = try v2c.select().fetchMany()
         XCTAssertEqual(rows, [V2(a: 4, b: nil), V2(a: 5, b: nil), V2(a: 6, b: "yo")])
         
         struct V1: Codable, Equatable {

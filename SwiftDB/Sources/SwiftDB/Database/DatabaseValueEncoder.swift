@@ -24,7 +24,6 @@ struct DatabaseValueEncoder {
         if T.self == UInt16.self  { return DatabaseValue(value as! UInt16) }
         if T.self == UInt32.self  { return DatabaseValue(value as! UInt32) }
         if T.self == UInt64.self  { return DatabaseValue(value as! UInt64) }
-        if T.self == Data.self    { return DatabaseValue(value as! Data) }
         
         if let value = value as? DatabaseValueConvertible {
             return value.databaseValue

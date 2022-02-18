@@ -6,7 +6,7 @@ struct StatementDecoder {
     static func decode<T: Decodable>(_ type: T.Type, from statement: Statement, maxRows: Int? = nil) throws -> T {
         let _ = try statement.step()
         let decoder = StatementDecoderImpl(statement, maxRows: maxRows)
-        if type == Data.self || type == Date.self  {
+        if type is DatabaseValueConvertible.Type  {
             return try decoder.singleValueContainer().decode(type)
         }
         return try T(from: decoder)
