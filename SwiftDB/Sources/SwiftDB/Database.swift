@@ -5,6 +5,8 @@ public class Database {
     private let options: Options
     private var collections = [ObjectIdentifier: Any]()
     
+    private let collectionCreateQueue = DispatchQueue(label: "Database.collectionCreateQueue")
+    
     public init(path: String, options: Options = Options()) {
         self.path = path
         self.options = options
@@ -15,19 +17,21 @@ public class Database {
     }
     
     public func collection<T: Codable>(_ type: T.Type, _ collectionOptions: [Collection<T>.Option] = []) throws -> Collection<T> {
-        let typeId = ObjectIdentifier(type)
-        if let collection = collections[typeId] {
-            guard let collection = collection as? Collection<T> else {
-                throw SwiftDBError.unexpected(message: "cached collection has wrong type")
+        return try collectionCreateQueue.sync {
+            let typeId = ObjectIdentifier(type)
+            if let collection = collections[typeId] {
+                guard let collection = collection as? Collection<T> else {
+                    throw SwiftDBError.unexpected(message: "cached collection has wrong type")
+                }
+                return collection
             }
+            let collection = try Collection(type, try getConnection(), collectionOptions)
+            if options.autoMigrate {
+                try collection.migrate(dropColumns: options.autoDropColumns)
+            }
+            collections[typeId] = collection
             return collection
         }
-        let collection = try Collection(type, try getConnection(), collectionOptions)
-        if options.autoMigrate {
-            try collection.migrate(dropColumns: options.autoDropColumns)
-        }
-        collections[typeId] = collection
-        return collection
     }
     
     public struct Options {

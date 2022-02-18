@@ -1,6 +1,6 @@
 import Foundation
 
-public enum DatabaseValue: Equatable, CustomStringConvertible {
+public enum DatabaseValue: Equatable, CustomStringConvertible, CustomDebugStringConvertible {
     case double(Double)
     case int(Int64)
     case null
@@ -14,6 +14,18 @@ public enum DatabaseValue: Equatable, CustomStringConvertible {
         case .null: return "null"
         case .text: return "text"
         case .blob: return "blob"
+        }
+    }
+    
+    public var debugDescription: String {
+        switch self {
+        case .double(let value): return "double(\(value))"
+        case .int(let value): return "int(\(value))"
+        case .null: return "null"
+        case .text(let value):
+            let displayValue = value.count > 100 ? value.prefix(100) + "..." : value
+            return "text(\(displayValue))"
+        case .blob(let value): return "blob(\(value))"
         }
     }
 

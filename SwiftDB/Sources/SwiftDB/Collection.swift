@@ -13,6 +13,7 @@ public class Collection<Row: Codable> {
         
         var table = String(describing: Row.self)
         var indices = [Index]()
+        var nonUniqueId = false
         for option in options {
             switch option.kind {
             case .tableName(let name):
@@ -27,7 +28,11 @@ public class Collection<Row: Codable> {
                     ],
                     unique: unique
                 ))
+            case .nonUniqueId: nonUniqueId = true
             }
+        }
+        if !nonUniqueId && columns.contains("id") {
+            indices.append(Index([Index.Part(["id"], .ascending)], unique: true))
         }
         self.table = table
         self.indices = indices
@@ -36,16 +41,24 @@ public class Collection<Row: Codable> {
     public struct Option {
         let kind: Kind
         
+        /// Customise the table name. The default is the name of the collection `Row` type
         public static func tableName(_ name: String) -> Option {
             return Option(kind: .tableName(name))
         }
         
+        /// Add a non-unique index to a property
         public static func index<V: Codable>(_ keyPath: KeyPath<Row, V>) -> Option {
             return Option(kind: .index(mapper(keyPath), keyPath, false))
         }
         
+        /// Add a unique index to a property
         public static func unique<V: Codable>(_ keyPath: KeyPath<Row, V>) -> Option {
             return Option(kind: .index(mapper(keyPath), keyPath, true))
+        }
+        
+        /// Disable the default behaviour of adding a unique index to any property called "id"
+        public static var nonUniqueId: Option {
+            Option(kind: .nonUniqueId)
         }
         
         private static func mapper<V: Codable>(_ keyPath: KeyPath<Row, V>) -> (Row) throws -> Encoded {
@@ -55,6 +68,7 @@ public class Collection<Row: Codable> {
         enum Kind {
             case tableName(String)
             case index((Row) throws -> Encoded, AnyKeyPath, Bool)
+            case nonUniqueId
         }
     }
     

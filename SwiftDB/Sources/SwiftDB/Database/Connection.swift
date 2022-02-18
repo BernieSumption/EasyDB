@@ -2,7 +2,7 @@ import Foundation
 import SQLite3
 import os
 
-private let log = Logger.init(subsystem: "SwiftDB", category: "sql")
+let swiftDBLog = Logger.init(subsystem: "SwiftDB", category: "sql")
 
 class Connection {
     let db: OpaquePointer
@@ -17,7 +17,7 @@ class Connection {
 
     /// Compile a prepared statement
     func prepare(sql: String) throws -> Statement {
-        return try Statement(db, sql)
+        return try Statement(db, sql, log: logSQL)
     }
     
     /// Compile and execute an SQL query, decoding the results into an instance of `T`
@@ -29,9 +29,6 @@ class Connection {
     
     /// Compile and execute an SQL query that returns no results
     func execute(sql: String, parameters: [DatabaseValue] = []) throws {
-        if logSQL {
-            log.info("Executing statement: \(sql, privacy: .public)")
-        }
         let statement = try prepare(sql: sql)
         try statement.bind(parameters)
         let _ = try statement.step()

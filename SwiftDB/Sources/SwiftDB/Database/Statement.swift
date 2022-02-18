@@ -9,6 +9,7 @@ class Statement {
     private var parameterNameToIndex = [String: Int]()
     private var hasColumnNames = false
     private let sql: String
+    private let log: Bool
     
     /// True if the most recent call to `step()` returned `.done`
     ///
@@ -19,10 +20,13 @@ class Statement {
     ///
     /// Calling any of the `readXXX()` functions will throw an error if `hasRow` is false
     private(set) var hasRow = false
+    
+    private var parameters = [Int: String]()
 
-    init(_ db: OpaquePointer, _ sql: String) throws {
+    init(_ db: OpaquePointer, _ sql: String, log: Bool = false) throws {
         self.db = db
         self.sql = sql
+        self.log = log
         var statement: OpaquePointer?
         try SwiftDB.checkOK(sqlite3_prepare_v2(db, sql, -1, &statement, nil), sql: sql, db: db)
         self.statement = try checkPointer(statement, from: "sqlite3_prepare_v2")
@@ -30,6 +34,7 @@ class Statement {
 
     /// Bind `N` parameters to the statement in positions `1..N`, clearing any previously bound parameters.
     func bind(_ parameters: [DatabaseValue]) throws {
+        self.parameters.removeAll()
         try checkOK(sqlite3_clear_bindings(statement))
 
         var index: Int = 1
@@ -41,6 +46,9 @@ class Statement {
     
     /// Bind a value to a parameter by index
     func bind(_ parameter: DatabaseValue, to index: Int) throws {
+        if log {
+            self.parameters[index] = parameter.debugDescription
+        }
         let index = Int32(index)
         switch parameter {
         case .double(let double):
@@ -86,6 +94,19 @@ class Statement {
     /// - Returns: `.row` if there is data to be read or `.done` if the end of the query has been reached
     /// - Throws: `SwiftDBError.noRow` if called again after returning `.done`
     func step() throws -> StepResult {
+        if !hasRow && log {
+            let sql = self.sql
+            if parameters.count > 0 {
+                let parameters = parameters
+                    .sorted(by: { $0.key < $1.key })
+                    .map({ "\($0.key)=\($0.value)" })
+                    .joined(separator: ", ")
+                
+                swiftDBLog.info("Executing statement: \"\(sql, privacy: .public)\" (parameters: \(parameters))")
+            } else {
+                swiftDBLog.info("Executing statement: \"\(sql, privacy: .public)\"")
+            }
+        }
         if isDone {
             throw SwiftDBError.noRow
         }
@@ -195,7 +216,7 @@ class Statement {
     func reset() throws {
         hasRow = false
         isDone = false
-        try checkOK(sqlite3_reset(statement))
+        sqlite3_reset(statement)
     }
 
     deinit {
