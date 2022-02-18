@@ -1,5 +1,5 @@
 import Foundation
-import CSQLite
+import SQLite3
 import os
 
 private let log = Logger.init(subsystem: "SwiftDB", category: "sql")

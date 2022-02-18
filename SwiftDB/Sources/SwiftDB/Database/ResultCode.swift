@@ -1,5 +1,5 @@
 import Foundation
-import CSQLite
+import SQLite3
 
 private let codeNames: [CInt: String] = [
     0: "SQLITE_OK",

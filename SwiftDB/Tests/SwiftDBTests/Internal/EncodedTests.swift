@@ -2,7 +2,7 @@ import XCTest
 
 @testable import SwiftDB
 
-class JSONTests: XCTestCase {
+class EncodedTests: XCTestCase {
 
     func testParseSimpleValues() throws {
         XCTAssertEqual(try Encoded(parsing: "1"), Encoded.number(1))

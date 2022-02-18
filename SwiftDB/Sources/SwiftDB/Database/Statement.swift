@@ -1,4 +1,4 @@
-import CSQLite
+import SQLite3
 import Foundation
 
 /// Wrapper around an SQLite C API `sqlite3_stmt` object providing a more Swifty API

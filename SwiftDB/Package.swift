@@ -17,19 +17,12 @@ let package = Package(
     dependencies: [
     ],
     targets: [
-        .systemLibrary(
-            name: "CSQLite",
-            providers: [
-                .apt(["libsqlite3-dev"])
-            ]
-        ),
         .target(
-            name: "SwiftDB",
-            dependencies: ["CSQLite"]
+            name: "SwiftDB"
         ),
         .testTarget(
             name: "SwiftDBTests",
             dependencies: ["SwiftDB"]
-        ),
+        )
     ]
 )
