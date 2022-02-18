@@ -71,10 +71,17 @@ class CollectionTests: XCTestCase {
             "UNIQUE constraint failed: RowWithId.id")
         
         XCTAssertNoThrow(try c.insert(rowB))
-        
-        struct RowWithId: Codable, Equatable {
-            var id = UUID()
-        }
+    }
+    
+    struct RowWithId: Codable, Equatable {
+        var id = UUID()
+    }
+    
+    func testDisableAutoIndexForIdentifiable() throws {
+        let c = try db.collection(RowWithId.self, [.nonUniqueId])
+        let rowA = RowWithId()
+        try c.insert(rowA)
+        try c.insert(rowA)
     }
     
     func testFetchOneReadsSingleRow() throws {
