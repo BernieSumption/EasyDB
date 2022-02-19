@@ -6,32 +6,31 @@ public class Collection<Row: Codable> {
     private let table: String
     private let indices: [Index]
     
-    internal init(_ type: Row.Type, _ connection: Connection, _ options: [Option] = []) throws {
+    internal init(_ type: Row.Type, _ connection: Connection, _ options: [Option], identifiable: Bool) throws {
         self.connection = connection
         self.mapper = try KeyPathMapper(type)
         self.columns = mapper.rootProperties
         
         var table = String(describing: Row.self)
         var indices = [Index]()
-        var nonUniqueId = false
+        var hasIdIndex = false
         for option in options {
             switch option.kind {
             case .tableName(let name):
                 table = name
-            case .index(let getEncodedValue, let keyPath, let unique):
-                indices.append(Index(
-                    [
-                        Index.Part(
-                            try mapper.propertyPath(for: getEncodedValue, cacheKey: keyPath),
-                            .ascending
-                        )
-                    ],
+            case .index(let keyPath, let unique):
+                let indexParts = try mapper.propertyPath(for: keyPath)
+                let index = Index(
+                    [Index.Part(indexParts, .ascending)],
                     unique: unique
-                ))
-            case .nonUniqueId: nonUniqueId = true
+                )
+                indices.append(index)
+                if indexParts == ["id"] {
+                    hasIdIndex = true
+                }
             }
         }
-        if !nonUniqueId && columns.contains("id") {
+        if identifiable && !hasIdIndex {
             indices.append(Index([Index.Part(["id"], .ascending)], unique: true))
         }
         self.table = table
@@ -48,27 +47,17 @@ public class Collection<Row: Codable> {
         
         /// Add a non-unique index to a property
         public static func index<V: Codable>(_ keyPath: KeyPath<Row, V>) -> Option {
-            return Option(kind: .index(mapper(keyPath), keyPath, false))
+            return Option(kind: .index(PartialCodableKeyPath(keyPath), false))
         }
         
         /// Add a unique index to a property
         public static func unique<V: Codable>(_ keyPath: KeyPath<Row, V>) -> Option {
-            return Option(kind: .index(mapper(keyPath), keyPath, true))
-        }
-        
-        /// Disable the default behaviour of adding a unique index to any property called "id"
-        public static var nonUniqueId: Option {
-            Option(kind: .nonUniqueId)
-        }
-        
-        private static func mapper<V: Codable>(_ keyPath: KeyPath<Row, V>) -> (Row) throws -> Encoded {
-            return { try Encoded(encoding: $0[keyPath: keyPath]) }
+            return Option(kind: .index(PartialCodableKeyPath(keyPath), true))
         }
         
         enum Kind {
             case tableName(String)
-            case index((Row) throws -> Encoded, AnyKeyPath, Bool)
-            case nonUniqueId
+            case index(PartialCodableKeyPath<Row>, Bool)
         }
     }
     

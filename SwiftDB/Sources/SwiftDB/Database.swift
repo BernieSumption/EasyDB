@@ -12,11 +12,15 @@ public class Database {
         self.options = options
     }
     
-    public func collection<T: Codable>(_ type: T.Type, _ collectionOption: Collection<T>.Option) throws -> Collection<T> {
-        return try collection(type, [collectionOption])
+    public func collection<T: Codable & Identifiable>(_ type: T.Type, _ collectionOptions: [Collection<T>.Option] = []) throws -> Collection<T> {
+        return try collection(type, collectionOptions, identifiable: true)
     }
     
     public func collection<T: Codable>(_ type: T.Type, _ collectionOptions: [Collection<T>.Option] = []) throws -> Collection<T> {
+        return try collection(type, collectionOptions, identifiable: false)
+    }
+    
+    func collection<T: Codable>(_ type: T.Type, _ collectionOptions: [Collection<T>.Option], identifiable: Bool) throws -> Collection<T> {
         return try collectionCreateQueue.sync {
             let typeId = ObjectIdentifier(type)
             if let collection = collections[typeId] {
@@ -25,7 +29,7 @@ public class Database {
                 }
                 return collection
             }
-            let collection = try Collection(type, try getConnection(), collectionOptions)
+            let collection = try Collection(type, try getConnection(), collectionOptions, identifiable: identifiable)
             if options.autoMigrate {
                 try collection.migrate(dropColumns: options.autoDropColumns)
             }
