@@ -11,10 +11,6 @@ class CollectionTests: XCTestCase {
     
     func testCollectionCaching() {
         XCTAssertTrue(try db.collection(Row.self) === db.collection(Row.self))
-        
-        struct Row: Codable, Equatable {
-            let i: Int
-        }
     }
     
     func testInsertAndSelect() throws {
@@ -45,19 +41,20 @@ class CollectionTests: XCTestCase {
     }
     
     func testUniqueIndex() throws {
-        let c = try db.collection(Row.self, [.unique(\.unique), .index(\.regular)])
-        try c.insert(Row(unique: 4, regular: 5))
-        
-        XCTAssertNoThrow(try c.insert(Row(unique: 1, regular: 5)))
+        let c = try db.collection(Row.self, [.unique(\.value)])
+        try c.insert(Row(value: 5))
         
         assertThrowsConnectionError(
-            try c.insert(Row(unique: 4, regular: 8)),
-            "UNIQUE constraint failed: Row.unique")
+            try c.insert(Row(value: 5)),
+            "UNIQUE constraint failed: Row.value")
         
-        struct Row: Codable, Equatable {
-            let unique: Int
-            let regular: Int
-        }
+        XCTAssertNoThrow(try c.insert(Row(value: 6)))
+    }
+    
+    func testRegularIndex() throws {
+        let c = try db.collection(Row.self, [.index(\.value)])
+        try c.insert(Row(value: 5))
+        XCTAssertNoThrow(try c.insert(Row(value: 5)))
     }
     
     func testAutoIndexForIdentifiable() throws {
@@ -78,10 +75,6 @@ class CollectionTests: XCTestCase {
         let rowA = RowWithId()
         try c.insert(rowA)
         XCTAssertNoThrow(try c.insert(rowA))
-    }
-    
-    struct RowWithId: Codable, Equatable, Identifiable {
-        var id: UUID = UUID()
     }
     
     func testFetchOneReadsSingleRow() throws {
@@ -109,5 +102,13 @@ extension CollectionTests {
         XCTAssertThrowsError(try expression()) { error in
             XCTAssertEqual((error as! ConnectionError).message, message)
         }
+    }
+    
+    struct Row: Codable, Equatable {
+        let value: Int
+    }
+    
+    struct RowWithId: Codable, Equatable, Identifiable {
+        var id: UUID = UUID()
     }
 }
