@@ -96,12 +96,87 @@ class CollectionTests: XCTestCase {
     }
     
     func testFilterEquals() throws {
-        let c = try db.collection(Row.self)
-        try c.insert((1...10).map({ Row(value: $0) }))
-        
-        XCTAssertEqual(
-            try c.filter(\.value, eq: 3).fetchMany(),
-            [Row(value: 3)])
+        try testFilter(
+            [1, 2, 3, 4, 5],
+            { try $0.filter(\.value, ==, 3) },
+            [3])
+    }
+    
+    func testFilterEqualsWithJSONValues() throws {
+        try testFilter(
+            [[1, 2], [2, 2], [3, 1]],
+            { try $0.filter(\.value, ==, [2, 2]) },
+            [[2, 2]])
+    }
+    
+    func testFilterNotEquals() throws {
+        try testFilter(
+            [1, 2, 3, 4, 5],
+            { try $0.filter(\.value, !=, 3) },
+            [1, 2, 4, 5])
+    }
+    
+    func testFilterLessThan() throws {
+        try testFilter(
+            [1, 2, 3, 4, 5],
+            { try $0.filter(\.value, <, 3) },
+            [1, 2])
+    }
+    
+    func testFilterLessThanOrEqualTo() throws {
+        try testFilter(
+            [1, 2, 3, 4, 5],
+            { try $0.filter(\.value, <=, 3) },
+            [1, 2, 3])
+    }
+    
+    func testFilterGreaterThan() throws {
+        try testFilter(
+            [1, 2, 3, 4, 5],
+            { try $0.filter(\.value, >, 3) },
+            [4, 5])
+    }
+    
+    func testFilterGreaterThanOrEqualTo() throws {
+        try testFilter(
+            [1, 2, 3, 4, 5],
+            { try $0.filter(\.value, >=, 3) },
+            [3, 4, 5])
+    }
+    
+    func testFilterChaining() throws {
+        try testFilter(
+            [1, 2, 3, 4, 5],
+            { try $0.filter(\.value, <=, 4).filter(\.value, >, 1) },
+            [2, 3, 4])
+    }
+    
+    func testIsNull() throws {
+        try testFilter(
+            [1, nil, 3, nil, 5],
+            { try $0.filter(\.value, isNull: true) },
+            [nil, nil])
+    }
+    
+    func testIsNotNull() throws {
+        try testFilter(
+            [1, nil, 3, nil, 5],
+            { try $0.filter(\.value, isNull: false) },
+            [1, 3, 5])
+    }
+    
+    func testLike() throws {
+        try testFilter(
+            ["foo", "food", "shizfoo", "FOO"],
+            { try $0.filter(\.value, like: "foo%") },
+            ["foo", "food", "FOO"])
+    }
+    
+    func testNotLike() throws {
+        try testFilter(
+            ["foo", "food", "shizfoo", "FOO"],
+            { try $0.filter(\.value, notLike: "foo%") },
+            ["shizfoo"])
     }
 
 }
@@ -113,8 +188,20 @@ extension CollectionTests {
         }
     }
     
+    func testFilter<T: Codable & Equatable>(_ data: [T], _ filter: (Collection<RowT<T>>) throws -> QueryBuilder<RowT<T>>, _ expected: [T]) throws {
+        let c = try db.collection(RowT<T>.self)
+        try c.insert(data.map(RowT<T>.init))
+        XCTAssertEqual(
+            try filter(c).fetchMany().map(\.value),
+            expected)
+    }
+    
     struct Row: Codable, Equatable {
         var value: Int
+    }
+    
+    struct RowT<T: Codable & Equatable>: Codable, Equatable {
+        var value: T
     }
     
     struct RowWithId: Codable, Equatable, Identifiable {

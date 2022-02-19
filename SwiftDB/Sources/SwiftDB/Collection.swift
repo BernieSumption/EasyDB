@@ -122,15 +122,28 @@ public class Collection<Row: Codable>: Filterable {
         return QueryBuilder(self)
     }
     
-    public func filter<V: Codable>(_ keyPath: KeyPath<Row, V>, eq value: V) throws -> QueryBuilder<Row> {
-        return try QueryBuilder(self).filter(keyPath, eq: value)
+    public func filter(sql: String) -> QueryBuilder<Row> {
+        return filter(sql: sql, parameters: [])
+    }
+    
+    public func filter(sql: String, parameters: [DatabaseValue] = []) -> QueryBuilder<Row> {
+        return QueryBuilder(self).filter(sql: sql, parameters: parameters)
+    }
+    
+    public func propertyName<V: Codable>(for keyPath: KeyPath<Row, V>) throws -> String {
+        let path = try mapper.propertyPath(for: keyPath)
+        guard path.count == 1 else {
+            throw SwiftDBError.notImplemented(feature: #"filtering by nested KeyPaths e.g. \.foo.bar"#)
+        }
+        return path[0]
     }
 }
 
 public struct QueryBuilder<Row: Codable>: Filterable {
+
     private let collection: Collection<Row>
     
-    private var filters = [(String, DatabaseValue?)]()
+    private var filters = [SQLPart]()
     
     internal init(_ collection: Collection<Row>) {
         self.collection = collection
@@ -145,20 +158,18 @@ public struct QueryBuilder<Row: Codable>: Filterable {
         return try StatementDecoder.decode([Row].self, from: prepare())
     }
     
-    public func filter<V: Codable>(_ property: KeyPath<Row, V>, eq value: V) throws -> QueryBuilder<Row> {
-        return try filter(property, "=", DatabaseValueEncoder.encode(value))
+    public func filter(sql: String) -> QueryBuilder<Row> {
+        return filter(sql: sql, parameters: [])
     }
     
-    private func filter<V: Codable>(_ property: KeyPath<Row, V>, _ op: String, _ value: DatabaseValue?) throws -> QueryBuilder<Row> {
-        let path = try collection.mapper.propertyPath(for: property)
-        guard path.count == 1 else {
-            throw SwiftDBError.notImplemented(feature: #"filtering by nested KeyPaths e.g. \.foo.bar"#)
-        }
-        let property = path[0]
-        
+    public func filter(sql: String, parameters: [DatabaseValue] = []) -> QueryBuilder<Row> {
         var copy = self
-        copy.filters.append(("\(property) \(op) ?", value))
+        copy.filters.append(SQLPart(sql: sql, parameters: parameters))
         return copy
+    }
+    
+    public func propertyName<V: Codable>(for keyPath: KeyPath<Row, V>) throws -> String {
+        return try collection.propertyName(for: keyPath)
     }
     
     private func prepare() throws -> Statement {
@@ -169,12 +180,12 @@ public struct QueryBuilder<Row: Codable>: Filterable {
             .from(collection.table)
         
         if filters.count > 0 {
-            sql = sql.raw("WHERE")
-            for (fragment, value) in filters {
-                sql = sql.raw(fragment)
-                if let value = value {
-                    parameters.append(value)
-                }
+            sql = sql
+                .raw("WHERE")
+                .raw(filters.map(\.sql).joined(separator: " AND "))
+            
+            for filter in filters {
+                parameters += filter.parameters
             }
         }
             
@@ -189,6 +200,64 @@ public struct QueryBuilder<Row: Codable>: Filterable {
 public protocol Filterable {
     associatedtype Row: Codable
     
-    /// Add an equality filter, `filter(\.prop, 5)` being equivalent to SQL `WHERE prop = 5`
-    func filter<V: Codable>(_ property: KeyPath<Row, V>, eq: V) throws -> QueryBuilder<Row>
+    /// Given a key path, return the property name, e.g. `propertyName(\.foo)` will return `"foo"`
+    func propertyName<V: Codable>(for keyPath: KeyPath<Row, V>) throws -> String
+    
+    func filter(sql: String) -> QueryBuilder<Row>
+    func filter(sql: String, parameters: [DatabaseValue]) -> QueryBuilder<Row>
 }
+//=, <>, <, <=, >, >=, IS, IS NOT
+
+
+struct SQLPart {
+    let sql: String
+    let parameters: [DatabaseValue]
+}
+
+extension Filterable {
+    public func filter<V: Codable, P: Codable>(_ property: KeyPath<Row, V>, template: String, parameters: [P]) throws -> QueryBuilder<Row> {
+        let quotedName = SQL.quoteName(try propertyName(for: property))
+        let sql = template.replacingOccurrences(of: "{}", with: quotedName)
+        
+        return filter(
+            sql: sql,
+            parameters: try DatabaseValueEncoder.encodeAll(parameters))
+    }
+    
+    public func filter<V: Codable>(_ property: KeyPath<Row, V>, template: String) throws -> QueryBuilder<Row> {
+        let quotedName = SQL.quoteName(try propertyName(for: property))
+        let sql = template.replacingOccurrences(of: "{}", with: quotedName)
+        return filter(sql: sql, parameters: [])
+    }
+    
+    /// Filter by basic comparison operators, e.g. `filter(\.property, <, 7)` is equivalent to SQL `WHERE property < 7`
+    ///
+    /// - Throws an error if `op` is not one of `==`, `!=`, `<`, `<=`, `>` or `>=`
+    public func filter<V: Codable>(_ property: KeyPath<Row, V>, _ op: (Int, Int) -> Bool, _ value: V) throws -> QueryBuilder<Row> {
+        guard let binOp = operators[[1, 2, 3].filter({ op($0, 2) })] else {
+            throw SwiftDBError.misuse(message: "Invalid operator - only ==, !=, <, <=, > and >= are supported")
+        }
+        return try filter(property, template: "{} \(binOp) ?", parameters: [value])
+    }
+    
+    public func filter<V: Codable>(_ property: KeyPath<Row, V>, isNull: Bool) throws -> QueryBuilder<Row> {
+        return try filter(property, template: isNull ? "{} IS NULL" : "{} IS NOT NULL")
+    }
+    
+    public func filter(_ property: KeyPath<Row, String>, like: String) throws -> QueryBuilder<Row> {
+        return try filter(property, template: "{} LIKE ?", parameters: [like])
+    }
+    
+    public func filter(_ property: KeyPath<Row, String>, notLike: String) throws -> QueryBuilder<Row> {
+        return try filter(property, template: "{} NOT LIKE ?", parameters: [notLike])
+    }
+}
+
+private let operators = [
+    [2]: "=",
+    [1, 3]: "<>",
+    [1]: "<",
+    [1, 2]: "<=",
+    [3]: ">",
+    [2, 3]: ">="
+]

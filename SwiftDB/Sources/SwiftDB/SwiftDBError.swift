@@ -19,6 +19,9 @@ public enum SwiftDBError: Error, CustomStringConvertible {
     
     /// A feature implied by the API is not implemented.
     case notImplemented(feature: String)
+    
+    /// Invalid data was passed to an API method
+    case misuse(message: String)
 
     public var description: String {
         switch self {
@@ -35,6 +38,7 @@ public enum SwiftDBError: Error, CustomStringConvertible {
             return "Internal error: \(message) - this is a bug in SwiftDB that should be reported"
         case .notImplemented(let feature):
             return "\(feature) is not implemented - if this would be useful to you please make a feature request as a GitHub issue and give some details about your use case"
+        case .misuse(let message): return message
         }
     }
 }

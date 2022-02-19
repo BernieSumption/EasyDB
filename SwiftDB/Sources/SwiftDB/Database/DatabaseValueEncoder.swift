@@ -42,6 +42,10 @@ struct DatabaseValueEncoder {
             return value
         }
     }
+    
+    static func encodeAll<T: Encodable>(_ values: [T]) throws -> [DatabaseValue] {
+        return try values.map(encode)
+    }
 }
 
 private struct DatabaseValueEncoderImpl: Encoder {
