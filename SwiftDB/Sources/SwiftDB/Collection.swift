@@ -13,24 +13,23 @@ public class Collection<Row: Codable> {
         
         var table = String(describing: Row.self)
         var indices = [Index]()
-        var hasIdIndex = false
+        var noUniqueId = false
         for option in options {
             switch option.kind {
             case .tableName(let name):
                 table = name
             case .index(let keyPath, let unique):
-                let indexParts = try mapper.propertyPath(for: keyPath)
-                let index = Index(
-                    [Index.Part(indexParts, .ascending)],
-                    unique: unique
-                )
-                indices.append(index)
-                if indexParts == ["id"] {
-                    hasIdIndex = true
-                }
+                let propertyPath = try mapper.propertyPath(for: keyPath)
+                indices.append(
+                    Index(
+                        [Index.Part(propertyPath, .ascending)],
+                        unique: unique
+                    ))
+            case .noUniqueId:
+                noUniqueId = true
             }
         }
-        if identifiable && !hasIdIndex {
+        if identifiable && !noUniqueId {
             indices.append(Index([Index.Part(["id"], .ascending)], unique: true))
         }
         self.table = table
@@ -55,9 +54,15 @@ public class Collection<Row: Codable> {
             return Option(kind: .index(PartialCodableKeyPath(keyPath), true))
         }
         
+        /// Disable the default behaviour of creating a unique index on `\.id`  types conforming to `Identifiable`
+        public static var noUniqueId: Option {
+            Option(kind: .noUniqueId)
+        }
+        
         enum Kind {
             case tableName(String)
             case index(PartialCodableKeyPath<Row>, Bool)
+            case noUniqueId
         }
     }
     
