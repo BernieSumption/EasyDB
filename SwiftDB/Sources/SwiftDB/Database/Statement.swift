@@ -44,12 +44,12 @@ class Statement {
         }
     }
     
-    /// Bind a value to a parameter by index
-    func bind(_ parameter: DatabaseValue, to index: Int) throws {
+    /// Bind a value to a parameter by position, where `1` is the leftmost parameter
+    func bind(_ parameter: DatabaseValue, to position: Int) throws {
         if log {
-            self.parameters[index] = parameter.debugDescription
+            self.parameters[position] = parameter.debugDescription
         }
-        let index = Int32(index)
+        let index = Int32(position)
         switch parameter {
         case .double(let double):
             try checkOK(sqlite3_bind_double(statement, index, double))

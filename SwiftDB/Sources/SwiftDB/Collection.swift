@@ -1,9 +1,14 @@
+
+/// A collection of Codable objects, backed by an SQLite table
 ///
-public class Collection<Row: Codable> {
-    private let connection: Connection
-    private let mapper: KeyPathMapper<Row>
-    private let columns: [String]
-    private let table: String
+/// `Collection` is the main interface to data in SwiftDB, handling reading and writing data as well as
+/// migrating the underlying table to fit `Row`
+public class Collection<Row: Codable>: Filterable {
+    let connection: Connection
+    let columns: [String]
+    let table: String
+    let mapper: KeyPathMapper<Row>
+    
     private let indices: [Index]
     
     internal init(_ type: Row.Type, _ connection: Connection, _ options: [Option], identifiable: Bool) throws {
@@ -82,6 +87,10 @@ public class Collection<Row: Codable> {
         var _ = try statement.step()
     }
     
+    public func insert(_ rows: [Row]) throws {
+        try rows.forEach(insert)
+    }
+    
     public func execute(sql: String) throws {
         let statement = try connection.prepare(sql: sql)
         let _ = try statement.step()
@@ -109,33 +118,77 @@ public class Collection<Row: Codable> {
         return statement
     }
     
-    public func select() -> SelectBuilder {
-        return SelectBuilder(self)
+    public func all() -> QueryBuilder<Row> {
+        return QueryBuilder(self)
     }
     
-    public class SelectBuilder {
-        private let collection: Collection<Row>
-        
-        internal init(_ collection: Collection<Row>) {
-            self.collection = collection
-        }
-        
-        public func fetchOne() throws -> Row? {
-            let rows = try StatementDecoder.decode([Row].self, from: prepare(), maxRows: 1)
-            return rows.first
-        }
-        
-        public func fetchMany() throws -> [Row] {
-            return try StatementDecoder.decode([Row].self, from: prepare())
-        }
-        
-        private func prepare() throws -> Statement {
-            let sql = SQL()
-                .select()
-                .quotedNames(collection.columns)
-                .from(collection.table)
-                .text
-            return try collection.connection.prepare(sql: sql)
-        }
+    public func filter<V: Codable>(_ keyPath: KeyPath<Row, V>, eq value: V) throws -> QueryBuilder<Row> {
+        return try QueryBuilder(self).filter(keyPath, eq: value)
     }
+}
+
+public struct QueryBuilder<Row: Codable>: Filterable {
+    private let collection: Collection<Row>
+    
+    private var filters = [(String, DatabaseValue?)]()
+    
+    internal init(_ collection: Collection<Row>) {
+        self.collection = collection
+    }
+    
+    public func fetchOne() throws -> Row? {
+        let rows = try StatementDecoder.decode([Row].self, from: prepare(), maxRows: 1)
+        return rows.first
+    }
+    
+    public func fetchMany() throws -> [Row] {
+        return try StatementDecoder.decode([Row].self, from: prepare())
+    }
+    
+    public func filter<V: Codable>(_ property: KeyPath<Row, V>, eq value: V) throws -> QueryBuilder<Row> {
+        return try filter(property, "=", DatabaseValueEncoder.encode(value))
+    }
+    
+    private func filter<V: Codable>(_ property: KeyPath<Row, V>, _ op: String, _ value: DatabaseValue?) throws -> QueryBuilder<Row> {
+        let path = try collection.mapper.propertyPath(for: property)
+        guard path.count == 1 else {
+            throw SwiftDBError.notImplemented(feature: #"filtering by nested KeyPaths e.g. \.foo.bar"#)
+        }
+        let property = path[0]
+        
+        var copy = self
+        copy.filters.append(("\(property) \(op) ?", value))
+        return copy
+    }
+    
+    private func prepare() throws -> Statement {
+        var parameters = [DatabaseValue]()
+        var sql = SQL()
+            .select()
+            .quotedNames(collection.columns)
+            .from(collection.table)
+        
+        if filters.count > 0 {
+            sql = sql.raw("WHERE")
+            for (fragment, value) in filters {
+                sql = sql.raw(fragment)
+                if let value = value {
+                    parameters.append(value)
+                }
+            }
+        }
+            
+        let statement = try collection.connection.prepare(sql: sql.text)
+        for (index, parameter) in parameters.enumerated() {
+            try statement.bind(parameter, to: index + 1)
+        }
+        return statement
+    }
+}
+
+public protocol Filterable {
+    associatedtype Row: Codable
+    
+    /// Add an equality filter, `filter(\.prop, 5)` being equivalent to SQL `WHERE prop = 5`
+    func filter<V: Codable>(_ property: KeyPath<Row, V>, eq: V) throws -> QueryBuilder<Row>
 }

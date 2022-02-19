@@ -29,7 +29,7 @@ struct KeyPathMapper<T: Codable> {
 
     init(_ type: T.Type) throws {
         instances = try MultifariousDecoder.instances(for: type)
-        let jsonInstances = try instances.map({ try Encoded(encoding: $0) })
+        let jsonInstances = try instances.map({ try Encoded($0) })
         guard let first = jsonInstances.first else {
             throw SwiftDBError.unexpected(message: "Multifarious.instances was empty")
         }
@@ -89,7 +89,7 @@ struct PartialCodableKeyPath<Row> {
     let cacheKey: AnyKeyPath
     
     init<V: Encodable>(_ keyPath: KeyPath<Row, V>) {
-        self.encode = { try Encoded(encoding: $0[keyPath: keyPath]) }
+        self.encode = { try Encoded($0[keyPath: keyPath]) }
         self.cacheKey = keyPath
     }
 }

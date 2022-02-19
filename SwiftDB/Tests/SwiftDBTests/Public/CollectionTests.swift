@@ -16,7 +16,7 @@ class CollectionTests: XCTestCase {
     func testInsertAndSelect() throws {
         let c = try db.collection(KitchenSinkEntity.self)
         try c.insert(KitchenSinkEntity.standard)
-        let row = try c.select().fetchOne()
+        let row = try c.all().fetchOne()
         XCTAssertEqual(row, KitchenSinkEntity.standard)
     }
     
@@ -28,7 +28,7 @@ class CollectionTests: XCTestCase {
         let v2c = try db.collection(V2.self, [.tableName("x")])
         
         try v2c.insert(V2(a: 6, b: "yo"))
-        let rows = try v2c.select().fetchMany()
+        let rows = try v2c.all().fetchMany()
         XCTAssertEqual(rows, [V2(a: 4, b: nil), V2(a: 5, b: nil), V2(a: 6, b: "yo")])
         
         struct V1: Codable, Equatable {
@@ -84,15 +84,24 @@ class CollectionTests: XCTestCase {
         try c.execute(sql: #"INSERT INTO Row (t) VALUES ('OK'), (NULL)"#)
         
         // check that reading all rows does indeed cause an error
-        XCTAssertThrowsError(try c.select().fetchMany())
+        XCTAssertThrowsError(try c.all().fetchMany())
         
         // this should not throw an error if we're lazily fetching rows and
         // never try to decode row 2
-        XCTAssertNoThrow(try c.select().fetchOne())
+        XCTAssertNoThrow(try c.all().fetchOne())
         
         struct Row: Codable, Equatable {
             let t: String
         }
+    }
+    
+    func testFilterEquals() throws {
+        let c = try db.collection(Row.self)
+        try c.insert((1...10).map({ Row(value: $0) }))
+        
+        XCTAssertEqual(
+            try c.filter(\.value, eq: 3).fetchMany(),
+            [Row(value: 3)])
     }
 
 }
@@ -105,7 +114,7 @@ extension CollectionTests {
     }
     
     struct Row: Codable, Equatable {
-        let value: Int
+        var value: Int
     }
     
     struct RowWithId: Codable, Equatable, Identifiable {

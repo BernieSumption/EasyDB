@@ -45,7 +45,7 @@ class EncodedTests: XCTestCase {
 
     func testParseCodable() throws {
         XCTAssertEqual(
-            try Encoded(encoding: ParseCodable()),
+            try Encoded(ParseCodable()),
             .object([
                 "bool": .boolean(true),
                 "object": .object(["i": .number(1)]),

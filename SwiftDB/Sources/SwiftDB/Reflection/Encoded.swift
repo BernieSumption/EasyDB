@@ -10,7 +10,7 @@ enum Encoded: Hashable {
     case array([Encoded])
     case object([String: Encoded])
 
-    init<T: Encodable>(encoding encodable: T) throws {
+    init<T: Encodable>(_ encodable: T) throws {
         let data = try JSONEncoder().encode(encodable)
         try self.init(parsing: data)
     }

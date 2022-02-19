@@ -42,8 +42,8 @@ private func __debug__valuesEncodeDifferently<T1: Encodable, T2: Encodable>(_ a:
     -> Bool
 {
     do {
-        let a = try Encoded(encoding: a)
-        let b = try Encoded(encoding: b)
+        let a = try Encoded(a)
+        let b = try Encoded(b)
         return a != b
     } catch {
         assert(false, "Error encoding values to check equality: \(error)")
