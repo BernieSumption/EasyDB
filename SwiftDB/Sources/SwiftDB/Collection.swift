@@ -122,14 +122,11 @@ public class Collection<Row: Codable>: Filterable {
         return QueryBuilder(self)
     }
     
-    public func filter(sql: String) -> QueryBuilder<Row> {
-        return filter(sql: sql, parameters: [])
+    public func filter(_ sqlFragment: SQLFragment<Row>) -> QueryBuilder<Row> {
+        return QueryBuilder(self).filter(sqlFragment)
     }
     
-    public func filter(sql: String, parameters: [DatabaseValue] = []) -> QueryBuilder<Row> {
-        return QueryBuilder(self).filter(sql: sql, parameters: parameters)
-    }
-    
+    // TODO: can I remove this?
     public func propertyName<V: Codable>(for keyPath: KeyPath<Row, V>) throws -> String {
         let path = try mapper.propertyPath(for: keyPath)
         guard path.count == 1 else {
@@ -143,7 +140,7 @@ public struct QueryBuilder<Row: Codable>: Filterable {
 
     private let collection: Collection<Row>
     
-    private var filters = [SQLPart]()
+    private var filters = [SQLFragment<Row>]()
     
     internal init(_ collection: Collection<Row>) {
         self.collection = collection
@@ -158,13 +155,9 @@ public struct QueryBuilder<Row: Codable>: Filterable {
         return try StatementDecoder.decode([Row].self, from: prepare())
     }
     
-    public func filter(sql: String) -> QueryBuilder<Row> {
-        return filter(sql: sql, parameters: [])
-    }
-    
-    public func filter(sql: String, parameters: [DatabaseValue] = []) -> QueryBuilder<Row> {
+    public func filter(_ sqlFragment: SQLFragment<Row>) -> QueryBuilder<Row> {
         var copy = self
-        copy.filters.append(SQLPart(sql: sql, parameters: parameters))
+        copy.filters.append(sqlFragment)
         return copy
     }
     
@@ -182,10 +175,14 @@ public struct QueryBuilder<Row: Codable>: Filterable {
         if filters.count > 0 {
             sql = sql
                 .raw("WHERE")
-                .raw(filters.map(\.sql).joined(separator: " AND "))
+                .raw(
+                    try filters
+                        .map({ try $0.sql(mapper: collection.mapper) })
+                        .joined(separator: " AND ")
+                )
             
             for filter in filters {
-                parameters += filter.parameters
+                parameters += try filter.parameters()
             }
         }
             
@@ -200,64 +197,139 @@ public struct QueryBuilder<Row: Codable>: Filterable {
 public protocol Filterable {
     associatedtype Row: Codable
     
+    // TODO: can I remove this?
     /// Given a key path, return the property name, e.g. `propertyName(\.foo)` will return `"foo"`
     func propertyName<V: Codable>(for keyPath: KeyPath<Row, V>) throws -> String
     
-    func filter(sql: String) -> QueryBuilder<Row>
-    func filter(sql: String, parameters: [DatabaseValue]) -> QueryBuilder<Row>
+    
+    /// Add an SQL filter using string interpolation to provide parameters. String interpolation is used to
+    /// provide parameters safely (i.e. without the possibility of SQL injection). This low-level method is
+    /// useful to construct complex SQL filters e.g. by invoking SQLite functions.
+    ///
+    /// For example `filter("replace(foo, '-', '') = \(myString)")` will append
+    /// `WHERE replace(foo, '-', '') = ?` to the SQL query and bind `myString` as a parameter
+    func filter(_ sqlFragment: SQLFragment<Row>) throws -> QueryBuilder<Row>
 }
-//=, <>, <, <=, >, >=, IS, IS NOT
 
-
-struct SQLPart {
-    let sql: String
-    let parameters: [DatabaseValue]
-}
 
 extension Filterable {
-    public func filter<V: Codable, P: Codable>(_ property: KeyPath<Row, V>, template: String, parameters: [P]) throws -> QueryBuilder<Row> {
-        let quotedName = SQL.quoteName(try propertyName(for: property))
-        let sql = template.replacingOccurrences(of: "{}", with: quotedName)
-        
-        return filter(
-            sql: sql,
-            parameters: try DatabaseValueEncoder.encodeAll(parameters))
-    }
-    
-    public func filter<V: Codable>(_ property: KeyPath<Row, V>, template: String) throws -> QueryBuilder<Row> {
-        let quotedName = SQL.quoteName(try propertyName(for: property))
-        let sql = template.replacingOccurrences(of: "{}", with: quotedName)
-        return filter(sql: sql, parameters: [])
-    }
-    
-    /// Filter by basic comparison operators, e.g. `filter(\.property, <, 7)` is equivalent to SQL `WHERE property < 7`
+    /// Select records where `property == value`.
     ///
-    /// - Throws an error if `op` is not one of `==`, `!=`, `<`, `<=`, `>` or `>=`
-    public func filter<V: Codable>(_ property: KeyPath<Row, V>, _ op: (Int, Int) -> Bool, _ value: V) throws -> QueryBuilder<Row> {
-        guard let binOp = operators[[1, 2, 3].filter({ op($0, 2) })] else {
-            throw SwiftDBError.misuse(message: "Invalid operator - only ==, !=, <, <=, > and >= are supported")
-        }
-        return try filter(property, template: "{} \(binOp) ?", parameters: [value])
+    /// This uses the SQL `IS` operator which has the same semantics as Swift's `==` when comparing null values
+    public func filter<V: Codable>(_ property: KeyPath<Row, V>, is value: V) throws -> QueryBuilder<Row> {
+        return try filter("\(property) IS \(value)")
     }
-    
+
+    /// Select records where `property != value`.
+    ///
+    /// This uses the SQL `IS NOT` operator which has the same semantics as Swift's `!=` when comparing null values.
+    public func filter<V: Codable>(_ property: KeyPath<Row, V>, isNot value: V) throws -> QueryBuilder<Row> {
+        return try filter("\(property) IS NOT \(value)")
+    }
+
+    /// Select records where `property > value`
+    public func filter<V: Codable>(_ property: KeyPath<Row, V>, greaterThan value: V) throws -> QueryBuilder<Row> {
+        return try filter("\(property) > \(value)")
+    }
+
+    /// Select records where `property < value`
+    public func filter<V: Codable>(_ property: KeyPath<Row, V>, lessThan value: V) throws -> QueryBuilder<Row> {
+        return try filter("\(property) < \(value)")
+    }
+
+    /// Select records where `property >= value`
+    public func filter<V: Codable>(_ property: KeyPath<Row, V>, greaterThanOrEqualTo value: V) throws -> QueryBuilder<Row> {
+        return try filter("\(property) >= \(value)")
+    }
+
+    /// Select records where `property <= value`
+    public func filter<V: Codable>(_ property: KeyPath<Row, V>, lessThanOrEqualTo value: V) throws -> QueryBuilder<Row> {
+        return try filter("\(property) <= \(value)")
+    }
+
+    /// Select records where `property IS NULL` (if `isNull` is `true`) or `property IS NOT NULL` otherwise
     public func filter<V: Codable>(_ property: KeyPath<Row, V>, isNull: Bool) throws -> QueryBuilder<Row> {
-        return try filter(property, template: isNull ? "{} IS NULL" : "{} IS NOT NULL")
+        return try filter(isNull ? "\(property) IS NULL" : "\(property) IS NOT NULL")
     }
-    
+
+    /// Select records where `property LIKE value`
     public func filter(_ property: KeyPath<Row, String>, like: String) throws -> QueryBuilder<Row> {
-        return try filter(property, template: "{} LIKE ?", parameters: [like])
+        return try filter("\(property) LIKE \(like)")
     }
-    
+
+    /// Select records where `property NOT LIKE value`
     public func filter(_ property: KeyPath<Row, String>, notLike: String) throws -> QueryBuilder<Row> {
-        return try filter(property, template: "{} NOT LIKE ?", parameters: [notLike])
+        return try filter("\(property) NOT LIKE \(notLike)")
     }
 }
 
-private let operators = [
-    [2]: "=",
-    [1, 3]: "<>",
-    [1]: "<",
-    [1, 2]: "<=",
-    [3]: ">",
-    [2, 3]: ">="
-]
+public struct SQLFragment<Row: Codable>: ExpressibleByStringInterpolation {
+    var parts = [Part]()
+    
+    enum Part {
+        case literal(String)
+        case property(PartialCodableKeyPath<Row>)
+        case parameter(DatabaseValue)
+    }
+    
+    init(_ value: String) {
+        parts.append(.literal(value))
+    }
+    
+    public init(stringLiteral value: String) {
+        self.init(value)
+    }
+    
+    public init(stringInterpolation: StringInterpolation) {
+        parts = stringInterpolation.parts
+    }
+    
+    public struct StringInterpolation: StringInterpolationProtocol {
+        var parts = [Part]()
+        
+        public init(literalCapacity: Int, interpolationCount: Int) {}
+        
+        public mutating func appendLiteral(_ literal: String) {
+            parts.append(.literal(literal))
+        }
+        
+        public mutating func appendInterpolation<V: Codable>(_ value: V) {
+            // TODO: remove force try
+            let value = try! DatabaseValueEncoder.encode(value)
+            parts.append(.parameter(value))
+        }
+        
+        public mutating func appendInterpolation<V: Codable>(_ property: KeyPath<Row, V>) {
+            parts.append(.property(PartialCodableKeyPath(property)))
+        }
+    }
+    
+    func sql(mapper: KeyPathMapper<Row>) throws -> String {
+        return try parts.compactMap { part in
+            switch part {
+            case .literal(let string):
+                return string
+            case .property(let keyPath):
+                let path = try mapper.propertyPath(for: keyPath)
+                guard path.count == 1 else {
+                    throw SwiftDBError.notImplemented(feature: #"filtering by nested KeyPaths e.g. \.foo.bar"#)
+                }
+                return SQL.quoteName(path[0])
+            case .parameter:
+                return "?"
+            }
+        }
+        .joined(separator: " ")
+    }
+    
+    func parameters() throws -> [DatabaseValue] {
+        return parts.compactMap { part -> DatabaseValue? in
+            switch part {
+            case .parameter(let value):
+                return value
+            default:
+                return nil
+            }
+        }
+    }
+}

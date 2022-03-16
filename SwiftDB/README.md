@@ -8,14 +8,14 @@ SwiftDB is designed to provide the best developer experience possible when stori
 
 ```
 struct Book: Codable, Identifiable {
-    var id: Int
+    var id = UUID()
     var name: String
     var author: String
     var price: Int // in pence
 }
 let db = SwiftDB()
 let collection = db.collection(Book.self)
-  // ^^ CREATE TABLE Book (id INTEGER PRIMARY KEY, name, author, price)
+  // ^^ CREATE TABLE Book (id, name, author, price)
 
 collection.insert([
     Book(name: "Catch-22", author: "Joseph Heller", price: 1050),
@@ -23,12 +23,23 @@ collection.insert([
     Book(name: "Nineteen Eighty-Four", author: "George Orwell", price: 799),
     Book(name: "A Pattern Language", author: "Christopher Alexander et al.", price: 2250)
 ])
-  // ^^ INSERT INTO Book (name, author, price) VALUES (?, ?, ?), (?, ?, ?), (?, ?, ?), (?, ?, ?)
+  // ^^ INSERT INTO Book (name, author, price) VALUES (?, ?, ?) # executed 4 times in a transaction
   //    Inserts of many instances are batched into fewer queries for performance
 
 let cheapBooks = collection.select().where(\.price, lessThan: 1000).fetchMany()
   // ^^ SELECT * FROM Book WHERE price > 1000
 ```
+
+### Design goals
+
+#### The best developer experience for simple storing and querying data
+
+* Use the latest Swift APIs - Codable, KeyPath and string interpolations - to improve the developer experience
+* Configurable (to an extent) but zero configuration required. No need to create a schema or even specify a database file name.
+
+#### Embrace the schemaless document store mindset
+
+TODO fill this one in. Maybe a bit of history about the RDBMS mindset vs document stores
 
 #### When not to use SwiftDB
 
