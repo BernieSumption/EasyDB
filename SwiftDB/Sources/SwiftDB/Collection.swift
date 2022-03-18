@@ -114,15 +114,6 @@ public class Collection<Row: Codable>: Filterable {
     public func filter(_ sqlFragment: SQLFragment<Row>) -> QueryBuilder<Row> {
         return QueryBuilder(self).filter(sqlFragment)
     }
-    
-    // TODO: can I remove this?
-    public func propertyName<V: Codable>(for keyPath: KeyPath<Row, V>) throws -> String {
-        let path = try mapper.propertyPath(for: keyPath)
-        guard path.count == 1 else {
-            throw SwiftDBError.notImplemented(feature: #"filtering by nested KeyPaths e.g. \.foo.bar"#)
-        }
-        return path[0]
-    }
 }
 
 public struct QueryBuilder<Row: Codable>: Filterable {
@@ -148,10 +139,6 @@ public struct QueryBuilder<Row: Codable>: Filterable {
         var copy = self
         copy.filters.append(sqlFragment)
         return copy
-    }
-    
-    public func propertyName<V: Codable>(for keyPath: KeyPath<Row, V>) throws -> String {
-        return try collection.propertyName(for: keyPath)
     }
     
     private func prepare() throws -> Statement {
@@ -185,11 +172,6 @@ public struct QueryBuilder<Row: Codable>: Filterable {
 
 public protocol Filterable {
     associatedtype Row: Codable
-    
-    // TODO: can I remove this?
-    /// Given a key path, return the property name, e.g. `propertyName(\.foo)` will return `"foo"`
-    func propertyName<V: Codable>(for keyPath: KeyPath<Row, V>) throws -> String
-    
     
     /// Add an SQL filter using string interpolation to provide parameters. String interpolation is used to
     /// provide parameters safely (i.e. without the possibility of SQL injection). This low-level method is

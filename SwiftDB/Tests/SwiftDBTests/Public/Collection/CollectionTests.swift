@@ -29,19 +29,19 @@ class CollectionTests: SwiftDBTestCase {
     
     func testUniqueIndex() throws {
         let c = try db.collection(RowWithValue.self, [.unique(\.value)])
-        try c.insert(RowWithValue(value: 5))
+        try c.insert(RowWithValue(5))
         
         assertThrowsConnectionError(
-            try c.insert(RowWithValue(value: 5)),
+            try c.insert(RowWithValue(5)),
             "UNIQUE constraint failed: RowWithValue.value")
         
-        XCTAssertNoThrow(try c.insert(RowWithValue(value: 6)))
+        XCTAssertNoThrow(try c.insert(RowWithValue(6)))
     }
     
     func testRegularIndex() throws {
         let c = try db.collection(RowWithValue.self, [.index(\.value)])
-        try c.insert(RowWithValue(value: 5))
-        XCTAssertNoThrow(try c.insert(RowWithValue(value: 5)))
+        try c.insert(RowWithValue(5))
+        XCTAssertNoThrow(try c.insert(RowWithValue(5)))
     }
     
     func testAutoIndexForIdentifiable() throws {

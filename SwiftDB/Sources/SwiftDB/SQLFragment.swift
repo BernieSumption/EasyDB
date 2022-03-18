@@ -49,7 +49,8 @@ public struct SQLFragment<Row: Codable>: ExpressibleByStringInterpolation {
             case .property(let keyPath):
                 let path = try mapper.propertyPath(for: keyPath)
                 guard path.count == 1 else {
-                    throw SwiftDBError.notImplemented(feature: #"filtering by nested KeyPaths e.g. \.foo.bar"#)
+                    let pathString = path.joined(separator: ".")
+                    throw SwiftDBError.notImplemented(feature: "filtering by nested KeyPaths (\\.\(pathString))")
                 }
                 return SQL.quoteName(path[0])
             case .parameter:

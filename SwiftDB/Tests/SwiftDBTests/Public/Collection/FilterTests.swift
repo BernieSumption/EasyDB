@@ -17,11 +17,20 @@ class FilterTests: SwiftDBTestCase {
             [])
     }
     
-    func testEqualsWithJSONValues() throws {
+    func testEqualsWithArrayValue() throws {
         try testFilter(
             [[1, 2], [2, 2], [3, 1]],
             { $0.filter(\.value, is: [2, 2]) },
             [[2, 2]])
+    }
+    
+    func testEqualsWithStructValue() throws {
+        let a = Struct(foo: "a")
+        let b = Struct(foo: "b")
+        try testFilter(
+            [a, b],
+            { $0.filter(\.value, is: b) },
+            [b])
     }
     
     func testNotEquals() throws {
@@ -113,6 +122,13 @@ class FilterTests: SwiftDBTestCase {
             { $0.filter("replace(\(\.value), \(search), \(replace)) = \(match)") },
             ["a'b", "'a'b'"])
     }
+    
+    func testErrorMessage() throws {
+        let c = try db.collection(RowT<Struct>.self)
+        assertThrowsError(
+            try c.filter(\.value.foo, is: "foo").fetchMany(),
+            contains: #"filtering by nested KeyPaths (\.value.foo) is not implemented"#)
+    }
 }
 
 extension FilterTests {
@@ -129,5 +145,9 @@ extension FilterTests {
     
     struct RowT<T: Codable & Equatable>: Codable, Equatable {
         var value: T
+    }
+    
+    struct Struct: Codable, Equatable {
+        let foo: String
     }
 }

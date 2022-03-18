@@ -39,10 +39,18 @@ struct KitchenSinkEntity: Codable, Equatable {
 
 struct RowWithValue: Codable, Equatable {
     var value: Int
+    
+    init(_ value: Int) {
+        self.value = value
+    }
 }
 
 struct RowWithId: Codable, Equatable, Identifiable {
-    var id: UUID = UUID()
+    let id: UUID
+    
+    init(_ id: UUID = UUID()) {
+        self.id = id
+    }
 }
 
 class SwiftDBTestCase: XCTestCase {
@@ -52,16 +60,29 @@ class SwiftDBTestCase: XCTestCase {
         db = Database(path: ":memory:")
     }
     
-    func assertThrowsConnectionError<T>(_ expression: @autoclosure () throws -> T, _ message: String) {
+    func assertThrowsConnectionError(_ expression: @autoclosure () throws -> Any, _ message: String) {
         XCTAssertThrowsError(try expression()) { error in
             XCTAssertEqual((error as! ConnectionError).message, message)
         }
     }
     
-    func assertThrowsConnectionError<T>(_ expression: @autoclosure () throws -> T, contains messagePart: String) {
+    func assertThrowsConnectionError(_ expression: @autoclosure () throws -> Any, contains messagePart: String) {
         XCTAssertThrowsError(try expression()) { error in
             let message = (error as! ConnectionError).message!
             XCTAssertTrue(message.contains(messagePart), "\"\(message)\" does not contain \"\(messagePart)\"")
+        }
+    }
+    
+    func assertThrowsError(_ expression: @autoclosure () throws -> Any, _ message: String) {
+        XCTAssertThrowsError(try expression()) { error in
+            XCTAssertEqual("\(error)", message)
+        }
+    }
+    
+    func assertThrowsError(_ expression: @autoclosure () throws -> Any, contains: String) {
+        XCTAssertThrowsError(try expression()) { error in
+            let message = "\(error)"
+            XCTAssertTrue(message.contains(contains), "\"\(message)\" does not contain \"\(contains)\"")
         }
     }
 }
