@@ -2,14 +2,25 @@ import Foundation
 
 public class Database {
     private let path: String
-    private let options: Options
+    private var autoMigrate = true
+    private var autoDropColumns = false
+    public var logSQL = false
     private var collections = [ObjectIdentifier: Any]()
     
     private let collectionCreateQueue = DispatchQueue(label: "Database.collectionCreateQueue")
     
-    public init(path: String, options: Options = Options()) {
+    public init(path: String, options: [Option] = []) {
         self.path = path
-        self.options = options
+        for option in options {
+            switch option {
+            case .autoMigrate(let value):
+                self.autoMigrate = value
+            case .autoDropColumns(let value):
+                self.autoDropColumns = value
+            case .logSQL(let value):
+                self.logSQL = value
+            }
+        }
     }
     
     public func collection<T: Codable & Identifiable>(_ type: T.Type, _ collectionOptions: [Collection<T>.Option] = []) throws -> Collection<T> {
@@ -32,8 +43,8 @@ public class Database {
                 return collection
             }
             let collection = try Collection(type, try getConnection(), collectionOptions, identifiable: identifiable)
-            if options.autoMigrate {
-                try collection.migrate(dropColumns: options.autoDropColumns)
+            if autoMigrate {
+                try collection.migrate(dropColumns: autoDropColumns)
             }
             collections[typeId] = collection
             return collection
@@ -54,23 +65,17 @@ public class Database {
         return try StatementDecoder.decode(resultType, from: statement)
     }
     
-    public struct Options {
+    public enum Option {
         /// Whether to automatically create missing tables and add missing columns when a `Collection` is created.
         ///
         /// Defaults to `true`. If disabled you can call `migrate(_:dropColumns)` to migrate manually.
-        public var autoMigrate = true
+        case autoMigrate(Bool)
         
-        /// Whether to drop columns while running automatic migrations. Has no effect without `autoMigrate`
-        public var autoDropColumns = false
+        /// Whether to drop columns while running automatic migrations. Defaults to false. Has no effect without `autoMigrate`
+        case autoDropColumns(Bool)
 
-        /// Print all executed SQL statements as they are executed
-        public var logSQL = false
-        
-        public init(autoMigrate: Bool = true, autoDropColumns: Bool = false, logSQL: Bool = false) {
-            self.autoMigrate = autoMigrate
-            self.autoDropColumns = autoDropColumns
-            self.logSQL = logSQL
-        }
+        /// Print all executed SQL statements as they are executed. Defaults to false.
+        case logSQL(Bool)
     }
     
     private var _connection: Connection?
@@ -78,7 +83,7 @@ public class Database {
         if let c = _connection {
             return c
         }
-        let c = try Connection(path: path, logSQL: options.logSQL)
+        let c = try Connection(path: path, logSQL: logSQL)
         _connection = c
         return c
     }

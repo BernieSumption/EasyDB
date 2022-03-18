@@ -4,7 +4,7 @@ import SwiftDB
 class DatabaseTests: SwiftDBTestCase {
     
     func testExecute() throws {
-        db = Database(path: ":memory:", options: .init(logSQL: true))
+        db = Database(path: ":memory:", options: [.logSQL(true)])
         try db.execute("CREATE TABLE foo (a, b)")
         try db.execute("INSERT INTO foo (a, b) VALUES ('a', 'b'), ('c', 'd'), ('e', 'f')")
         let aNotEqualTo = "a"
