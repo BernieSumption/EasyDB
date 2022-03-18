@@ -13,7 +13,7 @@ public class Collection<Row: Codable>: Filterable {
     
     internal init(_ type: Row.Type, _ connection: Connection, _ options: [Option], identifiable: Bool) throws {
         self.connection = connection
-        self.mapper = try KeyPathMapper(type)
+        self.mapper = try KeyPathMapper.forType(type)
         self.columns = mapper.rootProperties
         
         var table = String(describing: Row.self)
@@ -41,7 +41,7 @@ public class Collection<Row: Codable>: Filterable {
         self.indices = indices
     }
     
-    public struct Option {
+    public struct Option: Equatable {
         let kind: Kind
         
         /// Customise the table name. The default is the name of the collection `Row` type
@@ -64,7 +64,7 @@ public class Collection<Row: Codable>: Filterable {
             Option(kind: .noUniqueId)
         }
         
-        enum Kind {
+        enum Kind: Equatable {
             case tableName(String)
             case index(PartialCodableKeyPath<Row>, Bool)
             case noUniqueId
@@ -89,17 +89,6 @@ public class Collection<Row: Codable>: Filterable {
     
     public func insert(_ rows: [Row]) throws {
         try rows.forEach(insert)
-    }
-    
-    public func execute(sql: String) throws {
-        let statement = try connection.prepare(sql: sql)
-        let _ = try statement.step()
-    }
-    
-    public func execute<T: Codable>(_ resultType: T.Type, sql: String) throws -> T {
-        let statement = try connection.prepare(sql: sql)
-        let _ = try statement.step()
-        return try StatementDecoder.decode(resultType, from: statement)
     }
     
     private var insertStatement: Statement?
@@ -177,7 +166,7 @@ public struct QueryBuilder<Row: Codable>: Filterable {
                 .raw("WHERE")
                 .raw(
                     try filters
-                        .map({ try $0.sql(mapper: collection.mapper) })
+                        .map({ try $0.sql() })
                         .joined(separator: " AND ")
                 )
             
@@ -208,7 +197,7 @@ public protocol Filterable {
     ///
     /// For example `filter("replace(foo, '-', '') = \(myString)")` will append
     /// `WHERE replace(foo, '-', '') = ?` to the SQL query and bind `myString` as a parameter
-    func filter(_ sqlFragment: SQLFragment<Row>) throws -> QueryBuilder<Row>
+    func filter(_ sqlFragment: SQLFragment<Row>) -> QueryBuilder<Row>
 }
 
 
@@ -216,120 +205,49 @@ extension Filterable {
     /// Select records where `property == value`.
     ///
     /// This uses the SQL `IS` operator which has the same semantics as Swift's `==` when comparing null values
-    public func filter<V: Codable>(_ property: KeyPath<Row, V>, is value: V) throws -> QueryBuilder<Row> {
-        return try filter("\(property) IS \(value)")
+    public func filter<V: Codable>(_ property: KeyPath<Row, V>, is value: V) -> QueryBuilder<Row> {
+        return filter("\(property) IS \(value)")
     }
 
     /// Select records where `property != value`.
     ///
     /// This uses the SQL `IS NOT` operator which has the same semantics as Swift's `!=` when comparing null values.
-    public func filter<V: Codable>(_ property: KeyPath<Row, V>, isNot value: V) throws -> QueryBuilder<Row> {
-        return try filter("\(property) IS NOT \(value)")
+    public func filter<V: Codable>(_ property: KeyPath<Row, V>, isNot value: V) -> QueryBuilder<Row> {
+        return filter("\(property) IS NOT \(value)")
     }
 
     /// Select records where `property > value`
-    public func filter<V: Codable>(_ property: KeyPath<Row, V>, greaterThan value: V) throws -> QueryBuilder<Row> {
-        return try filter("\(property) > \(value)")
+    public func filter<V: Codable>(_ property: KeyPath<Row, V>, greaterThan value: V) -> QueryBuilder<Row> {
+        return filter("\(property) > \(value)")
     }
 
     /// Select records where `property < value`
-    public func filter<V: Codable>(_ property: KeyPath<Row, V>, lessThan value: V) throws -> QueryBuilder<Row> {
-        return try filter("\(property) < \(value)")
+    public func filter<V: Codable>(_ property: KeyPath<Row, V>, lessThan value: V) -> QueryBuilder<Row> {
+        return filter("\(property) < \(value)")
     }
 
     /// Select records where `property >= value`
-    public func filter<V: Codable>(_ property: KeyPath<Row, V>, greaterThanOrEqualTo value: V) throws -> QueryBuilder<Row> {
-        return try filter("\(property) >= \(value)")
+    public func filter<V: Codable>(_ property: KeyPath<Row, V>, greaterThanOrEqualTo value: V) -> QueryBuilder<Row> {
+        return filter("\(property) >= \(value)")
     }
 
     /// Select records where `property <= value`
-    public func filter<V: Codable>(_ property: KeyPath<Row, V>, lessThanOrEqualTo value: V) throws -> QueryBuilder<Row> {
-        return try filter("\(property) <= \(value)")
+    public func filter<V: Codable>(_ property: KeyPath<Row, V>, lessThanOrEqualTo value: V) -> QueryBuilder<Row> {
+        return filter("\(property) <= \(value)")
     }
 
     /// Select records where `property IS NULL` (if `isNull` is `true`) or `property IS NOT NULL` otherwise
-    public func filter<V: Codable>(_ property: KeyPath<Row, V>, isNull: Bool) throws -> QueryBuilder<Row> {
-        return try filter(isNull ? "\(property) IS NULL" : "\(property) IS NOT NULL")
+    public func filter<V: Codable>(_ property: KeyPath<Row, V>, isNull: Bool) -> QueryBuilder<Row> {
+        return filter(isNull ? "\(property) IS NULL" : "\(property) IS NOT NULL")
     }
 
     /// Select records where `property LIKE value`
-    public func filter(_ property: KeyPath<Row, String>, like: String) throws -> QueryBuilder<Row> {
-        return try filter("\(property) LIKE \(like)")
+    public func filter(_ property: KeyPath<Row, String>, like: String) -> QueryBuilder<Row> {
+        return filter("\(property) LIKE \(like)")
     }
 
     /// Select records where `property NOT LIKE value`
-    public func filter(_ property: KeyPath<Row, String>, notLike: String) throws -> QueryBuilder<Row> {
-        return try filter("\(property) NOT LIKE \(notLike)")
-    }
-}
-
-public struct SQLFragment<Row: Codable>: ExpressibleByStringInterpolation {
-    var parts = [Part]()
-    
-    enum Part {
-        case literal(String)
-        case property(PartialCodableKeyPath<Row>)
-        case parameter(DatabaseValue)
-    }
-    
-    init(_ value: String) {
-        parts.append(.literal(value))
-    }
-    
-    public init(stringLiteral value: String) {
-        self.init(value)
-    }
-    
-    public init(stringInterpolation: StringInterpolation) {
-        parts = stringInterpolation.parts
-    }
-    
-    public struct StringInterpolation: StringInterpolationProtocol {
-        var parts = [Part]()
-        
-        public init(literalCapacity: Int, interpolationCount: Int) {}
-        
-        public mutating func appendLiteral(_ literal: String) {
-            parts.append(.literal(literal))
-        }
-        
-        public mutating func appendInterpolation<V: Codable>(_ value: V) {
-            // TODO: remove force try
-            let value = try! DatabaseValueEncoder.encode(value)
-            parts.append(.parameter(value))
-        }
-        
-        public mutating func appendInterpolation<V: Codable>(_ property: KeyPath<Row, V>) {
-            parts.append(.property(PartialCodableKeyPath(property)))
-        }
-    }
-    
-    func sql(mapper: KeyPathMapper<Row>) throws -> String {
-        return try parts.compactMap { part in
-            switch part {
-            case .literal(let string):
-                return string
-            case .property(let keyPath):
-                let path = try mapper.propertyPath(for: keyPath)
-                guard path.count == 1 else {
-                    throw SwiftDBError.notImplemented(feature: #"filtering by nested KeyPaths e.g. \.foo.bar"#)
-                }
-                return SQL.quoteName(path[0])
-            case .parameter:
-                return "?"
-            }
-        }
-        .joined(separator: " ")
-    }
-    
-    func parameters() throws -> [DatabaseValue] {
-        return parts.compactMap { part -> DatabaseValue? in
-            switch part {
-            case .parameter(let value):
-                return value
-            default:
-                return nil
-            }
-        }
+    public func filter(_ property: KeyPath<Row, String>, notLike: String) -> QueryBuilder<Row> {
+        return filter("\(property) NOT LIKE \(notLike)")
     }
 }

@@ -5,7 +5,7 @@ import XCTest
 class KeyPathMapperTests: XCTestCase {
     
     func testFlat() throws {
-        let mapper = try KeyPathMapper(Flat.self)
+        let mapper = try KeyPathMapper.forType(Flat.self)
         XCTAssertEqual(try mapper.propertyPath(for: \.a), ["a"])
         XCTAssertEqual(try mapper.propertyPath(for: \.b), ["b"])
         XCTAssertEqual(try mapper.propertyPath(for: \.c), ["c"])
@@ -19,7 +19,7 @@ class KeyPathMapperTests: XCTestCase {
     }
 
     func testNested() throws {
-        let mapper = try KeyPathMapper(Nested.self)
+        let mapper = try KeyPathMapper.forType(Nested.self)
         XCTAssertEqual(try mapper.propertyPath(for: \.s1), ["s1"])
         XCTAssertEqual(try mapper.propertyPath(for: \.s1.b), ["s1", "b"])
         XCTAssertEqual(try mapper.propertyPath(for: \.s1.s12), ["s1", "s12"])
@@ -50,7 +50,7 @@ class KeyPathMapperTests: XCTestCase {
     }
 
     func testArrays() throws {
-        let mapper = try KeyPathMapper(Arrays.self)
+        let mapper = try KeyPathMapper.forType(Arrays.self)
         XCTAssertEqual(try mapper.propertyPath(for: \.array), ["array"])
         XCTAssertEqual(try mapper.propertyPath(for: \.sub), ["sub"])
         XCTAssertEqual(try mapper.propertyPath(for: \.sub.b), ["sub", "b"])
@@ -67,7 +67,7 @@ class KeyPathMapperTests: XCTestCase {
     }
 
     func testDictionaries() throws {
-        let mapper = try KeyPathMapper(Dictionaries.self)
+        let mapper = try KeyPathMapper.forType(Dictionaries.self)
         XCTAssertEqual(try mapper.propertyPath(for: \.dict), ["dict"])
         XCTAssertEqual(try mapper.propertyPath(for: \.sub), ["sub"])
         XCTAssertEqual(try mapper.propertyPath(for: \.sub.b), ["sub", "b"])
@@ -87,9 +87,9 @@ class KeyPathMapperTests: XCTestCase {
             let b: Bool
         }
     }
-
+    
     func testCodingKeys() throws {
-        let mapper = try KeyPathMapper(WithCustomNames.self)
+        let mapper = try KeyPathMapper.forType(WithCustomNames.self)
         XCTAssertEqual(try mapper.propertyPath(for: \.a), ["foo"])
     }
     struct WithCustomNames: Codable {
@@ -98,5 +98,9 @@ class KeyPathMapperTests: XCTestCase {
         enum CodingKeys: String, CodingKey {
             case a = "foo"
         }
+    }
+    
+    func testCaching() throws {
+        XCTAssertTrue(try KeyPathMapper.forType(Flat.self) === KeyPathMapper.forType(Flat.self))
     }
 }

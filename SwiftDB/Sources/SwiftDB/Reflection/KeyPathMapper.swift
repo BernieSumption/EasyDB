@@ -22,12 +22,12 @@
 /// had one sample instance, we'd only be able to differentiate two boolean properties. So in fact we have a list of
 /// instances containing enough samples to differentiate all properties. See `MultifariousDecoder` for details
 /// on how this works.
-struct KeyPathMapper<T: Codable> {
+class KeyPathMapper<T: Codable> {
     private let instances: [T]
     private let valuesToPropertyPath: [[Encoded]: [String]]
-    private let cache = Cache()
+    private var keyPathToPropertyPath = [AnyKeyPath: [String]]()
 
-    init(_ type: T.Type) throws {
+    private init(_ type: T.Type) throws {
         instances = try MultifariousDecoder.instances(for: type)
         let jsonInstances = try instances.map({ try Encoded($0) })
         guard let first = jsonInstances.first else {
@@ -63,33 +63,51 @@ struct KeyPathMapper<T: Codable> {
     
     /// A type-erased version of `propertyPath(for:)`
     func propertyPath(for keyPath: PartialCodableKeyPath<T>) throws -> [String] {
-        if let cached = cache.keyPathToPropertyPath[keyPath.cacheKey] {
+        if let cached = keyPathToPropertyPath[keyPath.cacheKey] {
             return cached
         }
         let values = try instances.map(keyPath.encode)
         guard let path = valuesToPropertyPath[values] else {
             throw ReflectionError.keyPathNotFound(T.self)
         }
-        cache.keyPathToPropertyPath[keyPath.cacheKey] = path
+        keyPathToPropertyPath[keyPath.cacheKey] = path
         return path
     }
     
     var rootProperties: [String] {
         [String](Set(valuesToPropertyPath.values.map(\.[0])))
     }
+    
+}
 
-    private class Cache {
-        var keyPathToPropertyPath = [AnyKeyPath: [String]]()
+private var instanceCache = [ObjectIdentifier: Any]()
+
+extension KeyPathMapper {
+    static func forType(_ type: T.Type) throws -> KeyPathMapper<T> {
+        let typeId = ObjectIdentifier(type)
+        if let instance = instanceCache[typeId] {
+            guard let instance = instance as? KeyPathMapper<T> else {
+                throw SwiftDBError.unexpected(message: "cached collection has wrong type")
+            }
+            return instance
+        }
+        let instance = try KeyPathMapper<T>(type)
+        instanceCache[typeId] = instance
+        return instance
     }
 }
 
 /// A KeyPath with the value type erased, but constrained to Codable values
-struct PartialCodableKeyPath<Row> {
+struct PartialCodableKeyPath<Row>: Equatable {
     let encode: (Row) throws -> Encoded
     let cacheKey: AnyKeyPath
     
     init<V: Encodable>(_ keyPath: KeyPath<Row, V>) {
         self.encode = { try Encoded($0[keyPath: keyPath]) }
         self.cacheKey = keyPath
+    }
+    
+    static func == (lhs: PartialCodableKeyPath<Row>, rhs: PartialCodableKeyPath<Row>) -> Bool {
+        return lhs.cacheKey == rhs.cacheKey
     }
 }

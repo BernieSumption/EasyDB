@@ -20,6 +20,8 @@ public class Database {
         return try collection(type, collectionOptions, identifiable: false)
     }
     
+    /// Return a collection. Unless automatic migration is disabled for this database, the table will be automatically
+    /// created or any missing columns added
     func collection<T: Codable>(_ type: T.Type, _ collectionOptions: [Collection<T>.Option], identifiable: Bool) throws -> Collection<T> {
         return try collectionCreateQueue.sync {
             let typeId = ObjectIdentifier(type)
@@ -36,6 +38,20 @@ public class Database {
             collections[typeId] = collection
             return collection
         }
+    }
+    
+    /// Execute an SQL statement. If the statement has results, they will be ignored
+    public func execute(_ sqlFragment: SQLFragment<NoProperties>) throws {
+        let statement = try getConnection().prepare(sql: try sqlFragment.sql())
+        let _ = try statement.step()
+    }
+    
+    /// Execute an SQL statement and return the results as an instance of T. T can be any codable type, see the rules
+    /// for decoding queries TODO: link to docs for "selecting results into other types"
+    public func execute<T: Codable>(_ resultType: T.Type, _ sqlFragment: SQLFragment<NoProperties>) throws -> T {
+        let statement = try getConnection().prepare(sql: sqlFragment.sql())
+        try statement.bind(try sqlFragment.parameters())
+        return try StatementDecoder.decode(resultType, from: statement)
     }
     
     public struct Options {
@@ -67,6 +83,8 @@ public class Database {
         return c
     }
 }
+
+public struct NoProperties: Codable {}
 
 extension Database {
     /// The standard database - most applications can use this unless they need multiple
