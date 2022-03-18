@@ -60,26 +60,13 @@ class SwiftDBTestCase: XCTestCase {
         db = Database(path: ":memory:")
     }
     
-    func assertThrowsConnectionError(_ expression: @autoclosure () throws -> Any, _ message: String) {
-        XCTAssertThrowsError(try expression()) { error in
-            XCTAssertEqual((error as! ConnectionError).message, message)
-        }
-    }
-    
-    func assertThrowsConnectionError(_ expression: @autoclosure () throws -> Any, contains messagePart: String) {
-        XCTAssertThrowsError(try expression()) { error in
-            let message = (error as! ConnectionError).message!
-            XCTAssertTrue(message.contains(messagePart), "\"\(message)\" does not contain \"\(messagePart)\"")
-        }
-    }
-    
-    func assertThrowsError(_ expression: @autoclosure () throws -> Any, _ message: String) {
+    func assertErrorMessage(_ expression: @autoclosure () throws -> Any, _ message: String) {
         XCTAssertThrowsError(try expression()) { error in
             XCTAssertEqual("\(error)", message)
         }
     }
     
-    func assertThrowsError(_ expression: @autoclosure () throws -> Any, contains: String) {
+    func assertErrorMessage(_ expression: @autoclosure () throws -> Any, contains: String) {
         XCTAssertThrowsError(try expression()) { error in
             let message = "\(error)"
             XCTAssertTrue(message.contains(contains), "\"\(message)\" does not contain \"\(contains)\"")

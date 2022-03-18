@@ -31,9 +31,9 @@ class CollectionTests: SwiftDBTestCase {
         let c = try db.collection(RowWithValue.self, [.unique(\.value)])
         try c.insert(RowWithValue(5))
         
-        assertThrowsConnectionError(
+        assertErrorMessage(
             try c.insert(RowWithValue(5)),
-            "UNIQUE constraint failed: RowWithValue.value")
+            contains: "UNIQUE constraint failed: RowWithValue.value")
         
         XCTAssertNoThrow(try c.insert(RowWithValue(6)))
     }
@@ -50,9 +50,9 @@ class CollectionTests: SwiftDBTestCase {
         let rowB = RowWithId()
         try c.insert(rowA)
         
-        assertThrowsConnectionError(
+        assertErrorMessage(
             try c.insert(rowA),
-            "UNIQUE constraint failed: RowWithId.id")
+            contains: "UNIQUE constraint failed: RowWithId.id")
         
         XCTAssertNoThrow(try c.insert(rowB))
     }

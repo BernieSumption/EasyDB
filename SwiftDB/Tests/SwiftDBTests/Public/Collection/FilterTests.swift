@@ -125,7 +125,7 @@ class FilterTests: SwiftDBTestCase {
     
     func testErrorMessage() throws {
         let c = try db.collection(RowT<Struct>.self)
-        assertThrowsError(
+        assertErrorMessage(
             try c.filter(\.value.foo, is: "foo").fetchMany(),
             contains: #"filtering by nested KeyPaths (\.value.foo) is not implemented"#)
     }
