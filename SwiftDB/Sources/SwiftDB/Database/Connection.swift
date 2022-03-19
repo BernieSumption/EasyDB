@@ -7,6 +7,7 @@ let swiftDBLog = Logger.init(subsystem: "SwiftDB", category: "sql")
 class Connection {
     let db: OpaquePointer
     let logSQL: Bool
+    var registeredCollations = Set<Collation>()
 
     init(path: String, logSQL: Bool = false) throws {
         self.logSQL = logSQL
@@ -32,6 +33,33 @@ class Connection {
         let statement = try prepare(sql: sql)
         try statement.bind(parameters)
         let _ = try statement.step()
+    }
+    
+    public func registerCollation(_ collation: Collation) {
+        guard !registeredCollations.contains(collation) else {
+            return
+        }
+        registeredCollations.insert(collation)
+        
+        guard collation.compare != nil else {
+            return
+        }
+        
+        // With thanks to GRDB where I learned about this technique:
+        
+        let collationPointer = Unmanaged.passUnretained(collation).toOpaque()
+        let code = sqlite3_create_collation_v2(
+            db,
+            collation.name,
+            SQLITE_UTF8,
+            collationPointer,
+            { (collationPointer, length1, buffer1, length2, buffer2) -> Int32 in
+                let collation = Unmanaged<Collation>.fromOpaque(collationPointer!).takeUnretainedValue()
+                return Int32(collation.compare!(length1, buffer1, length2, buffer2).rawValue)
+            }, nil)
+        guard code == SQLITE_OK else {
+            fatalError("call to sqlite3_create_collation_v2 failed with code \(code)")
+        }
     }
 }
 

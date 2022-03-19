@@ -50,5 +50,45 @@ class SortingTests: SwiftDBTestCase {
             { $0.all().orderBy(\.value, collate: .asciiCaseInsensitive) },
             ["a", "b", "C", "D"])
     }
+    
+    func testOrderByUnicodeCompare() throws {
+        try testFilter(
+            ["z", "Z", "u", "ü"],
+            { $0.all().orderBy(\.value) },
+            ["Z", "u", "z", "ü"])
+        
+        try testFilter(
+            ["z", "Z", "u", "ü"],
+            { $0.all().orderBy(\.value, collate: .compare) },
+            ["Z", "u", "z", "ü"])
+    }
+    
+    func testOrderByCustomCollation() throws {
+        
+        try testFilter(
+            ["x", "me first!", "a"],
+            { $0.all().orderBy(\.value) },
+            ["a", "me first!", "x"])
+        
+        try testFilter(
+            ["x", "me first!", "a"],
+            { $0.all().orderBy(\.value, collate: .stringMeFirstAlwaysGoesFirst) },
+            ["me first!", "a", "x"])
+    }
+}
+
+extension Collation {
+    static let stringMeFirstAlwaysGoesFirst = Collation("stringMeFirstAlwaysGoesFirst") { (a, b) in
+        if a == b {
+            return .orderedSame
+        }
+        if a == "me first!" {
+            return .orderedAscending
+        }
+        if b == "me first!" {
+            return .orderedDescending
+        }
+        return a < b ? .orderedAscending : .orderedDescending
+    }
 }
 

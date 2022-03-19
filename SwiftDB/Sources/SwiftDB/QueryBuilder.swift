@@ -66,6 +66,12 @@ public struct QueryBuilder<Row: Codable>: Filterable {
                         .joined(separator: ", ")
                 )
         }
+        
+        for order in orders {
+            if let collation = order.collation {
+                collection.connection.registerCollation(collation)
+            }
+        }
             
         let statement = try collection.connection.prepare(sql: sql.text)
         for (index, parameter) in parameters.enumerated() {
@@ -135,17 +141,42 @@ public struct QueryBuilder<Row: Codable>: Filterable {
 
 
 /// Define a sorting order for strings
-public struct Collation {
-    /// The built-in SQLite BINARY collation that compares strings using their in-memory binary representation,
+public class Collation {
+    /// The built-in SQLite `BINARY` collation that compares strings using their in-memory binary representation,
     /// regardless of text encoding. This is the default unless an alternative is specified.
     public static let binary = Collation("BINARY")
     
-    /// The built-in SQLite NOCASE collation that considers ASCII lowercase and uppercase letters to be equivalent
+    /// The built-in SQLite `NOCASE` collation that considers ASCII lowercase and uppercase letters to be equivalent
     /// but does not handle unicode case insensitivity
+    ///
+    /// This is slightly faster than `.caseInsensitive` if you know that your strings are definitely ASCII-only
     public static let asciiCaseInsensitive = Collation("NOCASE")
     
-    /// The built-in SQLite RTRIM collation - as `.binary` but ignoring trailing whitespace
-    public static let rtrim = Collation("RTRIM")
+    /// The built-in SQLite `RTRIM` collation - as `.binary` but ignoring trailing whitespace
+    public static let ignoreTrailingWhitespace = Collation("RTRIM")
+    
+    /// Sort unicode strings correctly using Swift's `==` and `<=` operators on `String`
+    public static let compare = Collation("SwiftDB_compare") { (a, b) in
+        if a == b {
+            return .orderedSame
+        }
+        return a < b ? .orderedAscending : .orderedDescending
+    }
+    
+    /// Sort unicode strings in a case-insensitive way using Swift's `String.caseInsensitiveCompare(_:)` function
+    public static let caseInsensitiveCompare = Collation("SwiftDB_unicodeCaseInsensitive") { (a, b) in
+        return a.caseInsensitiveCompare(b)
+    }
+    
+    /// Sort unicode strings using localized comparison with Swift's `String.localizedCompare(_:)` function
+    public static let localizedCompare = Collation("SwiftDB_localizedCompare") { (a, b) in
+        return a.localizedCompare(b)
+    }
+    
+    /// Sort unicode strings using case-insensitive localized comparison with Swift's `String.localizedCaseInsensitiveCompare(_:)` function
+    public static let localizedCaseInsensitiveCompare = Collation("SwiftDB_localizedCaseInsensitiveCompare") { (a, b) in
+        return a.localizedCaseInsensitiveCompare(b)
+    }
     
     let name: String
     let compare: ((Int32, UnsafeRawPointer?, Int32, UnsafeRawPointer?) -> ComparisonResult)?

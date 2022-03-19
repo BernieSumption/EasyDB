@@ -84,6 +84,13 @@ public class Database {
             return c
         }
         let c = try Connection(path: path, logSQL: logSQL)
+        c.registerCollation(.asciiCaseInsensitive)
+        c.registerCollation(.binary)
+        c.registerCollation(.ignoreTrailingWhitespace)
+        c.registerCollation(.compare)
+        c.registerCollation(.caseInsensitiveCompare)
+        c.registerCollation(.localizedCompare)
+        c.registerCollation(.localizedCaseInsensitiveCompare)
         _connection = c
         return c
     }
