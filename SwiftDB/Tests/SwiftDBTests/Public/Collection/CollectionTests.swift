@@ -4,7 +4,7 @@ import SwiftDB
 class CollectionTests: SwiftDBTestCase {
     
     func testCollectionCaching() {
-        XCTAssertTrue(try db.collection(RowWithValue.self) === db.collection(RowWithValue.self))
+        XCTAssertTrue(try db.collection(RowWithValue<Int>.self) === db.collection(RowWithValue<Int>.self))
     }
     
     func testMigrateData() throws {
@@ -28,18 +28,18 @@ class CollectionTests: SwiftDBTestCase {
     }
     
     func testUniqueIndex() throws {
-        let c = try db.collection(RowWithValue.self, [.unique(\.value)])
+        let c = try db.collection(RowWithValue<Int>.self, [.unique(\.value)])
         try c.insert(RowWithValue(5))
         
         assertErrorMessage(
             try c.insert(RowWithValue(5)),
-            contains: "UNIQUE constraint failed: RowWithValue.value")
+            contains: "UNIQUE constraint failed: RowWithValue<Int>.value")
         
         XCTAssertNoThrow(try c.insert(RowWithValue(6)))
     }
     
     func testRegularIndex() throws {
-        let c = try db.collection(RowWithValue.self, [.index(\.value)])
+        let c = try db.collection(RowWithValue<Int>.self, [.index(\.value)])
         try c.insert(RowWithValue(5))
         XCTAssertNoThrow(try c.insert(RowWithValue(5)))
     }

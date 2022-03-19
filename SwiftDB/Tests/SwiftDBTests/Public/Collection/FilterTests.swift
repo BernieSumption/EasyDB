@@ -124,7 +124,7 @@ class FilterTests: SwiftDBTestCase {
     }
     
     func testErrorMessage() throws {
-        let c = try db.collection(RowT<Struct>.self)
+        let c = try db.collection(RowWithValue<Struct>.self)
         assertErrorMessage(
             try c.filter(\.value.foo, is: "foo").fetchMany(),
             contains: #"filtering by nested KeyPaths (\.value.foo) is not implemented"#)
@@ -132,20 +132,6 @@ class FilterTests: SwiftDBTestCase {
 }
 
 extension FilterTests {
-    
-    func testFilter<T: Codable & Equatable>(_ data: [T], _ filter: (Collection<RowT<T>>) throws -> QueryBuilder<RowT<T>>, _ expected: [T]) throws {
-        // TODO: replace with collection.all().delete() when we have implemented that
-        try setUpWithError() // delete existing data
-        let c = try db.collection(RowT<T>.self)
-        try c.insert(data.map(RowT<T>.init))
-        XCTAssertEqual(
-            try filter(c).fetchMany().map(\.value),
-            expected)
-    }
-    
-    struct RowT<T: Codable & Equatable>: Codable, Equatable {
-        var value: T
-    }
     
     struct Struct: Codable, Equatable {
         let foo: String

@@ -37,19 +37,27 @@ struct KitchenSinkEntity: Codable, Equatable {
         sub: .init(d: Date(timeIntervalSinceReferenceDate: 20), a: 21))
 }
 
-struct RowWithValue: Codable, Equatable {
-    var value: Int
+struct RowWithValue<T: Codable & Equatable>: Codable, Equatable, CustomStringConvertible {
+    var value: T
     
-    init(_ value: Int) {
+    init(_ value: T) {
         self.value = value
+    }
+    
+    var description: String {
+        return "RowWithValue<\(T.self)>(\(value))"
     }
 }
 
-struct RowWithId: Codable, Equatable, Identifiable {
+struct RowWithId: Codable, Equatable, Identifiable, CustomStringConvertible {
     let id: UUID
     
     init(_ id: UUID = UUID()) {
         self.id = id
+    }
+    
+    var description: String {
+        return "RowWithId(\(id))"
     }
 }
 
@@ -58,6 +66,20 @@ class SwiftDBTestCase: XCTestCase {
     
     override func setUpWithError() throws {
         db = Database(path: ":memory:")
+    }
+    
+    func testFilter<T: Codable & Equatable>(
+        _ data: [T],
+        _ filter: (Collection<RowWithValue<T>>) throws -> QueryBuilder<RowWithValue<T>>,
+        _ expected: [T]
+    ) throws {
+        // TODO: replace with collection.all().delete() when we have implemented that
+        try setUpWithError() // delete existing data
+        let c = try db.collection(RowWithValue<T>.self)
+        try c.insert(data.map(RowWithValue<T>.init))
+        XCTAssertEqual(
+            try filter(c).fetchMany().map(\.value),
+            expected)
     }
     
     func assertErrorMessage(_ expression: @autoclosure () throws -> Any, _ message: String) {

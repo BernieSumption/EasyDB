@@ -77,7 +77,6 @@ class KeyPathMapper<T: Codable> {
     var rootProperties: [String] {
         [String](Set(valuesToPropertyPath.values.map(\.[0])))
     }
-    
 }
 
 private var instanceCache = [ObjectIdentifier: Any]()
@@ -98,7 +97,7 @@ extension KeyPathMapper {
 }
 
 /// A KeyPath with the value type erased, but constrained to Codable values
-struct PartialCodableKeyPath<Row>: Equatable {
+struct PartialCodableKeyPath<Row: Codable>: Equatable {
     let encode: (Row) throws -> Encoded
     let cacheKey: AnyKeyPath
     
@@ -109,5 +108,15 @@ struct PartialCodableKeyPath<Row>: Equatable {
     
     static func == (lhs: PartialCodableKeyPath<Row>, rhs: PartialCodableKeyPath<Row>) -> Bool {
         return lhs.cacheKey == rhs.cacheKey
+    }
+    
+    func nameExpression(operation: String) throws -> String {
+        let mapper = try KeyPathMapper.forType(Row.self)
+        let path = try mapper.propertyPath(for: self)
+        guard path.count == 1 else {
+            let pathString = path.joined(separator: ".")
+            throw SwiftDBError.notImplemented(feature: "\(operation) by nested KeyPaths (\\.\(pathString))")
+        }
+        return SQL.quoteName(path[0])
     }
 }

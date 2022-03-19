@@ -41,18 +41,12 @@ public struct SQLFragment<Row: Codable>: ExpressibleByStringInterpolation {
     }
     
     func sql() throws -> String {
-        let mapper = try KeyPathMapper.forType(Row.self)
         return try parts.compactMap { part in
             switch part {
             case .literal(let string):
                 return string
             case .property(let keyPath):
-                let path = try mapper.propertyPath(for: keyPath)
-                guard path.count == 1 else {
-                    let pathString = path.joined(separator: ".")
-                    throw SwiftDBError.notImplemented(feature: "filtering by nested KeyPaths (\\.\(pathString))")
-                }
-                return SQL.quoteName(path[0])
+                return try keyPath.nameExpression(operation: "filtering")
             case .parameter:
                 return "?"
             }
