@@ -97,7 +97,7 @@ extension KeyPathMapper {
 }
 
 /// A KeyPath with the value type erased, but constrained to Codable values
-struct PartialCodableKeyPath<Row: Codable>: Equatable {
+struct PartialCodableKeyPath<Row: Codable>: Hashable {
     let encode: (Row) throws -> Encoded
     let cacheKey: AnyKeyPath
     
@@ -106,8 +106,12 @@ struct PartialCodableKeyPath<Row: Codable>: Equatable {
         self.cacheKey = keyPath
     }
     
-    static func == (lhs: PartialCodableKeyPath<Row>, rhs: PartialCodableKeyPath<Row>) -> Bool {
-        return lhs.cacheKey == rhs.cacheKey
+    static func == (a: PartialCodableKeyPath<Row>, b: PartialCodableKeyPath<Row>) -> Bool {
+        return a.cacheKey == b.cacheKey
+    }
+    
+    func hash(into hasher: inout Hasher) {
+        hasher.combine(cacheKey)
     }
     
     func nameExpression(operation: String) throws -> String {

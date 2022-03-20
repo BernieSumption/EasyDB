@@ -105,5 +105,20 @@ struct SQL: CustomStringConvertible {
     static func quoteName(_ name: String) -> String {
         return "\"" + name.replacingOccurrences(of: "\"", with: "\"\"") + "\""
     }
+    
+    /// Convert lowercase ASCII characters to uppercase without affecting non-ASCII unicode characters. This matches
+    /// the process used by SQLite to compare strings for case-insensitive equality (`sqlite3_stricmp`)
+    static func normalizeName(_ name: String) -> String {
+        var result = ""
+        result.reserveCapacity(name.count)
+        for char in name {
+            if char.isASCII {
+                result.append(char.uppercased())
+            } else {
+                result.append(char)
+            }
+        }
+        return result
+    }
 }
 

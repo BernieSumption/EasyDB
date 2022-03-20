@@ -7,7 +7,7 @@ let swiftDBLog = Logger.init(subsystem: "SwiftDB", category: "sql")
 class Connection {
     let db: OpaquePointer
     let logSQL: Bool
-    var registeredCollations = Set<Collation>()
+    var registeredCollationNames = Set<String>()
 
     init(path: String, logSQL: Bool = false) throws {
         self.logSQL = logSQL
@@ -36,30 +36,38 @@ class Connection {
     }
     
     public func registerCollation(_ collation: Collation) {
-        guard !registeredCollations.contains(collation) else {
+        guard !registeredCollationNames.contains(collation.normalizedName) else {
             return
         }
-        registeredCollations.insert(collation)
+        registeredCollationNames.insert(collation.normalizedName)
         
-        guard collation.compare != nil else {
+        guard let compare = collation.compare else {
             return
         }
         
-        // With thanks to GRDB where I learned about this technique:
-        
-        let collationPointer = Unmanaged.passUnretained(collation).toOpaque()
+        let function = CollationFunctionWrapper(compare)
+        let functionPointer = Unmanaged.passRetained(function).toOpaque()
         let code = sqlite3_create_collation_v2(
             db,
             collation.name,
             SQLITE_UTF8,
-            collationPointer,
-            { (collationPointer, length1, buffer1, length2, buffer2) -> Int32 in
-                let collation = Unmanaged<Collation>.fromOpaque(collationPointer!).takeUnretainedValue()
-                return Int32(collation.compare!(length1, buffer1, length2, buffer2).rawValue)
+            functionPointer,
+            { (arg, size1, data1, size2, data2) -> Int32 in
+                let function = Unmanaged<CollationFunctionWrapper>.fromOpaque(arg!).takeUnretainedValue()
+                return Int32(function.compare(size1, data1, size2, data2).rawValue)
             }, nil)
         guard code == SQLITE_OK else {
             fatalError("call to sqlite3_create_collation_v2 failed with code \(code)")
         }
+    }
+}
+
+/// Wrapper for a collation function - required because we need a reference type for `Unmanaged.passRetained(_:)`
+class CollationFunctionWrapper {
+    let compare: SQLiteCustomCollationFunction
+    
+    init(_ compare: @escaping SQLiteCustomCollationFunction) {
+        self.compare = compare
     }
 }
 
