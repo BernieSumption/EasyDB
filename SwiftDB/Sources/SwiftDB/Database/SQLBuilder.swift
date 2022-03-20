@@ -44,7 +44,7 @@ struct SQL: CustomStringConvertible {
         return raw("DROP COLUMN").quotedName(column)
     }
     
-    func createIndex(name: String, on table: String, unique: Bool = false) -> SQL {
+    func createIndex(name: String, on table: String, unique: Bool) -> SQL {
         return raw("CREATE")
             .raw("UNIQUE", if: unique)
             .raw("INDEX")
@@ -92,13 +92,14 @@ struct SQL: CustomStringConvertible {
     }
     
     func raw(_ part: String, if condition: Bool = true) -> Self {
+        guard condition else {
+            return self
+        }
         var newText = text
         if newText != "" {
             newText.append(" ")
         }
-        if condition {
-            newText.append(part)
-        }
+        newText.append(part)
         return SQL(text: newText)
     }
     

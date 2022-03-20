@@ -1,7 +1,8 @@
 import Foundation
 
 /// Define a sorting order for strings
-public struct Collation {
+public struct Collation: Equatable {
+    
     /// The name of this collation that can be used in SQL queries
     public let name: String
     
@@ -26,6 +27,10 @@ public struct Collation {
         self.name = name
         self.normalizedName = SQL.normalizeName(name)
         self.compare = nil
+    }
+    
+    public static func == (lhs: Collation, rhs: Collation) -> Bool {
+        return lhs.normalizedName == rhs.normalizedName
     }
 }
 
@@ -55,17 +60,17 @@ extension Collation {
     }
     
     /// Sort unicode strings in a case-insensitive way using Swift's `String.caseInsensitiveCompare(_:)` function
-    public static let caseInsensitiveCompare = Collation("SwiftDB_unicodeCaseInsensitive") { (a, b) in
+    public static let caseInsensitiveCompare = Collation("caseInsensitiveCompare") { (a, b) in
         return a.caseInsensitiveCompare(b)
     }
     
     /// Sort unicode strings using localized comparison with Swift's `String.localizedCompare(_:)` function
-    public static let localizedCompare = Collation("SwiftDB_localizedCompare") { (a, b) in
+    public static let localizedCompare = Collation("localizedCompare") { (a, b) in
         return a.localizedCompare(b)
     }
     
     /// Sort unicode strings using case-insensitive localized comparison with Swift's `String.localizedCaseInsensitiveCompare(_:)` function
-    public static let localizedCaseInsensitiveCompare = Collation("SwiftDB_localizedCaseInsensitiveCompare") { (a, b) in
+    public static let localizedCaseInsensitiveCompare = Collation("localizedCaseInsensitiveCompare") { (a, b) in
         return a.localizedCaseInsensitiveCompare(b)
     }
 }

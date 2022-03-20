@@ -85,16 +85,22 @@ struct SchemaMigration {
 }
 
 struct Index {
-    var parts: [Part]
-    var unique: Bool
+    let parts: [Part]
+    let unique: Bool
+    let customName: String?
     
-    init(_ parts: [Part], unique: Bool = false) {
+    init(_ parts: [Part], unique: Bool = false, customName: String? = nil) {
         assert(parts.count > 0, "at least one parts required to create an index")
         self.parts = parts
         self.unique = unique
+        self.customName = customName
     }
     
     func name(forTable table: String) -> String {
+        if let customName = customName {
+            return customName
+        }
+
         return "swiftdb_\(table)_" + parts.map({ column in
             let path = column.path.joined(separator: ".")
             switch column.direction {
@@ -112,6 +118,9 @@ struct Index {
         let columnsSql: [String] = parts.map({ column in
             // TODO: JSON expression when path.count > 1
             var sql = SQL.quoteName(column.path.joined(separator: "."))
+            if let collation = column.collation {
+                sql += " COLLATE " + SQL.quoteName(collation.name)
+            }
             switch column.direction {
             case .ascending:
                 sql += " ASC"
@@ -129,15 +138,18 @@ struct Index {
     }
     
     struct Part {
-        var path: [String]
-        var direction: Direction?
+        let path: [String]
+        let direction: Direction?
+        let collation: Collation?
         
         init(
             _ path: [String],
-            _ direction: Direction? = nil
+            _ direction: Direction? = nil,
+            collation: Collation? = nil
         ) {
             self.path = path
             self.direction = direction
+            self.collation = collation
         }
     }
     

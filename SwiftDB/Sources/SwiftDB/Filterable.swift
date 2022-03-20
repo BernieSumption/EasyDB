@@ -46,9 +46,9 @@ extension Filterable {
         return filter("\(property) <= \(value)")
     }
 
-    /// Select records where `property IS NULL` (if `isNull` is `true`) or `property IS NOT NULL` otherwise
+    /// Select records where `property ISNULL` (if `isNull` is `true`) or `property NOTNULL` otherwise
     public func filter<V: Codable>(_ property: KeyPath<Row, V>, isNull: Bool) -> QueryBuilder<Row> {
-        return filter(isNull ? "\(property) IS NULL" : "\(property) IS NOT NULL")
+        return filter(isNull ? "\(property) ISNULL" : "\(property) NOTNULL")
     }
 
     /// Select records where `property LIKE value`

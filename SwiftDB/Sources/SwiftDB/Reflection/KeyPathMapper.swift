@@ -106,8 +106,8 @@ struct PartialCodableKeyPath<Row: Codable>: Hashable {
         self.cacheKey = keyPath
     }
     
-    static func == (a: PartialCodableKeyPath<Row>, b: PartialCodableKeyPath<Row>) -> Bool {
-        return a.cacheKey == b.cacheKey
+    static func == (lhs: PartialCodableKeyPath<Row>, rhs: PartialCodableKeyPath<Row>) -> Bool {
+        return lhs.cacheKey == rhs.cacheKey
     }
     
     func hash(into hasher: inout Hasher) {

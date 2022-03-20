@@ -23,19 +23,20 @@ public class Collection<Row: Codable>: Filterable {
             switch option.kind {
             case .tableName(let name):
                 table = name
-            case .index(let keyPath, let unique):
-                let propertyPath = try mapper.propertyPath(for: keyPath)
+            case .index(let spec):
+                let propertyPath = try mapper.propertyPath(for: spec.keyPath)
                 indices.append(
                     Index(
-                        [Index.Part(propertyPath, .ascending)],
-                        unique: unique
-                    ))
+                        [Index.Part(propertyPath, collation: spec.collation)],
+                        unique: spec.unique,
+                        customName: spec.name))
             case .noUniqueId:
                 noUniqueId = true
             }
         }
         if identifiable && !noUniqueId {
-            indices.append(Index([Index.Part(["id"], .ascending)], unique: true))
+            let index = Index([Index.Part(["id"], .ascending)], unique: true, customName: nil)
+            indices.append(index)
         }
         self.table = table
         self.indices = indices
@@ -49,14 +50,29 @@ public class Collection<Row: Codable>: Filterable {
             return Option(kind: .tableName(name))
         }
         
-        /// Add a non-unique index to a property
-        public static func index<V: Codable>(_ keyPath: KeyPath<Row, V>) -> Option {
-            return Option(kind: .index(PartialCodableKeyPath(keyPath), false))
+        /// Add an index to a property
+        public static func index<V: Codable>(
+            _ keyPath: KeyPath<Row, V>,
+            unique: Bool = false,
+            name: String? = nil,
+            collation: Collation? = nil
+        ) -> Option {
+            let spec = IndexSpec(
+                keyPath: PartialCodableKeyPath(keyPath),
+                unique: unique,
+                name: name,
+                collation: collation
+            )
+            return Option(kind: .index(spec))
         }
         
-        /// Add a unique index to a property
-        public static func unique<V: Codable>(_ keyPath: KeyPath<Row, V>) -> Option {
-            return Option(kind: .index(PartialCodableKeyPath(keyPath), true))
+        /// A convenience shortcut for adding a unique index to a property  with `.index(... unique:true)`)
+        public static func unique<V: Codable>(
+            _ keyPath: KeyPath<Row, V>,
+            name: String? = nil,
+            collation: Collation? = nil
+        ) -> Option {
+            return index(keyPath, unique: true, name: name, collation: collation)
         }
         
         /// Disable the default behaviour of creating a unique index on `\.id`  types conforming to `Identifiable`
@@ -66,8 +82,15 @@ public class Collection<Row: Codable>: Filterable {
         
         enum Kind: Equatable {
             case tableName(String)
-            case index(PartialCodableKeyPath<Row>, Bool)
+            case index(IndexSpec)
             case noUniqueId
+        }
+        
+        struct IndexSpec: Equatable {
+            let keyPath: PartialCodableKeyPath<Row>
+            let unique: Bool
+            let name: String?
+            let collation: Collation?
         }
     }
     

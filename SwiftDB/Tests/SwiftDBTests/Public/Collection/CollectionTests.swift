@@ -27,43 +27,6 @@ class CollectionTests: SwiftDBTestCase {
         }
     }
     
-    func testUniqueIndex() throws {
-        let c = try db.collection(RowWithValue<Int>.self, [.unique(\.value)])
-        try c.insert(RowWithValue(5))
-        
-        assertErrorMessage(
-            try c.insert(RowWithValue(5)),
-            contains: "UNIQUE constraint failed: RowWithValue<Int>.value")
-        
-        XCTAssertNoThrow(try c.insert(RowWithValue(6)))
-    }
-    
-    func testRegularIndex() throws {
-        let c = try db.collection(RowWithValue<Int>.self, [.index(\.value)])
-        try c.insert(RowWithValue(5))
-        XCTAssertNoThrow(try c.insert(RowWithValue(5)))
-    }
-    
-    func testAutoIndexForIdentifiable() throws {
-        let c = try db.collection(RowWithId.self)
-        let rowA = RowWithId()
-        let rowB = RowWithId()
-        try c.insert(rowA)
-        
-        assertErrorMessage(
-            try c.insert(rowA),
-            contains: "UNIQUE constraint failed: RowWithId.id")
-        
-        XCTAssertNoThrow(try c.insert(rowB))
-    }
-    
-    func testNoUniqueId() throws {
-        let c = try db.collection(RowWithId.self, [.noUniqueId])
-        let rowA = RowWithId()
-        try c.insert(rowA)
-        XCTAssertNoThrow(try c.insert(rowA))
-    }
-    
     func testFetchOneReadsSingleRow() throws {
         let c = try db.collection(Row.self)
         
