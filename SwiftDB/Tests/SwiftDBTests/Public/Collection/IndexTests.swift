@@ -47,9 +47,9 @@ class IndexTests: SwiftDBTestCase {
             .tableName("t")
         ])
         
-        let indexDefinitions = try db.execute([String].self, #"SELECT sql FROM sqlite_schema WHERE type = 'index' AND tbl_name = 't'"#)
+        let sql = try db.execute(String.self, #"SELECT sql FROM sqlite_schema WHERE type = 'index' AND tbl_name = 't'"#)
         
-        XCTAssertEqual(indexDefinitions, [#"CREATE INDEX "t-value" ON "t" ( "value" COLLATE "caseInsensitiveCompare" )"#])
+        XCTAssertTrue(sql.contains(#""value" COLLATE "caseInsensitiveCompare""#))
     }
 }
 
