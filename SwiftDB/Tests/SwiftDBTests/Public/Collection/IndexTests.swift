@@ -43,13 +43,13 @@ class IndexTests: SwiftDBTestCase {
     
     func testIndexWithCollation() throws {
         let _ = try db.collection(RowWithValue<UUID>.self, [
-            .index(\.value, name: "testIndex", collation: .caseInsensitiveCompare),
+            .index(\.value, collation: .caseInsensitiveCompare),
             .tableName("t")
         ])
         
-        let sql = try db.execute(String.self, #"SELECT sql FROM sqlite_schema WHERE type = 'index' AND name = 'testIndex'"#)
+        let indexDefinitions = try db.execute([String].self, #"SELECT sql FROM sqlite_schema WHERE type = 'index' AND tbl_name = 't'"#)
         
-        XCTAssertEqual(sql, #"CREATE INDEX "testIndex" ON "t" ( "value" COLLATE "caseInsensitiveCompare" )"#)
+        XCTAssertEqual(indexDefinitions, [#"CREATE INDEX "t-value" ON "t" ( "value" COLLATE "caseInsensitiveCompare" )"#])
     }
 }
 

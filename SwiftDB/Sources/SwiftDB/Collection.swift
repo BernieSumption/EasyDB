@@ -53,7 +53,6 @@ public class Collection<Row: Codable>: Filterable {
         public static func index<V: Codable>(
             _ keyPath: KeyPath<Row, V>,
             unique: Bool = false,
-            name: String? = nil,
             collation: Collation? = nil
         ) -> Option {
             let spec = IndexSpec(
@@ -67,10 +66,9 @@ public class Collection<Row: Codable>: Filterable {
         /// A convenience shortcut for adding a unique index to a property  with `.index(... unique:true)`)
         public static func unique<V: Codable>(
             _ keyPath: KeyPath<Row, V>,
-            name: String? = nil,
             collation: Collation? = nil
         ) -> Option {
-            return index(keyPath, unique: true, name: name, collation: collation)
+            return index(keyPath, unique: true, collation: collation)
         }
         
         /// Disable the default behaviour of creating a unique index on `\.id`  types conforming to `Identifiable`

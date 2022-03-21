@@ -133,7 +133,7 @@ class SchemaMigrationTests: XCTestCase {
             ])
         XCTAssertEqual(
             try sm.getIndexNames(table: "foo"),
-            ["foo-b-asc", "foo-b-a-desc"])
+            ["foo-b-a-desc", "foo-b-asc"])
         
         // remove "ascending" from "b" (should create a new index)
         try sm.migrateIndices(

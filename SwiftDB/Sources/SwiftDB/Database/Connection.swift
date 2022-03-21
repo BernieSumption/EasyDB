@@ -36,7 +36,6 @@ class Connection {
     }
     
     public func registerCollation(_ collation: Collation) {
-        return
         guard !registeredCollationNames.contains(collation.normalizedName) else {
             return
         }
