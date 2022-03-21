@@ -57,7 +57,7 @@ class SchemaMigrationTests: XCTestCase {
         )
         XCTAssertEqual(
             try sm.getIndexNames(table: "foo"),
-            ["swiftdb_foo_column_d_asc"]
+            ["foo-d-asc"]
         )
         
         // add another
@@ -69,7 +69,7 @@ class SchemaMigrationTests: XCTestCase {
         )
         XCTAssertEqual(
             try sm.getIndexNames(table: "foo"),
-            ["swiftdb_foo_column_c", "swiftdb_foo_column_d_asc"]
+            ["foo-c", "foo-d-asc"]
         )
         
         // add an index on another table
@@ -83,22 +83,22 @@ class SchemaMigrationTests: XCTestCase {
         )
         XCTAssertEqual(
             try sm.getIndexNames(table: "foo"),
-            ["swiftdb_foo_column_c", "swiftdb_foo_column_d_asc"]
+            ["foo-c", "foo-d-asc"]
         )
         XCTAssertEqual(
             try sm.getIndexNames(table: "bar"),
-            ["swiftdb_bar_column_x_column_y_desc"]
+            ["bar-x-y-desc"]
         )
         
         // drop an index
-        try sm.dropIndex(name: "swiftdb_foo_column_d_asc")
+        try sm.dropIndex(name: "foo-d-asc")
         XCTAssertEqual(
             try sm.getIndexNames(table: "foo"),
-            ["swiftdb_foo_column_c"]
+            ["foo-c"]
         )
         XCTAssertEqual(
             try sm.getIndexNames(table: "bar"),
-            ["swiftdb_bar_column_x_column_y_desc"]
+            ["bar-x-y-desc"]
         )
     }
     
@@ -117,7 +117,7 @@ class SchemaMigrationTests: XCTestCase {
             ])
         XCTAssertEqual(
             try sm.getIndexNames(table: "bar"),
-            ["swiftdb_bar_column_x"])
+            ["bar-x"])
         
         // create two indices on another table
         try sm.migrateIndices(
@@ -133,7 +133,7 @@ class SchemaMigrationTests: XCTestCase {
             ])
         XCTAssertEqual(
             try sm.getIndexNames(table: "foo"),
-            ["swiftdb_foo_column_b_asc", "swiftdb_foo_column_b_column_a_desc"])
+            ["foo-b-asc", "foo-b-a-desc"])
         
         // remove "ascending" from "b" (should create a new index)
         try sm.migrateIndices(
@@ -149,7 +149,7 @@ class SchemaMigrationTests: XCTestCase {
         ])
         XCTAssertEqual(
             try sm.getIndexNames(table: "foo"),
-            ["swiftdb_foo_column_b", "swiftdb_foo_column_b_column_a_desc"])
+            ["foo-b", "foo-b-a-desc"])
         
         // new set of indices
         try sm.migrateIndices(
@@ -159,7 +159,7 @@ class SchemaMigrationTests: XCTestCase {
                     Index.Part(["c"])
                 ])
             ])
-        XCTAssertEqual(try sm.getIndexNames(table: "foo"), ["swiftdb_foo_column_c"])
+        XCTAssertEqual(try sm.getIndexNames(table: "foo"), ["foo-c"])
                                                       
         // new set of indices
         try sm.migrateIndices(
@@ -171,10 +171,10 @@ class SchemaMigrationTests: XCTestCase {
             ])
         XCTAssertEqual(
             try sm.getIndexNames(table: "foo"),
-            ["swiftdb_foo_column_c"])
+            ["foo-c"])
         XCTAssertEqual(
             try sm.getIndexNames(table: "bar"),
-            ["swiftdb_bar_column_x"])
+            ["bar-x"])
     }
     
     func testQuotedNames() throws {
@@ -194,6 +194,6 @@ class SchemaMigrationTests: XCTestCase {
             ])
         XCTAssertEqual(
             try sm.getIndexNames(table: tableName),
-            ["swiftdb_\(tableName)_column_" + columnName])
+            ["\(tableName)-" + columnName])
     }
 }

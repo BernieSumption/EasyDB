@@ -28,14 +28,13 @@ public class Collection<Row: Codable>: Filterable {
                 indices.append(
                     Index(
                         [Index.Part(propertyPath, collation: spec.collation)],
-                        unique: spec.unique,
-                        customName: spec.name))
+                        unique: spec.unique))
             case .noUniqueId:
                 noUniqueId = true
             }
         }
         if identifiable && !noUniqueId {
-            let index = Index([Index.Part(["id"], .ascending)], unique: true, customName: nil)
+            let index = Index([Index.Part(["id"], .ascending)], unique: true)
             indices.append(index)
         }
         self.table = table
@@ -60,7 +59,6 @@ public class Collection<Row: Codable>: Filterable {
             let spec = IndexSpec(
                 keyPath: PartialCodableKeyPath(keyPath),
                 unique: unique,
-                name: name,
                 collation: collation
             )
             return Option(kind: .index(spec))
@@ -89,7 +87,6 @@ public class Collection<Row: Codable>: Filterable {
         struct IndexSpec: Equatable {
             let keyPath: PartialCodableKeyPath<Row>
             let unique: Bool
-            let name: String?
             let collation: Collation?
         }
     }

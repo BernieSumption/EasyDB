@@ -87,31 +87,25 @@ struct SchemaMigration {
 struct Index {
     let parts: [Part]
     let unique: Bool
-    let customName: String?
     
-    init(_ parts: [Part], unique: Bool = false, customName: String? = nil) {
+    init(_ parts: [Part], unique: Bool = false) {
         assert(parts.count > 0, "at least one parts required to create an index")
         self.parts = parts
         self.unique = unique
-        self.customName = customName
     }
     
     func name(forTable table: String) -> String {
-        if let customName = customName {
-            return customName
-        }
-
-        return "swiftdb_\(table)_" + parts.map({ column in
+        return "\(table)-" + parts.map({ column in
             let path = column.path.joined(separator: ".")
             switch column.direction {
             case .ascending:
-                return "column_\(path)_asc"
+                return "\(path)-asc"
             case .descending:
-                return "column_\(path)_desc"
+                return "\(path)-desc"
             case .none:
-                return "column_\(path)"
+                return path
             }
-        }).joined(separator: "_")
+        }).joined(separator: "-")
     }
     
     func createSQL(forTable table: String) -> String {
