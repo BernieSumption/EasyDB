@@ -71,8 +71,8 @@ class CollationFunctionWrapper {
     }
 }
 
-internal func checkOK(_ code: @autoclosure () -> CInt, sql: String?, db: OpaquePointer?) throws {
-    let resultCode = try ResultCode(code())
+internal func checkOK(_ code: CInt, sql: String?, db: OpaquePointer?) throws {
+    let resultCode = try ResultCode(code)
     var message: String?
     if let db = db {
         message = String(cString: sqlite3_errmsg(db))

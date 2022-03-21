@@ -223,8 +223,8 @@ class Statement {
         sqlite3_finalize(statement)
     }
     
-    private func checkOK(_ code: @autoclosure () -> CInt) throws {
-        try SwiftDB.checkOK(code(), sql: self.sql, db: db)
+    private func checkOK(_ code: CInt) throws {
+        try SwiftDB.checkOK(code, sql: self.sql, db: db)
     }
 }
 
