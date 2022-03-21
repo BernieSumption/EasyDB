@@ -8,6 +8,7 @@ class Connection {
     let db: OpaquePointer
     let logSQL: Bool
     var registeredCollationNames = Set<String>()
+    var collationFunctions = [CollationFunction]()
 
     init(path: String, logSQL: Bool = false) throws {
         self.logSQL = logSQL
@@ -45,15 +46,16 @@ class Connection {
             return
         }
         
-        let function = CollationFunctionWrapper(compare)
-        let functionPointer = Unmanaged.passRetained(function).toOpaque()
+        let function = CollationFunction(compare)
+        collationFunctions.append(function) // keep a reference to the function so that ti is not freed
+        let functionPointer = Unmanaged.passUnretained(function).toOpaque()
         let code = sqlite3_create_collation_v2(
             db,
             collation.name,
             SQLITE_UTF8,
             functionPointer,
             { (arg, size1, data1, size2, data2) -> Int32 in
-                let function = Unmanaged<CollationFunctionWrapper>.fromOpaque(arg!).takeUnretainedValue()
+                let function = Unmanaged<CollationFunction>.fromOpaque(arg!).takeUnretainedValue()
                 return Int32(function.compare(size1, data1, size2, data2).rawValue)
             }, nil)
         guard code == SQLITE_OK else {
@@ -63,7 +65,7 @@ class Connection {
 }
 
 /// Wrapper for a collation function - required because we need a reference type for `Unmanaged.passRetained(_:)`
-class CollationFunctionWrapper {
+class CollationFunction {
     let compare: SQLiteCustomCollationFunction
     
     init(_ compare: @escaping SQLiteCustomCollationFunction) {
