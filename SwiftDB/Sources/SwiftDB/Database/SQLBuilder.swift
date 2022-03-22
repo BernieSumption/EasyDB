@@ -21,11 +21,10 @@ struct SQL: CustomStringConvertible {
         return raw("LIMIT \(limit)")
     }
     
-    func createTable(_ table: String, ifNotExists: Bool = false, columns: [String]) -> Self {
+    func createTable(_ table: String, ifNotExists: Bool = false) -> Self {
         return raw("CREATE TABLE")
             .raw("IF NOT EXISTS", if: ifNotExists)
             .quotedName(table)
-            .bracketed(quotedNames: columns)
     }
     
     func insertInto(_ table: String, columns: [String]) -> Self {

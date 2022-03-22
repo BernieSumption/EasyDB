@@ -15,6 +15,11 @@ class Connection {
         var db: OpaquePointer?
         try checkOK(sqlite3_open(path, &db), sql: nil, db: nil)
         self.db = try checkPointer(db, from: "sqlite3_open")
+        registerCollation(.binary)
+        registerCollation(.string)
+        registerCollation(.caseInsensitive)
+        registerCollation(.localized)
+        registerCollation(.localizedCaseInsensitive)
     }
 
     /// Compile a prepared statement

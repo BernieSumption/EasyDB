@@ -12,7 +12,12 @@ struct SchemaMigration {
     /// Note: this method will not alter the columns of existing tables if they are different to `columns`
     func ensureTableExists(table: String, columns: [String]) throws {
         assert(columns.count > 0, "at least one column required to create a table")
-        let sql = SQL().createTable(table, ifNotExists: true, columns: columns).text
+        let sql = SQL()
+            .createTable(table, ifNotExists: true)
+            .bracketed(raw: columns.map { column in
+                SQL.quoteName(column) + " COLLATE " + SQL.quoteName(Collation.string.name)
+            })
+            .text
         try connection.execute(sql: sql)
     }
     

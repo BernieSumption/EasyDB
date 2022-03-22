@@ -45,5 +45,19 @@ class CollectionTests: SwiftDBTestCase {
         }
     }
     
+    let eWithAcuteCombining = "\u{0065}\u{0301}" // "Latin Small Letter E" followed by "Combining Acute Accent"
+    let eWithAcute = "\u{00E9}" // "Latin Small Letter E with Acute"
+    
+    func testDefaultColumnCollation() throws {
+        let c = try db.collection(RowT<String>.self, [.tableName("t")])
+        try c.insert([RowT(eWithAcute), RowT(eWithAcuteCombining)])
+        
+        let sql = try db.execute(String.self, #"SELECT sql FROM sqlite_schema WHERE type = 'table' AND tbl_name = 't'"#)
+        XCTAssertTrue(sql.contains(#""value" COLLATE "string"#))
+        
+        let count = try db.execute(Int.self, "SELECT COUNT(*) FROM t WHERE value = \(eWithAcute)")
+        XCTAssertEqual(count, 2)
+    }
+    
 }
 

@@ -86,9 +86,8 @@ class SwiftDBTestCase: XCTestCase {
         _ expected: [T],
         logSQL: Bool = false
     ) throws {
-        // TODO: replace with collection.all().delete() when we have implemented that
-        db = Database(path: ":memory:", options: [.logSQL(logSQL)])
-        let c = try db.collection(RowT<T>.self)
+        let c = try db.collection(RowT<T>.self, [.tableName("t")])
+        try db.execute("DELETE FROM t")
         try c.insert(data.map(RowT<T>.init))
         XCTAssertEqual(
             try filter(c).fetchMany().map(\.value),
