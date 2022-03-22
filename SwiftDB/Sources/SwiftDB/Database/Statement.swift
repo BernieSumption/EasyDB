@@ -11,11 +11,6 @@ class Statement {
     private let sql: String
     private let log: Bool
     
-    /// True if the most recent call to `step()` returned `.done`
-    ///
-    /// Calling `step()` will throw an error if `isDone` is true
-    private(set) var isDone = false
-    
     /// True if the most recent call to `step()` returned `.row`.
     ///
     /// Calling any of the `readXXX()` functions will throw an error if `hasRow` is false
@@ -96,19 +91,12 @@ class Statement {
     func step() throws -> StepResult {
         if !hasRow && log {
             let sql = self.sql
-            if parameters.count > 0 {
-                let parameters = parameters
-                    .sorted(by: { $0.key < $1.key })
-                    .map({ "\($0.key)=\($0.value)" })
-                    .joined(separator: ", ")
-                
-                swiftDBLog.info("Executing statement: \"\(sql, privacy: .public)\" (parameters: \(parameters))")
-            } else {
-                swiftDBLog.info("Executing statement: \"\(sql, privacy: .public)\"")
-            }
-        }
-        if isDone {
-            throw SwiftDBError.noRow
+            let parameters = parameters
+                .sorted(by: { $0.key < $1.key })
+                .map({ "\($0.key)=\($0.value)" })
+                .joined(separator: ", ")
+            
+            swiftDBLog.info("Executing statement: \"\(sql, privacy: .public)\" (parameters: \(parameters))")
         }
         let resultCode = sqlite3_step(statement)
         switch resultCode {
@@ -215,7 +203,6 @@ class Statement {
 
     func reset() throws {
         hasRow = false
-        isDone = false
         sqlite3_reset(statement)
     }
 
