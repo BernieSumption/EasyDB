@@ -124,10 +124,32 @@ class FilterTests: SwiftDBTestCase {
     }
     
     func testErrorMessage() throws {
-        let c = try db.collection(RowWithValue<Struct>.self)
+        let c = try db.collection(RowT<Struct>.self)
         assertErrorMessage(
             try c.filter(\.value.foo, is: "foo").fetchMany(),
             contains: #"filtering by nested KeyPaths (\.value.foo) is not implemented"#)
+    }
+    
+    func testFiltersWithCollation() throws {
+        try testFilter(
+            ["æ", "Æ"],
+            { $0.filter(\.value, is: "æ") },
+            ["æ"])
+        
+        try testFilter(
+            ["æ", "Æ"],
+            { $0.filter(\.value, is: "æ", collate: .caseInsensitive) },
+            ["æ", "Æ"])
+        
+        try testFilter(
+            ["æ", "Æ"],
+            { $0.filter(\.value, greaterThanOrEqualTo: "æ") },
+            ["æ"])
+        
+        try testFilter(
+            ["æ", "Æ"],
+            { $0.filter(\.value, greaterThanOrEqualTo: "æ", collate: .caseInsensitive) },
+            ["æ", "Æ"])
     }
 }
 

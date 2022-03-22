@@ -4,7 +4,7 @@ import SwiftDB
 class CollectionTests: SwiftDBTestCase {
     
     func testCollectionCaching() {
-        XCTAssertTrue(try db.collection(RowWithValue<Int>.self) === db.collection(RowWithValue<Int>.self))
+        XCTAssertTrue(try db.collection(Row.self) === db.collection(Row.self))
     }
     
     func testMigrateData() throws {

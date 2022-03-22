@@ -84,7 +84,7 @@ struct SchemaMigration {
     }
 }
 
-struct Index {
+struct  Index {
     let parts: [Part]
     let unique: Bool
     
@@ -95,17 +95,13 @@ struct Index {
     }
     
     func name(forTable table: String) -> String {
-        return "\(table)-" + parts.map({ column in
-            let path = column.path.joined(separator: ".")
-            switch column.direction {
-            case .ascending:
-                return "\(path)-asc"
-            case .descending:
-                return "\(path)-desc"
-            case .none:
-                return path
-            }
-        }).joined(separator: "-")
+        var result = table
+        if unique {
+            result += "-unique"
+        }
+        result += "-"
+        result += parts.map(\.name).joined(separator: "-")
+        return result
     }
     
     func createSQL(forTable table: String) -> String {
@@ -144,6 +140,23 @@ struct Index {
             self.path = path
             self.direction = direction
             self.collation = collation
+        }
+        
+        var name: String {
+            var result = path.joined(separator: ".")
+            if let collation = collation {
+                result += "-"
+                result += collation.name
+            }
+            if let direction = direction {
+                switch direction {
+                case .ascending:
+                    result += "-asc"
+                case .descending:
+                    result += "-desc"
+                }
+            }
+            return result
         }
     }
     

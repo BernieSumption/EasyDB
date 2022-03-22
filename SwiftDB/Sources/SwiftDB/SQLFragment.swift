@@ -40,13 +40,18 @@ public struct SQLFragment<Row: Codable>: ExpressibleByStringInterpolation {
         }
     }
     
-    func sql() throws -> String {
+    func sql(propertyCollation: Collation?) throws -> String {
         return try parts.compactMap { part in
             switch part {
             case .literal(let string):
                 return string
             case .property(let keyPath):
-                return try keyPath.nameExpression(operation: "filtering")
+                var result = try keyPath.nameExpression(operation: "filtering")
+                if let collation = propertyCollation {
+                    result += " COLLATE "
+                    result += SQL.quoteName(collation.name)
+                }
+                return result
             case .parameter:
                 return "?"
             }

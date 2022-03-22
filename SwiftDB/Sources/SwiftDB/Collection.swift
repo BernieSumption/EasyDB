@@ -129,7 +129,11 @@ public class Collection<Row: Codable>: Filterable {
         return QueryBuilder(self)
     }
     
+    public func filter(_ sqlFragment: SQLFragment<Row>, collate: Collation?) -> QueryBuilder<Row> {
+        return QueryBuilder(self).filter(sqlFragment, collate: collate)
+    }
+    
     public func filter(_ sqlFragment: SQLFragment<Row>) -> QueryBuilder<Row> {
-        return QueryBuilder(self).filter(sqlFragment)
+        return filter(sqlFragment, collate: nil)
     }
 }

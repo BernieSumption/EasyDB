@@ -53,14 +53,14 @@ public class Database {
     
     /// Execute an SQL statement. If the statement has results, they will be ignored
     public func execute(_ sqlFragment: SQLFragment<NoProperties>) throws {
-        let statement = try getConnection().prepare(sql: try sqlFragment.sql())
+        let statement = try getConnection().prepare(sql: try sqlFragment.sql(propertyCollation: nil))
         let _ = try statement.step()
     }
     
     /// Execute an SQL statement and return the results as an instance of T. T can be any codable type, see the rules
     /// for decoding queries TODO: link to docs for "selecting results into other types"
     public func execute<T: Codable>(_ resultType: T.Type, _ sqlFragment: SQLFragment<NoProperties>) throws -> T {
-        let statement = try getConnection().prepare(sql: sqlFragment.sql())
+        let statement = try getConnection().prepare(sql: sqlFragment.sql(propertyCollation: nil))
         try statement.bind(try sqlFragment.parameters())
         return try StatementDecoder.decode(resultType, from: statement)
     }
@@ -84,13 +84,11 @@ public class Database {
             return c
         }
         let c = try Connection(path: path, logSQL: logSQL)
-        c.registerCollation(.asciiCaseInsensitive)
         c.registerCollation(.binary)
-        c.registerCollation(.ignoreTrailingWhitespace)
-        c.registerCollation(.compare)
-        c.registerCollation(.caseInsensitiveCompare)
-        c.registerCollation(.localizedCompare)
-        c.registerCollation(.localizedCaseInsensitiveCompare)
+        c.registerCollation(.string)
+        c.registerCollation(.caseInsensitive)
+        c.registerCollation(.localized)
+        c.registerCollation(.localizedCaseInsensitive)
         _connection = c
         return c
     }

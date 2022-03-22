@@ -2,7 +2,7 @@ import Foundation
 
 public struct QueryBuilder<Row: Codable>: Filterable {
     private let collection: Collection<Row>
-    private var filters = [SQLFragment<Row>]()
+    private var filters = [Filter]()
     private var orders = [Order]()
     
     internal init(_ collection: Collection<Row>) {
@@ -18,10 +18,14 @@ public struct QueryBuilder<Row: Codable>: Filterable {
         return try StatementDecoder.decode([Row].self, from: prepare())
     }
     
-    public func filter(_ sqlFragment: SQLFragment<Row>) -> QueryBuilder<Row> {
+    public func filter(_ sqlFragment: SQLFragment<Row>, collate: Collation?) -> QueryBuilder<Row> {
         var copy = self
-        copy.filters.append(sqlFragment)
+        copy.filters.append(Filter(sqlFragment: sqlFragment, collation: collate))
         return copy
+    }
+    
+    public func filter(_ sqlFragment: SQLFragment<Row>) -> QueryBuilder<Row> {
+        return filter(sqlFragment, collate: nil)
     }
     
     public func orderBy<T: Codable>(
@@ -53,7 +57,7 @@ public struct QueryBuilder<Row: Codable>: Filterable {
                 )
             
             for filter in filters {
-                parameters += try filter.parameters()
+                parameters += try filter.sqlFragment.parameters()
             }
         }
         
@@ -78,6 +82,15 @@ public struct QueryBuilder<Row: Codable>: Filterable {
             try statement.bind(parameter, to: index + 1)
         }
         return statement
+    }
+    
+    struct Filter {
+        let sqlFragment: SQLFragment<Row>
+        let collation: Collation?
+        
+        func sql() throws -> String {
+            return try sqlFragment.sql(propertyCollation: collation)
+        }
     }
     
     struct Order {

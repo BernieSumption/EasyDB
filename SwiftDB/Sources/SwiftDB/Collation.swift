@@ -37,22 +37,8 @@ public struct Collation: Equatable {
 typealias SQLiteCustomCollationFunction = (Int32, UnsafeRawPointer?, Int32, UnsafeRawPointer?) -> ComparisonResult
 
 extension Collation {
-    
-    /// The built-in SQLite `BINARY` collation that compares strings using their in-memory binary representation,
-    /// regardless of text encoding. This is the default unless an alternative is specified.
-    public static let binary = Collation("BINARY")
-    
-    /// The built-in SQLite `NOCASE` collation that considers ASCII lowercase and uppercase letters to be equivalent
-    /// but does not handle unicode case insensitivity
-    ///
-    /// This is slightly faster than `.caseInsensitive` if you know that your strings are definitely ASCII-only
-    public static let asciiCaseInsensitive = Collation("NOCASE")
-    
-    /// The built-in SQLite `RTRIM` collation - as `.binary` but ignoring trailing whitespace
-    public static let ignoreTrailingWhitespace = Collation("RTRIM")
-    
-    /// Sort unicode strings correctly using Swift's `==` and `<=` operators on `String`
-    public static let compare = Collation("SwiftDB_compare") { (a, b) in
+    /// The default collation sequence for SwiftDB - sort strings case-sensitively using Swift's `==` and `<=` operators.
+    public static let string = Collation("string") { (a, b) in
         if a == b {
             return .orderedSame
         }
@@ -60,19 +46,25 @@ extension Collation {
     }
     
     /// Sort unicode strings in a case-insensitive way using Swift's `String.caseInsensitiveCompare(_:)` function
-    public static let caseInsensitiveCompare = Collation("caseInsensitiveCompare") { (a, b) in
+    public static let caseInsensitive = Collation("caseInsensitive") { (a, b) in
         return a.caseInsensitiveCompare(b)
     }
     
     /// Sort unicode strings using localized comparison with Swift's `String.localizedCompare(_:)` function
-    public static let localizedCompare = Collation("localizedCompare") { (a, b) in
+    public static let localized = Collation("localized") { (a, b) in
         return a.localizedCompare(b)
     }
     
     /// Sort unicode strings using case-insensitive localized comparison with Swift's `String.localizedCaseInsensitiveCompare(_:)` function
-    public static let localizedCaseInsensitiveCompare = Collation("localizedCaseInsensitiveCompare") { (a, b) in
+    public static let localizedCaseInsensitive = Collation("localizedCaseInsensitive") { (a, b) in
         return a.localizedCaseInsensitiveCompare(b)
     }
+    
+    /// The built-in SQLite `BINARY` collation that compares strings using their in-memory binary representation,
+    /// regardless of text encoding. WARNING: this is provided as a performance optimisation or because some
+    /// applications may want differentiate between equivalent but differently serialized unicode strings. But for most
+    /// real applications it is not a good choice.
+    public static let binary = Collation("BINARY")
 }
 
 private extension UnsafeRawPointer {

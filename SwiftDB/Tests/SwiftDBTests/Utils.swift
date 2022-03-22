@@ -37,7 +37,19 @@ struct KitchenSinkEntity: Codable, Equatable {
         sub: .init(d: Date(timeIntervalSinceReferenceDate: 20), a: 21))
 }
 
-struct RowWithValue<T: Codable & Equatable>: Codable, Equatable, CustomStringConvertible {
+struct Row: Codable, Equatable, CustomStringConvertible {
+    var value: Int
+    
+    init(_ value: Int) {
+        self.value = value
+    }
+    
+    var description: String {
+        return "Row(\(value))"
+    }
+}
+
+struct RowT<T: Codable & Equatable>: Codable, Equatable, CustomStringConvertible {
     var value: T
     
     init(_ value: T) {
@@ -45,7 +57,7 @@ struct RowWithValue<T: Codable & Equatable>: Codable, Equatable, CustomStringCon
     }
     
     var description: String {
-        return "RowWithValue<\(T.self)>(\(value))"
+        return "RowT<\(T.self)>(\(value))"
     }
 }
 
@@ -70,13 +82,14 @@ class SwiftDBTestCase: XCTestCase {
     
     func testFilter<T: Codable & Equatable>(
         _ data: [T],
-        _ filter: (Collection<RowWithValue<T>>) throws -> QueryBuilder<RowWithValue<T>>,
-        _ expected: [T]
+        _ filter: (Collection<RowT<T>>) throws -> QueryBuilder<RowT<T>>,
+        _ expected: [T],
+        logSQL: Bool = false
     ) throws {
         // TODO: replace with collection.all().delete() when we have implemented that
-        try setUpWithError() // delete existing data
-        let c = try db.collection(RowWithValue<T>.self)
-        try c.insert(data.map(RowWithValue<T>.init))
+        db = Database(path: ":memory:", options: [.logSQL(logSQL)])
+        let c = try db.collection(RowT<T>.self)
+        try c.insert(data.map(RowT<T>.init))
         XCTAssertEqual(
             try filter(c).fetchMany().map(\.value),
             expected)

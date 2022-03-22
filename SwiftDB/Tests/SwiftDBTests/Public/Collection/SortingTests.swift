@@ -47,7 +47,7 @@ class SortingTests: SwiftDBTestCase {
         
         try testFilter(
             ["a", "b", "C", "D"],
-            { $0.all().orderBy(\.value, collate: .asciiCaseInsensitive) },
+            { $0.all().orderBy(\.value, collate: .caseInsensitive) },
             ["a", "b", "C", "D"])
     }
     
@@ -59,7 +59,7 @@ class SortingTests: SwiftDBTestCase {
         
         try testFilter(
             ["z", "Z", "u", "ü"],
-            { $0.all().orderBy(\.value, collate: .compare) },
+            { $0.all().orderBy(\.value, collate: .string) },
             ["Z", "u", "z", "ü"])
     }
     
