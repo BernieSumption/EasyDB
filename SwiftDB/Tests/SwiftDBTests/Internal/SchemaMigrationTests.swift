@@ -52,7 +52,7 @@ class SchemaMigrationTests: XCTestCase {
         try sm.addIndex(
             table: "foo",
             Index([
-                Index.Part(["d"], .ascending)
+                Index.Part(["d"], collation: nil, .ascending)
             ])
         )
         XCTAssertEqual(
@@ -64,12 +64,12 @@ class SchemaMigrationTests: XCTestCase {
         try sm.addIndex(
             table: "foo",
             Index([
-                Index.Part(["c"])
+                Index.Part(["c"], collation: .caseInsensitive)
             ])
         )
         XCTAssertEqual(
             try sm.getIndexNames(table: "foo"),
-            ["foo-c", "foo-d-asc"]
+            ["foo-c-caseInsensitive", "foo-d-asc"]
         )
         
         // add an index on another table
@@ -77,13 +77,13 @@ class SchemaMigrationTests: XCTestCase {
         try sm.addIndex(
             table: "bar",
             Index([
-                Index.Part(["x"]),
-                Index.Part(["y"], .descending)
+                Index.Part(["x"], collation: nil),
+                Index.Part(["y"], collation: nil, .descending)
             ])
         )
         XCTAssertEqual(
             try sm.getIndexNames(table: "foo"),
-            ["foo-c", "foo-d-asc"]
+            ["foo-c-caseInsensitive", "foo-d-asc"]
         )
         XCTAssertEqual(
             try sm.getIndexNames(table: "bar"),
@@ -94,7 +94,7 @@ class SchemaMigrationTests: XCTestCase {
         try sm.dropIndex(name: "foo-d-asc")
         XCTAssertEqual(
             try sm.getIndexNames(table: "foo"),
-            ["foo-c"]
+            ["foo-c-caseInsensitive"]
         )
         XCTAssertEqual(
             try sm.getIndexNames(table: "bar"),
@@ -112,7 +112,7 @@ class SchemaMigrationTests: XCTestCase {
             table: "bar",
             indices: [
                 Index([
-                    Index.Part(["x"])
+                    Index.Part(["x"], collation: nil)
                 ])
             ])
         XCTAssertEqual(
@@ -124,11 +124,11 @@ class SchemaMigrationTests: XCTestCase {
             table: "foo",
             indices: [
                 Index([
-                    Index.Part(["b"], .ascending)
+                    Index.Part(["b"], collation: nil, .ascending)
                 ]),
                 Index([
-                    Index.Part(["b"]),
-                    Index.Part(["a"], .descending)
+                    Index.Part(["b"], collation: nil),
+                    Index.Part(["a"], collation: nil, .descending)
                 ]),
             ])
         XCTAssertEqual(
@@ -140,11 +140,11 @@ class SchemaMigrationTests: XCTestCase {
             table: "foo",
             indices: [
             Index([
-                Index.Part(["b"])
+                Index.Part(["b"], collation: nil)
             ]),
             Index([
-                Index.Part(["b"]),
-                Index.Part(["a"], .descending)
+                Index.Part(["b"], collation: nil),
+                Index.Part(["a"], collation: nil, .descending)
             ]),
         ])
         XCTAssertEqual(
@@ -156,7 +156,7 @@ class SchemaMigrationTests: XCTestCase {
             table: "foo",
             indices: [
                 Index([
-                    Index.Part(["c"])
+                    Index.Part(["c"], collation: nil)
                 ])
             ])
         XCTAssertEqual(try sm.getIndexNames(table: "foo"), ["foo-c"])
@@ -166,7 +166,7 @@ class SchemaMigrationTests: XCTestCase {
             table: "foo",
             indices: [
                 Index([
-                    Index.Part(["c"])
+                    Index.Part(["c"], collation: nil)
                 ])
             ])
         XCTAssertEqual(
@@ -189,7 +189,7 @@ class SchemaMigrationTests: XCTestCase {
             table: tableName,
             indices: [
                 Index([
-                    Index.Part([columnName])
+                    Index.Part([columnName], collation: nil)
                 ])
             ])
         XCTAssertEqual(

@@ -18,20 +18,20 @@ public struct QueryBuilder<Row: Codable>: Filterable {
         return try StatementDecoder.decode([Row].self, from: prepare())
     }
     
-    public func filter(_ sqlFragment: SQLFragment<Row>, collate: Collation?) -> QueryBuilder<Row> {
+    public func filter(_ sqlFragment: SQLFragment<Row>, collation: Collation?) -> QueryBuilder<Row> {
         var copy = self
-        copy.filters.append(Filter(sqlFragment: sqlFragment, collation: collate))
+        copy.filters.append(Filter(sqlFragment: sqlFragment, collation: collation))
         return copy
     }
     
     public func filter(_ sqlFragment: SQLFragment<Row>) -> QueryBuilder<Row> {
-        return filter(sqlFragment, collate: nil)
+        return filter(sqlFragment, collation: nil)
     }
     
     public func orderBy<T: Codable>(
         _ keyPath: KeyPath<Row, T>,
         _ direction: Direction? = nil,
-        collate collation: Collation? = nil,
+        collation: Collation? = nil,
         nulls: Nulls? = nil
     ) -> QueryBuilder<Row> {
         var copy = self

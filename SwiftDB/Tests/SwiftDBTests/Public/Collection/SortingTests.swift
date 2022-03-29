@@ -42,12 +42,12 @@ class SortingTests: SwiftDBTestCase {
         
         try testFilter(
             ["a", "b", "C", "D"],
-            { $0.all().orderBy(\.value, collate: .binary) },
+            { $0.all().orderBy(\.value, collation: .binary) },
             ["C", "D", "a", "b"])
         
         try testFilter(
             ["a", "b", "C", "D"],
-            { $0.all().orderBy(\.value, collate: .caseInsensitive) },
+            { $0.all().orderBy(\.value, collation: .caseInsensitive) },
             ["a", "b", "C", "D"])
     }
     
@@ -59,7 +59,7 @@ class SortingTests: SwiftDBTestCase {
         
         try testFilter(
             ["z", "Z", "u", "ü"],
-            { $0.all().orderBy(\.value, collate: .string) },
+            { $0.all().orderBy(\.value, collation: .string) },
             ["Z", "u", "z", "ü"])
     }
     
@@ -72,7 +72,7 @@ class SortingTests: SwiftDBTestCase {
         
         try testFilter(
             ["x", "me first!", "a"],
-            { $0.all().orderBy(\.value, collate: .stringMeFirstAlwaysGoesFirst) },
+            { $0.all().orderBy(\.value, collation: .stringMeFirstAlwaysGoesFirst) },
             ["me first!", "a", "x"])
     }
 }

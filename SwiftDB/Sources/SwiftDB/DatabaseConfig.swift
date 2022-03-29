@@ -28,26 +28,26 @@ public struct CollectionConfig {
         
         public static func column<T: Codable>(
             _ keyPath: KeyPath<Row, T>,
-            collate: Collation? = nil,
+            collation: Collation? = nil,
             _ indices: Index...
         ) -> PropertyConfig {
-            return PropertyConfig(keyPath: PartialCodableKeyPath(keyPath), collation: collate, indices: indices)
+            return PropertyConfig(keyPath: PartialCodableKeyPath(keyPath), collation: collation, indices: indices)
         }
         
         public static func column<T: Codable>(
             _ keyPath: KeyPath<Row, T>,
-            collate: Collation? = nil,
+            collation: Collation? = nil,
             unique: Bool
         ) -> PropertyConfig {
-            return column(keyPath, collate: collate, .index(unique: unique))
+            return column(keyPath, collation: collation, .index(unique: unique))
         }
         
         public struct Index: Equatable {
-            let collate: Collation?
+            let collation: Collation?
             let unique: Bool
             
-            public static func index(unique: Bool = false, collate: Collation? = nil) -> Index {
-                return Index(collate: collate, unique: unique)
+            public static func index(unique: Bool = false, collation: Collation? = nil) -> Index {
+                return Index(collation: collation, unique: unique)
             }
         }
     }

@@ -15,7 +15,7 @@ struct SchemaMigration {
         let sql = SQL()
             .createTable(table, ifNotExists: true)
             .bracketed(raw: columns.map { column in
-                SQL.quoteName(column) + " COLLATE " + SQL.quoteName(Collation.string.name)
+                SQL.quoteName(column)
             })
             .text
         try connection.execute(sql: sql)
@@ -134,13 +134,13 @@ struct Index: Equatable {
     
     struct Part: Equatable {
         let path: [String]
-        let direction: Direction?
         let collation: Collation?
+        let direction: Direction?
         
         init(
             _ path: [String],
-            _ direction: Direction? = nil,
-            collation: Collation? = nil
+            collation: Collation?,
+            _ direction: Direction? = nil
         ) {
             self.path = path
             self.direction = direction

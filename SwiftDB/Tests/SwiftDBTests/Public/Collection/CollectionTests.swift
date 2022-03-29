@@ -62,21 +62,27 @@ class CollectionTests: SwiftDBTestCase {
     let eWithAcute = "\u{00E9}" // "Latin Small Letter E with Acute"
     
     func testDefaultColumnCollation() throws {
-        db = Database(path: ":memory:", .collection(RowWithString.self, tableName: "t"))
+        db = Database(path: ":memory:", .collection(RowWithString.self))
         let c = try db.collection(RowWithString.self)
         try c.insert([RowWithString(eWithAcute), RowWithString(eWithAcuteCombining)])
         
-        let sql = try db.execute(String.self, #"SELECT sql FROM sqlite_schema WHERE type = 'table' AND tbl_name = 't'"#)
-        XCTAssertTrue(sql.contains(#""string" COLLATE "string"#))
+        let all = try c.filter(\.string, is: eWithAcute).fetchMany()
+        XCTAssertEqual(all.count, 2)
+    }
+    
+    func testDefaultColumnCollationIndex() throws {
+        db = Database(path: ":memory:", .collection(RowWithString.self, .column(\.string, unique: true)))
+        let _ = try db.collection(RowWithString.self)
         
-        let count = try db.execute(Int.self, "SELECT COUNT(*) FROM t WHERE string = \(eWithAcute)")
-        XCTAssertEqual(count, 2)
+        // check that the index has been created with the correct collation
+        let sql = try db.execute(String.self, #"SELECT sql FROM sqlite_schema WHERE type = 'index' AND tbl_name = 'RowWithString'"#)
+        XCTAssertTrue(sql.contains(#""string" COLLATE "string"#))
     }
     
     func testDefaultCollation() throws {
         db = Database(path: ":memory:",
                       .collection(RowWithString.self,
-                                  .column(\.string, collate: .caseInsensitive, unique: true)))
+                                  .column(\.string, collation: .caseInsensitive, unique: true)))
         
         let c = try db.collection(RowWithString.self)
         

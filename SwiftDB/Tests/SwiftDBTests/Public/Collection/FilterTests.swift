@@ -138,7 +138,7 @@ class FilterTests: SwiftDBTestCase {
         
         try testFilter(
             ["æ", "Æ"],
-            { $0.filter(\.value, is: "æ", collate: .caseInsensitive) },
+            { $0.filter(\.value, is: "æ", collation: .caseInsensitive) },
             ["æ", "Æ"])
         
         try testFilter(
@@ -148,7 +148,7 @@ class FilterTests: SwiftDBTestCase {
         
         try testFilter(
             ["æ", "Æ"],
-            { $0.filter(\.value, greaterThanOrEqualTo: "æ", collate: .caseInsensitive) },
+            { $0.filter(\.value, greaterThanOrEqualTo: "æ", collation: .caseInsensitive) },
             ["æ", "Æ"])
     }
 }

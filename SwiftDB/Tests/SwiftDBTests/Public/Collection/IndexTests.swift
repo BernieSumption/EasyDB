@@ -45,7 +45,7 @@ class IndexTests: SwiftDBTestCase {
     
     func testIndexWithCollation() throws {
         db = Database(path: ":memory:",
-                      .collection(RowT<UUID>.self, .column(\.value, collate: .caseInsensitive, unique: true)))
+                      .collection(RowT<UUID>.self, .column(\.value, collation: .caseInsensitive, unique: true)))
         // TODO: remove this when we move to up-front creation
         let _ = try db.collection(RowT<UUID>.self)
         
@@ -71,7 +71,7 @@ class IndexTests: SwiftDBTestCase {
                                   .column(\.value, .index(unique: true), .index(unique: true))))
         assertErrorMessage(
             try db.collection(RowT<UUID>.self),
-            contains: "index RowT-unique-value already exists")
+            contains: "index RowT-unique-value-string already exists")
     }
     
     func testNoErrorOnNonDuplicateIndex() throws {
@@ -81,10 +81,10 @@ class IndexTests: SwiftDBTestCase {
                                   .column(\.value,
                                            .index(unique: true),
                                            .index(unique: false),
-                                           .index(unique: true, collate: .caseInsensitive),
-                                           .index(unique: false, collate: .caseInsensitive),
-                                           .index(unique: true, collate: .localized),
-                                           .index(unique: false, collate: .localized))))
+                                           .index(unique: true, collation: .caseInsensitive),
+                                           .index(unique: false, collation: .caseInsensitive),
+                                           .index(unique: true, collation: .localized),
+                                           .index(unique: false, collation: .localized))))
         // should not throw
         XCTAssertNoThrow(try db.collection(RowT<UUID>.self))
     }

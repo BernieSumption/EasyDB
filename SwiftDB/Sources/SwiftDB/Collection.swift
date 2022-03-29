@@ -38,19 +38,20 @@ public class Collection<Row: Codable>: Filterable, DefaultCollations {
             }
             configuredColumns.insert(propertyPath)
             for indexSpec in property.indices {
-                let collation = indexSpec.collate ?? property.collation
+                let collation = indexSpec.collation ?? defaultCollations[property.keyPath.cacheKey] ?? .string
                 let index = Index(
                     [Index.Part(propertyPath, collation: collation)],
                     unique: indexSpec.unique)
                 indices.append(index)
-                if index.parts.map(\.name) == ["id"] {
+                print(index.parts.map(\.name))
+                if index.parts.map(\.path) == [["id"]] {
                     hasIdIndex = true
                 }
             }
         }
         let hasId = mapper.rootProperties.contains("id")
         if hasId && !hasIdIndex {
-            let index = Index([Index.Part(["id"], .ascending)], unique: true)
+            let index = Index([Index.Part(["id"], collation: .string, .ascending)], unique: true)
             indices.append(index)
         }
         self.indices = indices
@@ -100,12 +101,12 @@ public class Collection<Row: Codable>: Filterable, DefaultCollations {
         return QueryBuilder(self)
     }
     
-    public func filter(_ sqlFragment: SQLFragment<Row>, collate: Collation?) -> QueryBuilder<Row> {
-        return QueryBuilder(self).filter(sqlFragment, collate: collate)
+    public func filter(_ sqlFragment: SQLFragment<Row>, collation: Collation?) -> QueryBuilder<Row> {
+        return QueryBuilder(self).filter(sqlFragment, collation: collation)
     }
     
     public func filter(_ sqlFragment: SQLFragment<Row>) -> QueryBuilder<Row> {
-        return filter(sqlFragment, collate: nil)
+        return filter(sqlFragment, collation: nil)
     }
     
     func defaultCollation(for columnKeyPath: AnyKeyPath) -> Collation {
