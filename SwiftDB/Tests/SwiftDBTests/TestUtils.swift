@@ -47,9 +47,11 @@ struct Row: Codable, Equatable, CustomStringConvertible {
     var description: String {
         return "Row(\(value))"
     }
+    
+    static var tableName: String { "t" }
 }
 
-struct RowT<T: Codable & Equatable>: Codable, Equatable, CustomStringConvertible {
+struct RowT<T: Codable & Equatable>: Codable, Equatable, CustomStringConvertible, CustomTableName {
     var value: T
     
     init(_ value: T) {
@@ -59,6 +61,8 @@ struct RowT<T: Codable & Equatable>: Codable, Equatable, CustomStringConvertible
     var description: String {
         return "RowT<\(T.self)>(\(value))"
     }
+    
+    static var tableName: String { "RowT" }
 }
 
 struct RowWithId: Codable, Equatable, Identifiable, CustomStringConvertible {
@@ -71,6 +75,8 @@ struct RowWithId: Codable, Equatable, Identifiable, CustomStringConvertible {
     var description: String {
         return "RowWithId(\(id))"
     }
+    
+    static var tableName: String { "t" }
 }
 
 class SwiftDBTestCase: XCTestCase {
@@ -86,9 +92,8 @@ class SwiftDBTestCase: XCTestCase {
         _ expected: [T],
         logSQL: Bool = false
     ) throws {
-        // TODO: implement CustomTableName protocol and use it, so that I can avoid configuring here
-        let c = try db.collection(RowT<T>.self, [.tableName("t")])
-        try db.execute("DELETE FROM t")
+        let c = try db.collection(RowT<T>.self)
+        try db.execute("DELETE FROM RowT")
         try c.insert(data.map(RowT<T>.init))
         XCTAssertEqual(
             try filter(c).fetchMany().map(\.value),

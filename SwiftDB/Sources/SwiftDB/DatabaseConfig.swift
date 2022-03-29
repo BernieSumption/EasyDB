@@ -1,7 +1,8 @@
 import Foundation
 
-
+/// Used to configure a collection on a `Database`
 public struct CollectionConfig {
+    let type: Any.Type
     let typeId: ObjectIdentifier
     let tableName: String?
     let disableUniqueId: Bool
@@ -15,13 +16,14 @@ public struct CollectionConfig {
         _ indices: Index<T>...
     ) -> CollectionConfig {
         return CollectionConfig(
+            type: type,
             typeId: ObjectIdentifier(type),
             tableName: tableName,
             disableUniqueId: disableUniqueId,
             indices: indices)
     }
     
-    
+    /// Used to configure an index on a collection
     public struct Index<Row: Codable>: Equatable {
         let keyPath: PartialCodableKeyPath<Row>
         let unique: Bool
@@ -48,35 +50,19 @@ public struct CollectionConfig {
             return index(keyPath, unique: true, collation: collation)
         }
     }
+    
+    func build<T: Codable>(_ type: T.Type) throws -> Collection<T>.Config {
+        guard let indices = self.indices as? [Index<T>] else {
+            throw SwiftDBError.unexpected(message: "type mismatch in CollectionConfig: expected \(self.type) got \(type)")
+        }
+        
+        return Collection<T>.Config(
+            tableName: tableName,
+            disableUniqueId: disableUniqueId,
+            indices: indices)
+    }
 }
 
-
-// TODO: remove this or use it throughout
-struct TypeScopedSingleton {
-    private var instances = [ObjectIdentifier: Any]()
-    
-    mutating func getOrCreate<K, V>(_ type: K.Type, _ create: () throws -> V) rethrows -> V {
-        let typeId = ObjectIdentifier(type)
-        if let instance = instances[typeId] {
-            guard let instanceV = instance as? V else {
-                fatalError("expected cached instance to be of type \(V.self) but got \(instance)")
-            }
-            return instanceV
-        }
-        let instance = try create()
-        instances[typeId] = instance
-        return instance
-    }
-    
-    // TODO: this is in here temporarily, we need to move V to the class level, or at least not pass an iniitialiser to this method just for typing
-    func getIfPresent<K, V>(_ type: K.Type, _ create: () throws -> V) rethrows -> V? {
-        let typeId = ObjectIdentifier(type)
-        if let instance = instances[typeId] {
-            guard let instanceV = instance as? V else {
-                fatalError("expected cached instance to be of type \(V.self) but got \(instance)")
-            }
-            return instanceV
-        }
-        return nil
-    }
+public protocol CustomTableName {
+    static var tableName: String { get }
 }

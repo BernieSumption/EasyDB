@@ -7,6 +7,7 @@ public class Database {
     private let autoMigrate: Bool
     private let autoDropColumns: Bool
     private let logSQL: Bool
+    private let collectionConfigs: [CollectionConfig]
     
     private var collections = [ObjectIdentifier: Any]()
     
@@ -35,11 +36,12 @@ public class Database {
         self.autoMigrate = autoMigrate
         self.autoDropColumns = autoDropColumns
         self.logSQL = logSQL
+        self.collectionConfigs = collections
     }
     
     /// Return a collection. Unless automatic migration is disabled for this database, the table will be automatically
     /// created or any missing columns added
-    func collection<T: Codable>(_ type: T.Type, _ collectionOptions: [Collection<T>.Option]) throws -> Collection<T> {
+    public func collection<T: Codable>(_ type: T.Type) throws -> Collection<T> {
         return try collectionCreateQueue.sync {
             let typeId = ObjectIdentifier(type)
             if let collection = collections[typeId] {
@@ -48,7 +50,8 @@ public class Database {
                 }
                 return collection
             }
-            let collection = try Collection(type, try getConnection(), collectionOptions)
+            let collectionConfig = collectionConfigs.first(where: { $0.typeId == typeId })
+            let collection = try Collection(type, try getConnection(), collectionConfig?.build(type))
             if autoMigrate {
                 try collection.migrate(dropColumns: autoDropColumns)
             }

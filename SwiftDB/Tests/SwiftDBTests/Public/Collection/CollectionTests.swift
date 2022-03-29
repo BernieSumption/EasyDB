@@ -8,21 +8,21 @@ class CollectionTests: SwiftDBTestCase {
     }
     
     func testCollectionConfiguration() throws {
+        // TODO: assert that this throws an error
         db = Database(path: ":memory:",
                       .collection(Row.self, tableName: "row"),
-                      .collection(V2.self, tableName: "x"))
-        
+                      .collection(Row.self, tableName: "row"))
     }
     
     func testMigrateData() throws {
         db = Database(path: ":memory:",
                       .collection(V1.self, tableName: "x"),
                       .collection(V2.self, tableName: "x"))
-        let v1c = try db.collection(V1.self, [.tableName("x")])
+        let v1c = try db.collection(V1.self)
         try v1c.insert(V1(a: 4))
         try v1c.insert(V1(a: 5))
         
-        let v2c = try db.collection(V2.self, [.tableName("x")])
+        let v2c = try db.collection(V2.self)
         
         try v2c.insert(V2(a: 6, b: "yo"))
         let rows = try v2c.all().fetchMany()
@@ -59,7 +59,8 @@ class CollectionTests: SwiftDBTestCase {
     let eWithAcute = "\u{00E9}" // "Latin Small Letter E with Acute"
     
     func testDefaultColumnCollation() throws {
-        let c = try db.collection(RowT<String>.self, [.tableName("t")])
+        db = Database(path: ":memory:", .collection(RowT<String>.self, tableName: "t"))
+        let c = try db.collection(RowT<String>.self)
         try c.insert([RowT(eWithAcute), RowT(eWithAcuteCombining)])
         
         let sql = try db.execute(String.self, #"SELECT sql FROM sqlite_schema WHERE type = 'table' AND tbl_name = 't'"#)
