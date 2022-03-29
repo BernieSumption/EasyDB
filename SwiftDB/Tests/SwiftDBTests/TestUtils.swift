@@ -86,6 +86,7 @@ class SwiftDBTestCase: XCTestCase {
         _ expected: [T],
         logSQL: Bool = false
     ) throws {
+        // TODO: implement CustomTableName protocol and use it, so that I can avoid configuring here
         let c = try db.collection(RowT<T>.self, [.tableName("t")])
         try db.execute("DELETE FROM t")
         try c.insert(data.map(RowT<T>.init))

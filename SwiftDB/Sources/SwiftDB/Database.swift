@@ -66,15 +66,17 @@ public class Database {
     }
     
     public enum Option {
-        /// Whether to automatically create missing tables and add missing columns when a `Collection` is created.
+        /// Whether to automatically create missing tables and add missing columns for collections. This defaults to `true` and
+        /// can be set to `false` for the whole database using this option, and overridden for individual collections.
         ///
-        /// Defaults to `true`. If disabled you can call `migrate(_:dropColumns)` to migrate manually.
+        /// If disabled you can call `collection.migrate(_:dropColumns)` to migrate manually.
         case autoMigrate(Bool)
         
-        /// Whether to drop columns while running automatic migrations. Defaults to false. Has no effect without `autoMigrate`
+        /// Whether to drop columns while running automatic migrations. This defaults to `false` and can be set to `true`
+        /// for the whole database using this option, and overridden for individual collections. Has no effect without `autoMigrate`
         case autoDropColumns(Bool)
-
-        /// Print all executed SQL statements as they are executed. Defaults to false.
+        
+        /// Print all executed SQL statements as they are executed. Defaults to `false`.
         case logSQL(Bool)
     }
     

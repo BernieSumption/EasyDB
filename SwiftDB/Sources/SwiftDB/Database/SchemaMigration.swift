@@ -89,7 +89,7 @@ struct SchemaMigration {
     }
 }
 
-struct  Index {
+struct Index {
     let parts: [Part]
     let unique: Bool
     
