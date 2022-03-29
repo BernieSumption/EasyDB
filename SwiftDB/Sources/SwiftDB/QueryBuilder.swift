@@ -31,12 +31,13 @@ public struct QueryBuilder<Row: Codable>: Filterable {
     public func orderBy<T: Codable>(
         _ keyPath: KeyPath<Row, T>,
         _ direction: Direction? = nil,
-        collate: Collation? = nil,
+        collate collation: Collation? = nil,
         nulls: Nulls? = nil
     ) -> QueryBuilder<Row> {
         var copy = self
+        let collation = collation ?? collection.defaultCollation(for: keyPath)
         copy.orders.append(
-            Order(keyPath: PartialCodableKeyPath(keyPath), direction: direction, collation: collate, nulls: nulls))
+            Order(keyPath: PartialCodableKeyPath(keyPath), direction: direction, collation: collation, nulls: nulls))
         return copy
     }
     
@@ -52,12 +53,15 @@ public struct QueryBuilder<Row: Codable>: Filterable {
                 .raw("WHERE")
                 .raw(
                     try filters
-                        .map({ try $0.sql() })
+                        .map({ try $0.sql(collection) })
                         .joined(separator: " AND ")
                 )
             
             for filter in filters {
                 parameters += try filter.sqlFragment.parameters()
+                if let collation = filter.collation {
+                    collection.connection.registerCollation(collation)
+                }
             }
         }
         
@@ -88,8 +92,8 @@ public struct QueryBuilder<Row: Codable>: Filterable {
         let sqlFragment: SQLFragment<Row>
         let collation: Collation?
         
-        func sql() throws -> String {
-            return try sqlFragment.sql(propertyCollation: collation)
+        func sql(_ collection: Collection<Row>) throws -> String {
+            return try sqlFragment.sql(collations: collection, overrideCollation: collation)
         }
     }
     

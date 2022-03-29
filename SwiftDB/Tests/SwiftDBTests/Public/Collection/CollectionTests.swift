@@ -8,10 +8,13 @@ class CollectionTests: SwiftDBTestCase {
     }
     
     func testCollectionConfiguration() throws {
-        // TODO: assert that this throws an error
         db = Database(path: ":memory:",
                       .collection(Row.self, tableName: "row"),
                       .collection(Row.self, tableName: "row"))
+        assertErrorMessage(
+            try db.collection(Row.self),
+            contains: "Collection Row is configured twice"
+        )
     }
     
     func testMigrateData() throws {
@@ -59,15 +62,41 @@ class CollectionTests: SwiftDBTestCase {
     let eWithAcute = "\u{00E9}" // "Latin Small Letter E with Acute"
     
     func testDefaultColumnCollation() throws {
-        db = Database(path: ":memory:", .collection(RowT<String>.self, tableName: "t"))
-        let c = try db.collection(RowT<String>.self)
-        try c.insert([RowT(eWithAcute), RowT(eWithAcuteCombining)])
+        db = Database(path: ":memory:", .collection(RowWithString.self, tableName: "t"))
+        let c = try db.collection(RowWithString.self)
+        try c.insert([RowWithString(eWithAcute), RowWithString(eWithAcuteCombining)])
         
         let sql = try db.execute(String.self, #"SELECT sql FROM sqlite_schema WHERE type = 'table' AND tbl_name = 't'"#)
         XCTAssertTrue(sql.contains(#""value" COLLATE "string"#))
         
         let count = try db.execute(Int.self, "SELECT COUNT(*) FROM t WHERE value = \(eWithAcute)")
         XCTAssertEqual(count, 2)
+    }
+    
+    func testDefaultCollation() throws {
+        db = Database(path: ":memory:",
+                      .collection(RowWithString.self,
+                                  .collation(\.string, .caseInsensitive),
+                                  .unique(\.string)))
+        
+        let c = try db.collection(RowWithString.self)
+        
+        try c.insert(RowWithString("a"))
+        try c.insert(RowWithString("B"))
+        try c.insert(RowWithString("c"))
+        
+        assertErrorMessage(
+            try c.insert(RowWithString("A")),
+            contains: "UNIQUE constraint failed: RowWithString.string")
+        
+        XCTAssertEqual(
+            try c.filter(\.string, is: "A").fetchOne(),
+            RowWithString("a"))
+        
+        
+        XCTAssertEqual(
+            try c.all().fetchMany().map(\.string),
+            ["a", "B", "c"])
     }
     
 }

@@ -75,8 +75,30 @@ struct RowWithId: Codable, Equatable, Identifiable, CustomStringConvertible {
     var description: String {
         return "RowWithId(\(id))"
     }
+}
+
+struct RowWithString: Codable, Equatable, CustomStringConvertible {
+    let string: String
     
-    static var tableName: String { "t" }
+    init(_ string: String) {
+        self.string = string
+    }
+    
+    var description: String {
+        return "RowWithString(\(string))"
+    }
+}
+
+struct RowWithInt: Codable, Equatable, CustomStringConvertible {
+    let int: Int
+    
+    init(_ int: Int) {
+        self.int = int
+    }
+    
+    var description: String {
+        return "RowWithInt(\(int))"
+    }
 }
 
 class SwiftDBTestCase: XCTestCase {

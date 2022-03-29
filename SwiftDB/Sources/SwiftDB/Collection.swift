@@ -3,11 +3,12 @@
 ///
 /// `Collection` is the main interface to data in SwiftDB, handling reading and writing data as well as
 /// migrating the underlying table to fit `Row`
-public class Collection<Row: Codable>: Filterable {
+public class Collection<Row: Codable>: Filterable, DefaultCollations {
     let connection: Connection
     let columns: [String]
     let table: String
     let mapper: KeyPathMapper<Row>
+    let defaultCollations: [AnyKeyPath: Collation]
     
     private let indices: [Index]
     
@@ -19,16 +20,25 @@ public class Collection<Row: Codable>: Filterable {
         let config = config ?? Config()
         self.table = config.tableName ?? defaultTableName(for: Row.self)
         
+        var defaultCollations = [AnyKeyPath: Collation]()
+        for property in config.properties.filter({ $0.kind == .defaultCollation }) {
+            defaultCollations[property.keyPath.cacheKey] = property.collation
+        }
+        self.defaultCollations = defaultCollations
+        
         var hasIdIndex = false
         var indices = [Index]()
-        for indexSpec in config.indices {
-            let propertyPath = try mapper.propertyPath(for: indexSpec.keyPath)
-            let index = Index(
-                [Index.Part(propertyPath, collation: indexSpec.collation)],
-                unique: indexSpec.unique)
-            indices.append(index)
-            if index.parts.map(\.name) == ["id"] {
-                hasIdIndex = true
+        for property in config.properties {
+            if case .index(unique: let unique) = property.kind {
+                let propertyPath = try mapper.propertyPath(for: property.keyPath)
+                let collation = property.collation ?? defaultCollations[property.keyPath.cacheKey]
+                let index = Index(
+                    [Index.Part(propertyPath, collation: collation)],
+                    unique: unique)
+                indices.append(index)
+                if index.parts.map(\.name) == ["id"] {
+                    hasIdIndex = true
+                }
             }
         }
         let hasId = mapper.rootProperties.contains("id")
@@ -42,7 +52,7 @@ public class Collection<Row: Codable>: Filterable {
     struct Config: Equatable {
         var tableName: String?
         var disableUniqueId = false
-        var indices = [CollectionConfig.Index<Row>]()
+        var properties = [CollectionConfig.PropertyConfig<Row>]()
     }
     
     /// Create the table if required, and add missing columns
@@ -91,6 +101,14 @@ public class Collection<Row: Codable>: Filterable {
     public func filter(_ sqlFragment: SQLFragment<Row>) -> QueryBuilder<Row> {
         return filter(sqlFragment, collate: nil)
     }
+    
+    func defaultCollation(for columnKeyPath: AnyKeyPath) -> Collation {
+        return defaultCollations[columnKeyPath] ?? .string
+    }
+}
+
+protocol DefaultCollations {
+    func defaultCollation(for columnKeyPath: AnyKeyPath) -> Collation
 }
 
 private func defaultTableName<T>(for type: T.Type) -> String {
