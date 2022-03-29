@@ -11,7 +11,7 @@ public class Collection<Row: Codable>: Filterable {
     
     private let indices: [Index]
     
-    internal init(_ type: Row.Type, _ connection: Connection, _ options: [Option], identifiable: Bool) throws {
+    init(_ type: Row.Type, _ connection: Connection, _ options: [Option]) throws {
         self.connection = connection
         self.mapper = try KeyPathMapper.forType(type)
         self.columns = mapper.rootProperties
@@ -19,6 +19,7 @@ public class Collection<Row: Codable>: Filterable {
         var table = String(describing: Row.self)
         var indices = [Index]()
         var noUniqueId = false
+        var hasIdIndex = false
         for option in options {
             switch option.kind {
             case .tableName(let name):

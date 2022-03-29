@@ -4,7 +4,7 @@ import SwiftDB
 class IndexTests: SwiftDBTestCase {
     
     func testUniqueIndex() throws {
-        db = Database(path: ":memory:", options: [.logSQL(true)])
+        db = Database(path: ":memory:")
         let c = try db.collection(Row.self, [.unique(\.value)])
         try c.insert(Row(5))
         

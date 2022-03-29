@@ -7,7 +7,17 @@ class CollectionTests: SwiftDBTestCase {
         XCTAssertTrue(try db.collection(Row.self) === db.collection(Row.self))
     }
     
+    func testCollectionConfiguration() throws {
+        db = Database(path: ":memory:",
+                      .collection(Row.self, tableName: "row"),
+                      .collection(V2.self, tableName: "x"))
+        
+    }
+    
     func testMigrateData() throws {
+        db = Database(path: ":memory:",
+                      .collection(V1.self, tableName: "x"),
+                      .collection(V2.self, tableName: "x"))
         let v1c = try db.collection(V1.self, [.tableName("x")])
         try v1c.insert(V1(a: 4))
         try v1c.insert(V1(a: 5))

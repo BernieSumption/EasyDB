@@ -1,39 +1,45 @@
 import Foundation
 
+/// A `Database` exists mainly to configure access to a database file and to create collections. Most reading and writing
+/// of data is done on the `Collection` objects returned by `database.collection(EntityType.self)`
 public class Database {
     private let path: String
-    private var autoMigrate = true
-    private var autoDropColumns = false
-    public var logSQL = false
+    private let autoMigrate: Bool
+    private let autoDropColumns: Bool
+    private let logSQL: Bool
+    
     private var collections = [ObjectIdentifier: Any]()
     
     private let collectionCreateQueue = DispatchQueue(label: "Database.collectionCreateQueue")
     
-    public init(path: String, options: [Option] = []) {
+    /// Initialise and  configure a `Database`
+    ///
+    /// - Parameters:
+    ///   - path: A file path to the database file on disk, or `":memory:"` to create an in-memory database
+    ///   - autoMigrate: Whether to drop columns while running automatic migrations. This defaults to `false` and can be set to `true`
+    ///       for the whole database using this option, and overridden for individual collections. Has no effect without `autoMigrate`
+    ///   - logSQL: Print all executed SQL statements as they are executed. Defaults to `false`.
+    ///   - collections: Any number of `CollectionConfig` values configuring collections on this database. Use the static factory
+    ///       function like this: `Database(path: "...", .collection(MyEntity.self, tableName: "t"))`.
+    ///
+    ///       It is not necessary to list collections here if there is no need to configure them. A collection that requires no indices or other
+    ///       configuration can be omitted and will be created on=demand the first time it is accessed.
+    public init(
+        path: String,
+        autoMigrate: Bool = true,
+        autoDropColumns: Bool = false,
+        logSQL: Bool = false,
+        _ collections: CollectionConfig...
+    ) {
         self.path = path
-        for option in options {
-            switch option {
-            case .autoMigrate(let value):
-                self.autoMigrate = value
-            case .autoDropColumns(let value):
-                self.autoDropColumns = value
-            case .logSQL(let value):
-                self.logSQL = value
-            }
-        }
-    }
-    
-    public func collection<T: Codable & Identifiable>(_ type: T.Type, _ collectionOptions: [Collection<T>.Option] = []) throws -> Collection<T> {
-        return try collection(type, collectionOptions, identifiable: true)
-    }
-    
-    public func collection<T: Codable>(_ type: T.Type, _ collectionOptions: [Collection<T>.Option] = []) throws -> Collection<T> {
-        return try collection(type, collectionOptions, identifiable: false)
+        self.autoMigrate = autoMigrate
+        self.autoDropColumns = autoDropColumns
+        self.logSQL = logSQL
     }
     
     /// Return a collection. Unless automatic migration is disabled for this database, the table will be automatically
     /// created or any missing columns added
-    func collection<T: Codable>(_ type: T.Type, _ collectionOptions: [Collection<T>.Option], identifiable: Bool) throws -> Collection<T> {
+    func collection<T: Codable>(_ type: T.Type, _ collectionOptions: [Collection<T>.Option]) throws -> Collection<T> {
         return try collectionCreateQueue.sync {
             let typeId = ObjectIdentifier(type)
             if let collection = collections[typeId] {
@@ -42,7 +48,7 @@ public class Database {
                 }
                 return collection
             }
-            let collection = try Collection(type, try getConnection(), collectionOptions, identifiable: identifiable)
+            let collection = try Collection(type, try getConnection(), collectionOptions)
             if autoMigrate {
                 try collection.migrate(dropColumns: autoDropColumns)
             }
@@ -63,21 +69,6 @@ public class Database {
         let statement = try getConnection().prepare(sql: sqlFragment.sql(propertyCollation: nil))
         try statement.bind(try sqlFragment.parameters())
         return try StatementDecoder.decode(resultType, from: statement)
-    }
-    
-    public enum Option {
-        /// Whether to automatically create missing tables and add missing columns for collections. This defaults to `true` and
-        /// can be set to `false` for the whole database using this option, and overridden for individual collections.
-        ///
-        /// If disabled you can call `collection.migrate(_:dropColumns)` to migrate manually.
-        case autoMigrate(Bool)
-        
-        /// Whether to drop columns while running automatic migrations. This defaults to `false` and can be set to `true`
-        /// for the whole database using this option, and overridden for individual collections. Has no effect without `autoMigrate`
-        case autoDropColumns(Bool)
-        
-        /// Print all executed SQL statements as they are executed. Defaults to `false`.
-        case logSQL(Bool)
     }
     
     private var _connection: Connection?
