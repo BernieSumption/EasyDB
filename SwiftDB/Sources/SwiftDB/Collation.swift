@@ -60,11 +60,11 @@ extension Collation {
         return a.localizedCaseInsensitiveCompare(b)
     }
     
-    /// The built-in SQLite `BINARY` collation that compares strings using their in-memory binary representation,
+    /// The built-in SQLite `binary` collation that compares strings using their in-memory binary representation,
     /// regardless of text encoding. WARNING: this is provided as a performance optimisation or because some
     /// applications may want differentiate between equivalent but differently serialized unicode strings. But for most
     /// real applications it is not a good choice.
-    public static let binary = Collation("BINARY")
+    public static let binary = Collation("binary")
 }
 
 private extension UnsafeRawPointer {

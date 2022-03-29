@@ -41,10 +41,10 @@ public struct SQLFragment<Row: Codable>: ExpressibleByStringInterpolation {
     }
     
     func sql(collations: DefaultCollations?, overrideCollation: Collation?) throws -> String {
-        return try parts.compactMap { part in
+        return try parts.compactMap { part -> String? in
             switch part {
             case .literal(let string):
-                return string == "" ? nil : string
+                return string
             case .property(let keyPath):
                 var result = try keyPath.nameExpression(operation: "filtering")
                 if let collation = overrideCollation ?? collations?.defaultCollation(for: keyPath.cacheKey) {
@@ -56,7 +56,7 @@ public struct SQLFragment<Row: Codable>: ExpressibleByStringInterpolation {
                 return "?"
             }
         }
-        .joined(separator: " ")
+        .joined(separator: "")
     }
     
     func parameters() throws -> [DatabaseValue] {

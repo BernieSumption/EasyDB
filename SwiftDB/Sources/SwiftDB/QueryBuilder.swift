@@ -107,7 +107,7 @@ public struct QueryBuilder<Row: Codable>: Filterable {
             var sql = try keyPath.nameExpression(operation: "ordering")
             if let collation = collation {
                 sql += " COLLATE "
-                sql += collation.name
+                sql += SQL.quoteName(collation.name)
             }
             if let direction = direction {
                 sql += " "
