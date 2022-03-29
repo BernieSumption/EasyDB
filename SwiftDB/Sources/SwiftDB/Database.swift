@@ -6,7 +6,7 @@ public class Database {
     private let path: String
     private let autoMigrate: Bool
     private let autoDropColumns: Bool
-    private let logSQL: Bool
+    private let logSQL: SQLLogger
     private let collectionConfigs: [CollectionConfig]
     
     private var collections = [ObjectIdentifier: Any]()
@@ -29,7 +29,7 @@ public class Database {
         path: String,
         autoMigrate: Bool = true,
         autoDropColumns: Bool = false,
-        logSQL: Bool = false,
+        logSQL: SQLLogger = .none,
         _ collections: CollectionConfig...
     ) {
         self.path = path

@@ -104,5 +104,30 @@ class CollectionTests: SwiftDBTestCase {
             ["a", "B", "c"])
     }
     
+    func testDefaultCollationX() throws {
+        db = Database(path: ":memory:",
+                      .collection(RowWithString.self,
+                                  .column(\.string, collation: .caseInsensitive, unique: true)))
+        
+        let c = try db.collection(RowWithString.self)
+        
+        try c.insert(RowWithString("a"))
+        try c.insert(RowWithString("B"))
+        try c.insert(RowWithString("c"))
+        
+        assertErrorMessage(
+            try c.insert(RowWithString("A")),
+            contains: "UNIQUE constraint failed: RowWithString.string")
+        
+        XCTAssertEqual(
+            try c.filter(\.string, is: "A").fetchOne(),
+            RowWithString("a"))
+        
+        
+        XCTAssertEqual(
+            try c.all().fetchMany().map(\.string),
+            ["a", "B", "c"])
+    }
+    
 }
 

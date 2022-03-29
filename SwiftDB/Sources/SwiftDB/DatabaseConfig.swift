@@ -63,3 +63,24 @@ public struct CollectionConfig {
 public protocol CustomTableName {
     static var tableName: String { get }
 }
+
+public enum SQLLogger {
+    case none
+    case print
+    case custom((String) -> Void)
+    
+    func log(_ message: String) {
+        switch self {
+        case .print: Swift.print(message)
+        case .custom(let callback): callback(message)
+        case .none: break
+        }
+    }
+    
+    var enabled: Bool {
+        if case .none = self {
+            return false
+        }
+        return true
+    }
+}

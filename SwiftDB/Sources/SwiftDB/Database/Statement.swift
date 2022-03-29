@@ -9,7 +9,7 @@ class Statement {
     private var parameterNameToIndex = [String: Int]()
     private var hasColumnNames = false
     private let sql: String
-    private let log: Bool
+    private let logSQL: SQLLogger
     
     /// True if the most recent call to `step()` returned `.row`.
     ///
@@ -18,10 +18,10 @@ class Statement {
     
     private var parameters = [Int: String]()
 
-    init(_ db: OpaquePointer, _ sql: String, log: Bool = false) throws {
+    init(_ db: OpaquePointer, _ sql: String, logSQL: SQLLogger = .none) throws {
         self.db = db
         self.sql = sql
-        self.log = log
+        self.logSQL = logSQL
         var statement: OpaquePointer?
         try SwiftDB.checkOK(sqlite3_prepare_v2(db, sql, -1, &statement, nil), sql: sql, db: db)
         self.statement = try checkPointer(statement, from: "sqlite3_prepare_v2")
@@ -41,7 +41,7 @@ class Statement {
     
     /// Bind a value to a parameter by position, where `1` is the leftmost parameter
     func bind(_ parameter: DatabaseValue, to position: Int) throws {
-        if log {
+        if logSQL.enabled {
             self.parameters[position] = parameter.debugDescription
         }
         let index = Int32(position)
@@ -89,14 +89,14 @@ class Statement {
     /// - Returns: `.row` if there is data to be read or `.done` if the end of the query has been reached
     /// - Throws: `SwiftDBError.noRow` if called again after returning `.done`
     func step() throws -> StepResult {
-        if !hasRow && log {
+        if !hasRow && logSQL.enabled {
             let sql = self.sql
             let parameters = parameters
                 .sorted(by: { $0.key < $1.key })
                 .map({ "\($0.key)=\($0.value)" })
                 .joined(separator: ", ")
             
-            swiftDBLog.info("Executing statement: \"\(sql, privacy: .public)\" (parameters: \(parameters))")
+            logSQL.log("Executing statement: \"\(sql)\" (parameters: \(parameters))")
         }
         let resultCode = sqlite3_step(statement)
         switch resultCode {

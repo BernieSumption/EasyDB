@@ -131,7 +131,11 @@ class SwiftDBTestCase: XCTestCase {
     func assertErrorMessage(_ expression: @autoclosure () throws -> Any, contains: String) {
         XCTAssertThrowsError(try expression()) { error in
             let message = "\(error)"
-            XCTAssertTrue(message.contains(contains), "\"\(message)\" does not contain \"\(contains)\"")
+            assertString(message, contains:contains)
         }
+    }
+    
+    func assertString(_ string: String, contains: String) {
+        XCTAssertTrue(string.contains(contains), "\"\(string)\" does not contain \"\(contains)\"")
     }
 }

@@ -44,7 +44,7 @@ public struct SQLFragment<Row: Codable>: ExpressibleByStringInterpolation {
         return try parts.compactMap { part in
             switch part {
             case .literal(let string):
-                return string
+                return string == "" ? nil : string
             case .property(let keyPath):
                 var result = try keyPath.nameExpression(operation: "filtering")
                 if let collation = overrideCollation ?? collations?.defaultCollation(for: keyPath.cacheKey) {

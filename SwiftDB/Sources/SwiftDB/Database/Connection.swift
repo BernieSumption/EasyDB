@@ -1,16 +1,13 @@
 import Foundation
 import SQLite3
-import os
-
-let swiftDBLog = Logger.init(subsystem: "SwiftDB", category: "sql")
 
 class Connection {
     let db: OpaquePointer
-    let logSQL: Bool
+    let logSQL: SQLLogger
     var registeredCollationNames = Set<String>()
     var collationFunctions = [CollationFunction]()
 
-    init(path: String, logSQL: Bool = false) throws {
+    init(path: String, logSQL: SQLLogger = .none) throws {
         self.logSQL = logSQL
         var db: OpaquePointer?
         try checkOK(sqlite3_open(path, &db), sql: nil, db: nil)
@@ -24,7 +21,7 @@ class Connection {
 
     /// Compile a prepared statement
     func prepare(sql: String) throws -> Statement {
-        return try Statement(db, sql, log: logSQL)
+        return try Statement(db, sql, logSQL: logSQL)
     }
     
     /// Compile and execute an SQL query, decoding the results into an instance of `T`

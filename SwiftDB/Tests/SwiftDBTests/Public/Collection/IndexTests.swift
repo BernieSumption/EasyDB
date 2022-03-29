@@ -76,7 +76,6 @@ class IndexTests: SwiftDBTestCase {
     
     func testNoErrorOnNonDuplicateIndex() throws {
         db = Database(path: ":memory:",
-                      logSQL: true,
                       .collection(RowT<UUID>.self,
                                   .column(\.value,
                                            .index(unique: true),
