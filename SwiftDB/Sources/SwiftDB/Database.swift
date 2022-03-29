@@ -54,7 +54,7 @@ public class Database {
             if collectionConfig.count > 1 {
                 throw SwiftDBError.misuse(message: "Collection \(T.self) is configured twice")
             }
-            let collection = try Collection(type, try getConnection(), collectionConfig.first?.build(type))
+            let collection = try Collection(type, try getConnection(), collectionConfig.first)
             if autoMigrate {
                 try collection.migrate(dropColumns: autoDropColumns)
             }

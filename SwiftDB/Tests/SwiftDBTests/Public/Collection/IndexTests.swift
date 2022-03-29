@@ -4,7 +4,7 @@ import SwiftDB
 class IndexTests: SwiftDBTestCase {
     
     func testUniqueIndex() throws {
-        db = Database(path: ":memory:", .collection(Row.self, .unique(\.value)))
+        db = Database(path: ":memory:", .collection(Row.self, .column(\.value, unique: true)))
         let c = try db.collection(Row.self)
         try c.insert(Row(5))
         
@@ -16,7 +16,7 @@ class IndexTests: SwiftDBTestCase {
     }
     
     func testRegularIndex() throws {
-        db = Database(path: ":memory:", .collection(Row.self, .index(\.value)))
+        db = Database(path: ":memory:", .collection(Row.self, .column(\.value, .index())))
         let c = try db.collection(Row.self)
         try c.insert(Row(5))
         XCTAssertNoThrow(try c.insert(Row(5)))
@@ -36,7 +36,7 @@ class IndexTests: SwiftDBTestCase {
     }
     
     func testNoUniqueId() throws {
-        db = Database(path: ":memory:", .collection(RowWithId.self, disableUniqueId: true))
+        db = Database(path: ":memory:", .collection(RowWithId.self, .column(\.id, .index(unique: false))))
         let c = try db.collection(RowWithId.self)
         let rowA = RowWithId()
         try c.insert(rowA)
@@ -45,7 +45,7 @@ class IndexTests: SwiftDBTestCase {
     
     func testIndexWithCollation() throws {
         db = Database(path: ":memory:",
-                      .collection(RowT<UUID>.self, .index(\.value, collation: .caseInsensitive)))
+                      .collection(RowT<UUID>.self, .column(\.value, collate: .caseInsensitive, unique: true)))
         // TODO: remove this when we move to up-front creation
         let _ = try db.collection(RowT<UUID>.self)
         
@@ -55,25 +55,36 @@ class IndexTests: SwiftDBTestCase {
         XCTAssertTrue(sql[0].contains(#""value" COLLATE "caseInsensitive""#))
     }
     
+    func testErrorIfColumnConfiguredTwice() throws {
+        db = Database(path: ":memory:",
+                      .collection(RowT<UUID>.self,
+                                  .column(\.value),
+                                  .column(\.value)))
+        assertErrorMessage(
+            try db.collection(RowT<UUID>.self),
+            "Column RowT.value has been configured more than once")
+    }
+    
     func testErrorIfIndexSpecifiedTwice() throws {
         db = Database(path: ":memory:",
                       .collection(RowT<UUID>.self,
-                                  .index(\.value, collation: .caseInsensitive),
-                                  .index(\.value, collation: .caseInsensitive)))
+                                  .column(\.value, .index(unique: true), .index(unique: true))))
         assertErrorMessage(
             try db.collection(RowT<UUID>.self),
-            contains: "index RowT-value-caseInsensitive already exists")
+            contains: "index RowT-unique-value already exists")
     }
     
     func testNoErrorOnNonDuplicateIndex() throws {
         db = Database(path: ":memory:",
+                      logSQL: true,
                       .collection(RowT<UUID>.self,
-                                  .index(\.value),
-                                  .index(\.value, collation: .string),
-                                  .index(\.value, collation: .localized),
-                                  .index(\.value, unique: true),
-                                  .index(\.value, unique: true, collation: .string),
-                                  .index(\.value, unique: true, collation: .localized)))
+                                  .column(\.value,
+                                           .index(unique: true),
+                                           .index(unique: false),
+                                           .index(unique: true, collate: .caseInsensitive),
+                                           .index(unique: false, collate: .caseInsensitive),
+                                           .index(unique: true, collate: .localized),
+                                           .index(unique: false, collate: .localized))))
         // should not throw
         XCTAssertNoThrow(try db.collection(RowT<UUID>.self))
     }

@@ -76,8 +76,7 @@ class CollectionTests: SwiftDBTestCase {
     func testDefaultCollation() throws {
         db = Database(path: ":memory:",
                       .collection(RowWithString.self,
-                                  .collation(\.string, .caseInsensitive),
-                                  .unique(\.string)))
+                                  .column(\.string, collate: .caseInsensitive, unique: true)))
         
         let c = try db.collection(RowWithString.self)
         

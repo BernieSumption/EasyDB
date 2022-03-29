@@ -12,29 +12,36 @@ public class Collection<Row: Codable>: Filterable, DefaultCollations {
     
     private let indices: [Index]
     
-    internal init(_ type: Row.Type, _ connection: Connection, _ config: Config?) throws {
+    internal init(_ type: Row.Type, _ connection: Connection, _ config: CollectionConfig?) throws {
         self.connection = connection
         self.mapper = try KeyPathMapper.forType(type)
         self.columns = mapper.rootProperties
         
-        let config = config ?? Config()
+        let config = config ?? .collection(type)
+        let propertyConfigs = try config.typedPropertyConfigs(type)
+        
         self.table = config.tableName ?? defaultTableName(for: Row.self)
         
         var defaultCollations = [AnyKeyPath: Collation]()
-        for property in config.properties.filter({ $0.kind == .defaultCollation }) {
+        for property in propertyConfigs {
             defaultCollations[property.keyPath.cacheKey] = property.collation
         }
         self.defaultCollations = defaultCollations
         
         var hasIdIndex = false
         var indices = [Index]()
-        for property in config.properties {
-            if case .index(unique: let unique) = property.kind {
-                let propertyPath = try mapper.propertyPath(for: property.keyPath)
-                let collation = property.collation ?? defaultCollations[property.keyPath.cacheKey]
+        var configuredColumns = Set<[String]>()
+        for property in propertyConfigs {
+            let propertyPath = try mapper.propertyPath(for: property.keyPath)
+            if configuredColumns.contains(propertyPath) {
+                throw SwiftDBError.misuse(message: "Column \(self.table).\(propertyPath.joined(separator: ".")) has been configured more than once")
+            }
+            configuredColumns.insert(propertyPath)
+            for indexSpec in property.indices {
+                let collation = indexSpec.collate ?? property.collation
                 let index = Index(
                     [Index.Part(propertyPath, collation: collation)],
-                    unique: unique)
+                    unique: indexSpec.unique)
                 indices.append(index)
                 if index.parts.map(\.name) == ["id"] {
                     hasIdIndex = true
@@ -42,7 +49,7 @@ public class Collection<Row: Codable>: Filterable, DefaultCollations {
             }
         }
         let hasId = mapper.rootProperties.contains("id")
-        if hasId && !hasIdIndex && !config.disableUniqueId {
+        if hasId && !hasIdIndex {
             let index = Index([Index.Part(["id"], .ascending)], unique: true)
             indices.append(index)
         }
@@ -51,8 +58,7 @@ public class Collection<Row: Codable>: Filterable, DefaultCollations {
     
     struct Config: Equatable {
         var tableName: String?
-        var disableUniqueId = false
-        var properties = [CollectionConfig.PropertyConfig<Row>]()
+        var indices = [Index]()
     }
     
     /// Create the table if required, and add missing columns

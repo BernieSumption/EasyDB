@@ -5,75 +5,58 @@ public struct CollectionConfig {
     let type: Any.Type
     let typeId: ObjectIdentifier
     let tableName: String?
-    let disableUniqueId: Bool
-    private let properties: Any
+    private let untypedProperties: Any
     
     /// Configure a collection on a `Database`
     public static func collection<T: Codable>(
         _ type: T.Type,
         tableName: String? = nil,
-        disableUniqueId: Bool = false,
         _ properties: PropertyConfig<T>...
     ) -> CollectionConfig {
         return CollectionConfig(
             type: type,
             typeId: ObjectIdentifier(type),
             tableName: tableName,
-            disableUniqueId: disableUniqueId,
-            properties: properties)
+            untypedProperties: properties)
     }
     
     /// Used to configure an index on a collection
     public struct PropertyConfig<Row: Codable>: Equatable {
         let keyPath: PartialCodableKeyPath<Row>
-        let kind: Kind
         let collation: Collation?
+        let indices: [Index]
         
-        /// Add an index to a property
-        public static func index<V: Codable>(
-            _ keyPath: KeyPath<Row, V>,
-            unique: Bool = false,
-            collation: Collation? = nil
+        public static func column<T: Codable>(
+            _ keyPath: KeyPath<Row, T>,
+            collate: Collation? = nil,
+            _ indices: Index...
         ) -> PropertyConfig {
-            return PropertyConfig(
-                keyPath: PartialCodableKeyPath(keyPath),
-                kind: .index(unique: unique),
-                collation: collation
-            )
+            return PropertyConfig(keyPath: PartialCodableKeyPath(keyPath), collation: collate, indices: indices)
         }
         
-        /// A convenience shortcut for adding a unique index to a property  with `.index(... unique:true)`)
-        public static func unique<V: Codable>(
-            _ keyPath: KeyPath<Row, V>,
-            collation: Collation? = nil
+        public static func column<T: Codable>(
+            _ keyPath: KeyPath<Row, T>,
+            collate: Collation? = nil,
+            unique: Bool
         ) -> PropertyConfig {
-            return index(keyPath, unique: true, collation: collation)
+            return column(keyPath, collate: collate, .index(unique: unique))
         }
         
-        /// Set the default collation for all indices, sorting and filtering operations on this property.
-        public static func collation<V: Codable>(_ keyPath: KeyPath<Row, V>, _ collation: Collation) -> PropertyConfig {
-            return PropertyConfig(
-                keyPath: PartialCodableKeyPath(keyPath),
-                kind: .defaultCollation,
-                collation: collation
-            )
-        }
-        
-        enum Kind: Equatable {
-            case index(unique: Bool)
-            case defaultCollation
+        public struct Index: Equatable {
+            let collate: Collation?
+            let unique: Bool
+            
+            public static func index(unique: Bool = false, collate: Collation? = nil) -> Index {
+                return Index(collate: collate, unique: unique)
+            }
         }
     }
     
-    func build<T: Codable>(_ type: T.Type) throws -> Collection<T>.Config {
-        guard let properties = self.properties as? [PropertyConfig<T>] else {
+    func typedPropertyConfigs<T>(_ type: T.Type) throws -> [PropertyConfig<T>] {
+        guard let properties = untypedProperties as? [PropertyConfig<T>] else {
             throw SwiftDBError.unexpected(message: "type mismatch in CollectionConfig: expected \(self.type) got \(type)")
         }
-        
-        return Collection<T>.Config(
-            tableName: tableName,
-            disableUniqueId: disableUniqueId,
-            properties: properties)
+        return properties
     }
 }
 

@@ -89,7 +89,7 @@ struct SchemaMigration {
     }
 }
 
-struct Index {
+struct Index: Equatable {
     let parts: [Part]
     let unique: Bool
     
@@ -132,7 +132,7 @@ struct Index {
             .text
     }
     
-    struct Part {
+    struct Part: Equatable {
         let path: [String]
         let direction: Direction?
         let collation: Collation?
