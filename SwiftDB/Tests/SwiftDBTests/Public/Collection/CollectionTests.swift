@@ -67,9 +67,9 @@ class CollectionTests: SwiftDBTestCase {
         try c.insert([RowWithString(eWithAcute), RowWithString(eWithAcuteCombining)])
         
         let sql = try db.execute(String.self, #"SELECT sql FROM sqlite_schema WHERE type = 'table' AND tbl_name = 't'"#)
-        XCTAssertTrue(sql.contains(#""value" COLLATE "string"#))
+        XCTAssertTrue(sql.contains(#""string" COLLATE "string"#))
         
-        let count = try db.execute(Int.self, "SELECT COUNT(*) FROM t WHERE value = \(eWithAcute)")
+        let count = try db.execute(Int.self, "SELECT COUNT(*) FROM t WHERE string = \(eWithAcute)")
         XCTAssertEqual(count, 2)
     }
     
