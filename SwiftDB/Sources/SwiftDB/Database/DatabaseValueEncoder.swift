@@ -79,7 +79,7 @@ private struct DatabaseValueEncoderImpl: Encoder {
     }
 }
 
-/// An error used to communicate the result of encoding
+/// Not really an error - this type is used to communicate the result of database value encoding
 private enum Result: Error {
     /// The type does not encode to a primitive value and JSON encoding should be used instead
     case useJsonEncoder

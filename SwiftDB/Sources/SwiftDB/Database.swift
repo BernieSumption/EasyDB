@@ -3,15 +3,19 @@ import Foundation
 /// A `Database` exists mainly to configure access to a database file and to create collections. Most reading and writing
 /// of data is done on the `Collection` objects returned by `database.collection(EntityType.self)`
 public class Database {
-    private let path: String
+    let path: String
+    
     private let autoMigrate: Bool
     private let autoDropColumns: Bool
-    private let logSQL: SQLLogger
     private let collectionConfigs: [CollectionConfig]
     
     private var collections = [ObjectIdentifier: Any]()
     
-    private let collectionCreateQueue = DispatchQueue(label: "Database.collectionCreateQueue")
+    private let collectionCreateQueue = DispatchQueue(label: "SwiftDB.collectionCreateQueue")
+    private let accessQueue = DispatchQueue(label: "SwiftDB.databaseAccessQueue")
+    
+    /// An `SQLLogger` instance to
+    public var logSQL: SQLLogger = .none
     
     /// Initialise and  configure a `Database`
     ///
@@ -19,9 +23,9 @@ public class Database {
     ///   - path: A file path to the database file on disk, or `":memory:"` to create an in-memory database
     ///   - autoMigrate: Whether to drop columns while running automatic migrations. This defaults to `false` and can be set to `true`
     ///       for the whole database using this option, and overridden for individual collections. Has no effect without `autoMigrate`
-    ///   - logSQL: Print all executed SQL statements as they are executed. Defaults to `false`.
     ///   - collections: Any number of `CollectionConfig` values configuring collections on this database. Use the static factory
     ///       function like this: `Database(path: "...", .collection(MyEntity.self, tableName: "t"))`.
+    ///
     ///
     ///       It is not necessary to list collections here if there is no need to configure them. A collection that requires no indices or other
     ///       configuration can be omitted and will be created on=demand the first time it is accessed.
@@ -29,13 +33,11 @@ public class Database {
         path: String,
         autoMigrate: Bool = true,
         autoDropColumns: Bool = false,
-        logSQL: SQLLogger = .none,
         _ collections: CollectionConfig...
     ) {
         self.path = path
         self.autoMigrate = autoMigrate
         self.autoDropColumns = autoDropColumns
-        self.logSQL = logSQL
         self.collectionConfigs = collections
     }
     
@@ -54,7 +56,7 @@ public class Database {
             if collectionConfig.count > 1 {
                 throw SwiftDBError.misuse(message: "Collection \(T.self) is configured twice")
             }
-            let collection = try Collection(type, try getConnection(), collectionConfig.first)
+            let collection = try Collection(type, self, collectionConfig.first)
             if autoMigrate {
                 try collection.migrate(dropColumns: autoDropColumns)
             }
@@ -65,28 +67,41 @@ public class Database {
     
     /// Execute an SQL statement. If the statement has results, they will be ignored
     public func execute(_ sqlFragment: SQLFragment<NoProperties>) throws {
-        let statement = try getConnection().prepare(
-            sql: sqlFragment.sql(collations: nil, overrideCollation: nil))
-        let _ = try statement.step()
+        let sql = try sqlFragment.sql(collations: nil, overrideCollation: nil)
+        try getConnection().execute(sql: sql)
     }
     
     /// Execute an SQL statement and return the results as an instance of T. T can be any codable type, see the rules
     /// for decoding queries TODO: link to docs for "selecting results into other types"
     public func execute<T: Codable>(_ resultType: T.Type, _ sqlFragment: SQLFragment<NoProperties>) throws -> T {
-        let statement = try getConnection().prepare(
-            sql: sqlFragment.sql(collations: nil, overrideCollation: nil))
-        try statement.bind(try sqlFragment.parameters())
-        return try StatementDecoder.decode(resultType, from: statement)
+        let sql = try sqlFragment.sql(collations: nil, overrideCollation: nil)
+        let parameters = try sqlFragment.parameters()
+        return try getConnection().execute(resultType, sql: sql, parameters: parameters)
     }
     
     private var _connection: Connection?
-    private func getConnection() throws -> Connection {
+    func getConnection() throws -> Connection {
         if let c = _connection {
             return c
         }
-        let c = try Connection(path: path, logSQL: logSQL)
+        let c = try Connection(self)
         _connection = c
         return c
+    }
+    
+    @TaskLocal static var isInAccessQueue = false
+    
+    func inAccessQueue<T>(block: () throws -> T) rethrows -> T {
+        if Database.isInAccessQueue {
+            // Avoid deadlock through reentrance: don't use accessQueue.sync if we're currently being
+            // executed by the same dispatch queue
+            return try block()
+        }
+        return try accessQueue.sync {
+            return try Database.$isInAccessQueue.withValue(true) {
+                return try block()
+            }
+        }
     }
 }
 

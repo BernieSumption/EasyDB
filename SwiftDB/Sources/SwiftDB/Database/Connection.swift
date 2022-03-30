@@ -2,16 +2,16 @@ import Foundation
 import SQLite3
 
 class Connection {
-    let db: OpaquePointer
-    let logSQL: SQLLogger
-    var registeredCollationNames = Set<String>()
-    var collationFunctions = [CollationFunction]()
+    private let database: Database
+    private let connectionPointer: OpaquePointer
+    private var registeredCollationNames = Set<String>()
+    private var collationFunctions = [CollationFunction]()
 
-    init(path: String, logSQL: SQLLogger = .none) throws {
-        self.logSQL = logSQL
-        var db: OpaquePointer?
-        try checkOK(sqlite3_open(path, &db), sql: nil, db: nil)
-        self.db = try checkPointer(db, from: "sqlite3_open")
+    init(_ database: Database) throws {
+        self.database = database
+        var connectionPointer: OpaquePointer?
+        try checkOK(sqlite3_open(database.path, &connectionPointer), sql: nil, db: nil)
+        self.connectionPointer = try checkPointer(connectionPointer, from: "sqlite3_open")
         registerCollation(.binary)
         registerCollation(.string)
         registerCollation(.caseInsensitive)
@@ -19,23 +19,30 @@ class Connection {
         registerCollation(.localizedCaseInsensitive)
     }
 
-    /// Compile a prepared statement
+    /// Compile a prepared statement. **WARNING:** Make sure that the resulting statement is only
+    /// used inside a `database.inAccessQueue` block to ensure thread safety.
     func prepare(sql: String) throws -> Statement {
-        return try Statement(db, sql, logSQL: logSQL)
+        return try Statement(connectionPointer, sql, logSQL: database.logSQL)
     }
     
     /// Compile and execute an SQL query, decoding the results into an instance of `T`
     func execute<T: Decodable>(_ resultType: T.Type, sql: String, parameters: [DatabaseValue] = []) throws -> T {
-        let statement = try prepare(sql: sql)
-        try statement.bind(parameters)
-        return try StatementDecoder.decode(resultType, from: statement)
+        return try database.inAccessQueue {
+            let statement = try prepare(sql: sql)
+            defer { statement.reset() }
+            try statement.bind(parameters)
+            return try StatementDecoder.decode(resultType, from: statement)
+        }
     }
     
     /// Compile and execute an SQL query that returns no results
     func execute(sql: String, parameters: [DatabaseValue] = []) throws {
-        let statement = try prepare(sql: sql)
-        try statement.bind(parameters)
-        let _ = try statement.step()
+        return try database.inAccessQueue {
+            let statement = try prepare(sql: sql)
+            defer { statement.reset() }
+            try statement.bind(parameters)
+            let _ = try statement.step()
+        }
     }
     
     public func registerCollation(_ collation: Collation) {
@@ -52,7 +59,7 @@ class Connection {
         collationFunctions.append(function) // keep a reference to the function so that ti is not freed
         let functionPointer = Unmanaged.passUnretained(function).toOpaque()
         let code = sqlite3_create_collation_v2(
-            db,
+            connectionPointer,
             collation.name,
             SQLITE_UTF8,
             functionPointer,

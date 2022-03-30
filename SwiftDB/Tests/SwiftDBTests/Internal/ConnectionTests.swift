@@ -5,7 +5,7 @@ import XCTest
 class ConnectionTests: XCTestCase {
 
     func testRead() throws {
-        let c = try Connection(path: ":memory:")
+        let c = try Database(path: ":memory:").getConnection()
         let s = try c.prepare(sql: """
             SELECT
                 1 as int,
@@ -22,13 +22,13 @@ class ConnectionTests: XCTestCase {
         XCTAssertEqual(try s.read(column: "blob"), .blob(Data([0x12, 0x34])))
         XCTAssertEqual(try s.read(column: "nil"), .null)
 
-        try s.reset()
+        s.reset()
         XCTAssertEqual(try s.step(), .row)
         XCTAssertEqual(try s.read(column: "int"), .int(1))
     }
 
     func testWrite() throws {
-        let c = try Connection(path: ":memory:")
+        let c = try Database(path: ":memory:").getConnection()
         let create = try c.prepare(sql: "CREATE TABLE tmp (a)")
         XCTAssertEqual(try create.step(), .done)
 
@@ -36,10 +36,10 @@ class ConnectionTests: XCTestCase {
         let selectStmt = try c.prepare(sql: "SELECT a FROM tmp ORDER BY rowid DESC LIMIT 1")
 
         func test(_ parameter: DatabaseValue) throws {
-            try insertStmt.reset()
+            insertStmt.reset()
             try insertStmt.bind([parameter])
             XCTAssertEqual(try insertStmt.step(), .done)
-            try selectStmt.reset()
+            selectStmt.reset()
             XCTAssertEqual(try selectStmt.step(), .row)
             XCTAssertEqual(try selectStmt.read(column: "a"), parameter)
         }

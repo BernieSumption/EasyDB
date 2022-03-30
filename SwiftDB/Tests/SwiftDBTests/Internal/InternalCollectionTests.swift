@@ -1,10 +1,3 @@
-//
-//  InternalCollectionTests.swift
-//  
-//
-//  Created by Bernard Sumption on 29/03/2022.
-//
-
 import XCTest
 @testable import SwiftDB
 
@@ -12,9 +5,11 @@ class InternalCollectionTests: SwiftDBTestCase {
     
     func testDefaultCollectionCollationUsedInSQL() throws {
         var sql = ""
-        db = Database(path: ":memory:", logSQL: .custom({ sql = $0 + "\n" }),
+        db = Database(path: ":memory:",
                       .collection(Row.self,
                                   .column(\.value, .index())))
+        db.logSQL = .custom({ sql = $0 + "\n" })
+        
         let c = try db.collection(Row.self)
         
         // index created with default collation "string"
@@ -27,9 +22,11 @@ class InternalCollectionTests: SwiftDBTestCase {
     
     func testExplicitDefaultCollectionCollationUsedInSQL() throws {
         var sql = ""
-        db = Database(path: ":memory:", logSQL: .custom({ sql = $0 + "\n" }),
+        db = Database(path: ":memory:",
                       .collection(Row.self,
                                   .column(\.value, collation: .binary, .index())))
+        db.logSQL = .custom({ sql = $0 + "\n" })
+        
         let c = try db.collection(Row.self)
         
         // index created with "binary" collation
@@ -44,9 +41,10 @@ class InternalCollectionTests: SwiftDBTestCase {
     
     func testOverrideCollationUsedInSQL() throws {
         var sql = ""
-        db = Database(path: ":memory:", logSQL: .custom({ sql = $0 + "\n" }),
+        db = Database(path: ":memory:",
                       .collection(Row.self,
                                   .column(\.value, collation: .binary, .index(collation: .caseInsensitive))))
+        db.logSQL = .custom({ sql = $0 + "\n" })
         let c = try db.collection(Row.self)
         
         // index created with "caseInsensitive" collation

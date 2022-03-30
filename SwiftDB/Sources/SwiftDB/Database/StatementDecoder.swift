@@ -3,9 +3,9 @@ import Foundation
 /// Decodes a statement's results into a `Codable` type, making an effort to do something pretty
 /// sensible for any codable type.
 struct StatementDecoder {
-    static func decode<T: Decodable>(_ type: T.Type, from statement: Statement, maxRows: Int? = nil) throws -> T {
+    static func decode<T: Decodable>(_ type: T.Type, from statement: Statement) throws -> T {
         let _ = try statement.step()
-        let decoder = StatementDecoderImpl(statement, maxRows: maxRows)
+        let decoder = StatementDecoderImpl(statement)
         if type is DatabaseValueConvertible.Type  {
             return try decoder.singleValueContainer().decode(type)
         }
@@ -16,13 +16,11 @@ struct StatementDecoder {
 /// The top-level decoder, decoding the result(s) of an SQL query
 private struct StatementDecoderImpl: Decoder {
     private let statement: Statement
-    private let maxRows: Int?
     let codingPath = [CodingKey]() // always top level so empty coding path
     let userInfo = [CodingUserInfoKey : Any]()
     
-    init(_ statement: Statement, maxRows: Int? = nil) {
+    init(_ statement: Statement) {
         self.statement = statement
-        self.maxRows = maxRows
     }
     
     /// Decode the first row of results into a struct or dictionary
@@ -32,7 +30,7 @@ private struct StatementDecoderImpl: Decoder {
     
     /// Decode all rows in the response into an array, each row becoming an element in the array
     func unkeyedContainer() throws -> UnkeyedDecodingContainer {
-        return ManyRowsUnkeyedContainer(statement, codingPath: [], maxRows: maxRows)
+        return ManyRowsUnkeyedContainer(statement, codingPath: [])
     }
     
     /// Decode the first column of the first row into a single value
@@ -159,25 +157,20 @@ private struct SingleRowKeyedContainer<Key: CodingKey>: KeyedDecodingContainerPr
 /// Decodes all rows in the response into an array, each row becoming an element in the array
 private class ManyRowsUnkeyedContainer: UnkeyedDecodingContainer {
     private let statement: Statement
-    private let maxRows: Int?
     private var needsStep = false
     private var errorFromIsAtEnd: Error? = nil
     
     let codingPath: [CodingKey]
     
-    init(_ statement: Statement, codingPath: [CodingKey], maxRows: Int? = nil) {
+    init(_ statement: Statement, codingPath: [CodingKey]) {
         self.statement = statement
         self.codingPath = codingPath
-        self.maxRows = maxRows
     }
 
     let count: Int? = nil // nil = count unknown in advance
     private(set) var currentIndex: Int = 0
     
     var isAtEnd: Bool {
-        if let maxRows = maxRows, currentIndex >= maxRows {
-            return true
-        }
         do {
             try stepIfRequired()
         } catch {

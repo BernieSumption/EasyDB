@@ -201,7 +201,7 @@ class Statement {
         }
     }
 
-    func reset() throws {
+    func reset() {
         hasRow = false
         sqlite3_reset(statement)
     }

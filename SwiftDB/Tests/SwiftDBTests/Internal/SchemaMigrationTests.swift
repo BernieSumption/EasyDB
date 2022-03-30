@@ -1,13 +1,14 @@
 import XCTest
 @testable import SwiftDB
 
-class SchemaMigrationTests: XCTestCase {
+class SchemaMigrationTests: SwiftDBTestCase {
     
     var c: Connection!
     var sm: SchemaMigration!
 
     override func setUpWithError() throws {
-        c = try Connection(path: ":memory:")
+        try super.setUpWithError()
+        c = try db.getConnection()
         sm = SchemaMigration(connection: c)
     }
     

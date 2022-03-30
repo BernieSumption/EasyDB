@@ -4,7 +4,7 @@
 /// `Collection` is the main interface to data in SwiftDB, handling reading and writing data as well as
 /// migrating the underlying table to fit `Row`
 public class Collection<Row: Codable>: Filterable, DefaultCollations {
-    let connection: Connection
+    let database: Database
     let columns: [String]
     let table: String
     let mapper: KeyPathMapper<Row>
@@ -12,8 +12,8 @@ public class Collection<Row: Codable>: Filterable, DefaultCollations {
     
     private let indices: [Index]
     
-    internal init(_ type: Row.Type, _ connection: Connection, _ config: CollectionConfig?) throws {
-        self.connection = connection
+    internal init(_ type: Row.Type, _ database: Database, _ config: CollectionConfig?) throws {
+        self.database = database
         self.mapper = try KeyPathMapper.forType(type)
         self.columns = mapper.rootProperties
         
@@ -66,35 +66,51 @@ public class Collection<Row: Codable>: Filterable, DefaultCollations {
     ///
     /// - Parameter dropColumns: Remove unused columns. This defaults to `false`
     public func migrate(dropColumns: Bool = false) throws {
-        let migration = SchemaMigration(connection: connection)
+        let migration = SchemaMigration(connection: try database.getConnection())
         try migration.migrateColumns(table: table, columns: columns)
         try migration.migrateIndices(table: table, indices: indices)
     }
     
     public func insert(_ row: Row) throws {
+        
         let statement = try getInsertStatement()
+        defer { statement.reset() }
         try StatementEncoder.encode(row, into: statement)
         var _ = try statement.step()
     }
     
     public func insert(_ rows: [Row]) throws {
-        try rows.forEach(insert)
+        let connection = try database.getConnection()
+        do {
+            try database.inAccessQueue {
+                try connection.execute(sql: "BEGIN TRANSACTION")
+                try rows.forEach(insert)
+                try connection.execute(sql: "COMMIT TRANSACTION")
+            }
+        } catch {
+            // don't throw an error if the rollback fails, because we want to see the
+            // error that actually caused the statement to fail
+            try? connection.execute(sql: "ROLLBACK TRANSACTION")
+            throw error
+        }
     }
     
     private var insertStatement: Statement?
     private func getInsertStatement() throws -> Statement {
-        if let statement = insertStatement {
-            try statement.reset()
+        return try database.inAccessQueue {
+            if let statement = insertStatement {
+                statement.reset()
+                return statement
+            }
+            let sql = SQL()
+                .insertInto(table, columns: columns)
+                .values()
+                .bracketed(namedParameters: columns)
+                .text
+            let statement = try database.getConnection().prepare(sql: sql)
+            insertStatement = statement
             return statement
         }
-        let sql = SQL()
-            .insertInto(table, columns: columns)
-            .values()
-            .bracketed(namedParameters: columns)
-            .text
-        let statement = try connection.prepare(sql: sql)
-        insertStatement = statement
-        return statement
     }
     
     public func all() -> QueryBuilder<Row> {

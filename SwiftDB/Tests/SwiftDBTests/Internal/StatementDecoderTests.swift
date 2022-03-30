@@ -1,9 +1,7 @@
 import XCTest
 @testable import SwiftDB
 
-class StatementDecoderTests: XCTestCase {
-    
-    let c: Connection! = try? Connection(path: ":memory:")
+class StatementDecoderTests: SwiftDBTestCase {
 
     func testDecodeIntegers() throws {
         func testInteger<T: Decodable & Equatable & FixedWidthInteger>(_ type: T.Type) {
@@ -207,7 +205,7 @@ class StatementDecoderTests: XCTestCase {
 extension StatementDecoderTests {
     
     func selectAs<T: Decodable & Equatable>(_ sql: String, _ type: T.Type) throws -> T {
-        let s = try c.prepare(sql: sql)
+        let s = try db.getConnection().prepare(sql: sql)
         return try StatementDecoder.decode(type, from: s)
     }
 

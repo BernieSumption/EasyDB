@@ -4,27 +4,32 @@ public struct QueryBuilder<Row: Codable>: Filterable {
     private let collection: Collection<Row>
     private var filters = [Filter]()
     private var orders = [Order]()
+    private var limit: Int?
     
     internal init(_ collection: Collection<Row>) {
         self.collection = collection
     }
     
     public func fetchOne() throws -> Row? {
-        let rows = try StatementDecoder.decode([Row].self, from: prepare(), maxRows: 1)
+        let query = try limit(1).compile()
+        let rows = try getConnection().execute(
+            [Row].self, sql: query.sql, parameters: query.parameters)
         return rows.first
     }
     
     public func fetchMany() throws -> [Row] {
-        return try StatementDecoder.decode([Row].self, from: prepare())
+        let query = try compile()
+        return try getConnection().execute(
+            [Row].self, sql: query.sql, parameters: query.parameters)
     }
     
-    public func filter(_ sqlFragment: SQLFragment<Row>, collation: Collation?) -> QueryBuilder<Row> {
+    public func filter(_ sqlFragment: SQLFragment<Row>, collation: Collation?) -> Self {
         var copy = self
         copy.filters.append(Filter(sqlFragment: sqlFragment, collation: collation))
         return copy
     }
     
-    public func filter(_ sqlFragment: SQLFragment<Row>) -> QueryBuilder<Row> {
+    public func filter(_ sqlFragment: SQLFragment<Row>) -> Self {
         return filter(sqlFragment, collation: nil)
     }
     
@@ -41,12 +46,20 @@ public struct QueryBuilder<Row: Codable>: Filterable {
         return copy
     }
     
-    private func prepare() throws -> Statement {
+    public func limit(_ limit: Int) -> Self {
+        var copy = self
+        copy.limit = limit
+        return copy
+    }
+    
+    private func compile() throws -> CompileResult {
         var parameters = [DatabaseValue]()
         var sql = SQL()
             .select()
             .quotedNames(collection.columns)
             .from(collection.table)
+        
+        let connection = try getConnection()
         
         if !filters.isEmpty {
             sql = sql
@@ -60,7 +73,7 @@ public struct QueryBuilder<Row: Codable>: Filterable {
             for filter in filters {
                 parameters += try filter.sqlFragment.parameters()
                 if let collation = filter.collation {
-                    collection.connection.registerCollation(collation)
+                    connection.registerCollation(collation)
                 }
             }
         }
@@ -77,15 +90,15 @@ public struct QueryBuilder<Row: Codable>: Filterable {
         
         for order in orders {
             if let collation = order.collation {
-                collection.connection.registerCollation(collation)
+                connection.registerCollation(collation)
             }
         }
-            
-        let statement = try collection.connection.prepare(sql: sql.text)
-        for (index, parameter) in parameters.enumerated() {
-            try statement.bind(parameter, to: index + 1)
+        
+        if let limit = limit {
+            sql = sql.limit(limit)
         }
-        return statement
+        
+        return CompileResult(sql: sql.text, parameters: parameters)
     }
     
     struct Filter {
@@ -153,5 +166,14 @@ public struct QueryBuilder<Row: Codable>: Filterable {
                 return "LAST"
             }
         }
+    }
+    
+    private struct CompileResult {
+        let sql: String
+        let parameters: [DatabaseValue]
+    }
+    
+    private func getConnection() throws -> Connection {
+        return try collection.database.getConnection()
     }
 }

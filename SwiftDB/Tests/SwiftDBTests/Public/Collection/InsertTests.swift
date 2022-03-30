@@ -17,13 +17,13 @@ class InsertTests: SwiftDBTestCase {
         XCTAssertEqual(try c.all().fetchMany(), rows)
     }
     
-// TODO: restore this test when we implement transactions
-//    func testBulkInsertUsesTransaction() throws {
-//        let c = try db.collection(RowWithId.self)
-//        var rows = [RowWithId(), RowWithId()]
-//        rows.append(rows[0])
-//        assertThrowsConnectionError(try c.insert(rows), contains: "UNIQUE constraint failed")
-//        XCTAssertEqual(try c.all().fetchMany(), [])
-//    }
+    func testBulkInsertUsesTransaction() throws {
+        let c = try db.collection(RowWithId.self)
+        let a = RowWithId()
+        let b = RowWithId()
+        // should fail to insert the second `a`, so roll back and leave an empty collection
+        assertErrorMessage(try c.insert([a, b, a]), contains: "UNIQUE constraint failed")
+        XCTAssertEqual(try c.all().fetchMany(), [])
+    }
 }
 
