@@ -71,18 +71,44 @@ public class Collection<Row: Codable>: Filterable, DefaultCollations {
         try migration.migrateIndices(table: table, indices: indices)
     }
     
-    public func insert(_ row: Row) throws {
-        try database.inAccessQueue {
-            try notThreadSafe_doSingleInsert(row)
-        }
+    /// Insert one row into the collection
+    ///
+    /// - Parameters:
+    ///   - row: the row to insert
+    ///   - onConflict: What to do when the row violates a uniqueness constraint:
+    ///     - `.abort`:  throw an error
+    ///     - `.ignore`: make no changes to the existing row
+    ///     - `.update`: replace the existing row with the new one
+    public func insert(_ row: Row, onConflict: OnConflict? = nil) throws {
+        let sql = getInsertSQL(onConflict: onConflict)
+        try database.getConnection().execute(sql: sql, namedParameters: row)
     }
     
-    public func insert(_ rows: [Row]) throws {
+    /// Insert many rows into the collection, using a transaction so that if any row can not
+    /// be inserted due to a uniqueness constraint, no rows will be inserted
+    ///
+    /// - Parameters:
+    ///   - rows: the rows to insert
+    ///   - onConflict: What to do when one of the rows violates a uniqueness constraint:
+    ///     - `.abort`:  prevent all rows from being inserted and throw an error
+    ///     - `.ignore`: allow all non-conflicting rows to be inserted while ignoring conflicting rows
+    ///     - `.update`: replace the existing row with the new one
+    public func insert(_ rows: [Row], onConflict: OnConflict? = nil) throws {
+        guard rows.count > 0 else {
+            return
+        }
+        let sql = getInsertSQL(onConflict: onConflict)
         try database.inAccessQueue {
+            // TODO: this spends about 20% of its time compiling the same SQL over and over again
             let connection = try database.getConnection()
             do {
+                let statement = try connection.notThreadSafe_prepare(sql: sql)
                 try connection.execute(sql: "BEGIN TRANSACTION")
-                try rows.forEach(notThreadSafe_doSingleInsert)
+                for row in rows {
+                    try StatementEncoder.encode(row, into: statement)
+                    let _ = try statement.step()
+                    statement.reset()
+                }
                 try connection.execute(sql: "COMMIT TRANSACTION")
             } catch {
                 // don't throw an error if the rollback fails, because we want to see the
@@ -93,29 +119,22 @@ public class Collection<Row: Codable>: Filterable, DefaultCollations {
         }
     }
     
-    private func notThreadSafe_doSingleInsert(_ row: Row) throws {
-        try database.inAccessQueue {
-            let statement = try notThreadSafe_getInsertStatement()
-            defer { statement.reset() }
-            try StatementEncoder.encode(row, into: statement)
-            var _ = try statement.step()
-        }
+    /// Equivalent to `insert(row, onConflict: .replace)`
+    public func save(_ row: Row) throws {
+        try insert(row, onConflict: .replace)
     }
     
-    private var insertStatement: Statement?
-    private func notThreadSafe_getInsertStatement() throws -> Statement {
-        if let statement = insertStatement {
-            statement.reset()
-            return statement
-        }
-        let sql = SQL()
-            .insertInto(table, columns: columns)
+    /// Equivalent to `insert(rows, onConflict: .replace)`
+    public func save(_ rows: [Row]) throws {
+        try insert(rows, onConflict: .replace)
+    }
+    
+    private func getInsertSQL(onConflict: OnConflict?) -> String {
+        return SQL()
+            .insertInto(table, columns: columns, onConflict: onConflict)
             .values()
             .bracketed(namedParameters: columns)
             .text
-        let statement = try database.getConnection().notThreadSafe_prepare(sql: sql)
-        insertStatement = statement
-        return statement
     }
     
     public func all() -> QueryBuilder<Row> {
@@ -133,6 +152,16 @@ public class Collection<Row: Codable>: Filterable, DefaultCollations {
     func defaultCollation(for columnKeyPath: AnyKeyPath) -> Collation {
         return defaultCollations[columnKeyPath] ?? .string
     }
+}
+
+/// What to do during an insert operation if inserting the entity would violate a uniqueness constraint 
+public enum OnConflict {
+    /// Throw an error and abort the current transaction
+    case abort
+    /// Silently ignore rows that can't be inserted
+    case ignore
+    /// Replace conflicting rows with the new data provided
+    case replace
 }
 
 protocol DefaultCollations {

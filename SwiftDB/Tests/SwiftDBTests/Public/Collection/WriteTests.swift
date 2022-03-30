@@ -47,5 +47,58 @@ class WriteTests: SwiftDBTestCase {
         try c.all().delete()
         XCTAssertEqual(try c.all().fetchMany(), [])
     }
+    
+    func testUpsertOfIdentifiable() throws {
+        let r1 = TestUpsertOfIdentifiable(id: UUID(), name: "r1")
+        let r2 = TestUpsertOfIdentifiable(id: UUID(), name: "r2")
+        let c = try db.collection(TestUpsertOfIdentifiable.self)
+        
+        try c.insert([r1, r2])
+        
+        var r1v2 = r1
+        r1v2.name = "r1-v2"
+        try c.insert(r1v2, onConflict: .replace)
+        XCTAssertEqual(try c.all().orderBy(\.name).fetchMany(), [r1v2, r2])
+        
+        var r1v3 = r1v2
+        r1v3.name = "r1-v3"
+        try c.insert(r1v3, onConflict: .ignore)
+        XCTAssertEqual(try c.all().orderBy(\.name).fetchMany(), [r1v2, r2])
+        
+        assertErrorMessage(try c.insert(r1v3), contains: "UNIQUE constraint failed")
+        assertErrorMessage(try c.insert(r1v3, onConflict: .abort), contains: "UNIQUE constraint failed")
+    }
+    
+    struct TestUpsertOfIdentifiable: Codable, Equatable, Identifiable {
+        var id: UUID
+        var name: String
+    }
+    
+    func testUpsertOfUnique() throws {
+        db = Database(path: ":memory:", .collection(TestUpsertOfUnique.self, .column(\.handle, unique: true)))
+        let r1 = TestUpsertOfUnique(handle: "a", name: "r1")
+        let r2 = TestUpsertOfUnique(handle: "b", name: "r2")
+        let c = try db.collection(TestUpsertOfUnique.self)
+        
+        try c.insert([r1, r2])
+        
+        var r1v2 = r1
+        r1v2.name = "r1-v2"
+        try c.insert(r1v2, onConflict: .replace)
+        XCTAssertEqual(try c.all().orderBy(\.name).fetchMany(), [r1v2, r2])
+        
+        var r1v3 = r1v2
+        r1v3.name = "r1-v3"
+        try c.insert(r1v3, onConflict: .ignore)
+        XCTAssertEqual(try c.all().orderBy(\.name).fetchMany(), [r1v2, r2])
+        
+        assertErrorMessage(try c.insert(r1v3), contains: "UNIQUE constraint failed")
+        assertErrorMessage(try c.insert(r1v3, onConflict: .abort), contains: "UNIQUE constraint failed")
+    }
+    
+    struct TestUpsertOfUnique: Codable, Equatable {
+        var handle: String
+        var name: String
+    }
 }
 

@@ -111,8 +111,7 @@ class SwiftDBTestCase: XCTestCase {
     func testFilter<T: Codable & Equatable>(
         _ data: [T],
         _ filter: (Collection<RowT<T>>) throws -> QueryBuilder<RowT<T>>,
-        _ expected: [T],
-        logSQL: Bool = false
+        _ expected: [T]
     ) throws {
         try testFilter(
             data,
@@ -123,8 +122,7 @@ class SwiftDBTestCase: XCTestCase {
     func testFilter<T: Codable & Equatable, V: Equatable>(
         _ data: [T],
         _ callback: (Collection<RowT<T>>) throws -> V,
-        _ expected: V,
-        logSQL: Bool = false
+        _ expected: V
     ) throws {
         let c = try db.collection(RowT<T>.self)
         try db.execute("DELETE FROM RowT")

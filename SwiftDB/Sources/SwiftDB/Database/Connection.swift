@@ -18,11 +18,6 @@ class Connection {
         registerCollation(.localized)
         registerCollation(.localizedCaseInsensitive)
     }
-
-    /// Compile a prepared statement. Callers must ensure thread safety using  e.g.  `database.inAccessQueue`
-    func notThreadSafe_prepare(sql: String) throws -> Statement {
-        return try Statement(connectionPointer, sql, logSQL: database.logSQL)
-    }
     
     /// Compile and execute an SQL query, decoding the results into an instance of `T`
     func execute<T: Decodable>(_ resultType: T.Type, sql: String, parameters: [DatabaseValue] = []) throws -> T {
@@ -44,7 +39,21 @@ class Connection {
         }
     }
     
-    public func registerCollation(_ collation: Collation) {
+    /// Compile and execute an SQL query that returns no results, getting named parameters from the provided struct or dictionary
+    func execute<P: Codable>(sql: String, namedParameters: P) throws {
+        return try database.inAccessQueue {
+            let statement = try notThreadSafe_prepare(sql: sql)
+            defer { statement.reset() }
+            try StatementEncoder.encode(namedParameters, into: statement)
+            let _ = try statement.step()
+        }
+    }
+    
+    func notThreadSafe_prepare(sql: String) throws -> Statement {
+        return try Statement(connectionPointer, sql, logSQL: database.logSQL)
+    }
+    
+    func registerCollation(_ collation: Collation) {
         guard !registeredCollationNames.contains(collation.normalizedName) else {
             return
         }
