@@ -14,7 +14,7 @@ struct SQL: CustomStringConvertible {
     }
     
     func delete() -> Self {
-        return raw("SELECT")
+        return raw("DELETE")
     }
     
     func from(_ table: String) -> Self {

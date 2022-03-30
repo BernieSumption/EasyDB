@@ -23,6 +23,12 @@ public struct QueryBuilder<Row: Codable>: Filterable {
             [Row].self, sql: query.sql, parameters: query.parameters)
     }
     
+    public func fetchCount() throws -> Int {
+        let query = try compile(.count)
+        return try getConnection().execute(
+            Int.self, sql: query.sql, parameters: query.parameters)
+    }
+    
     public func delete() throws {
         let query = try compile(.delete)
         try getConnection().execute(sql: query.sql, parameters: query.parameters)
@@ -60,6 +66,7 @@ public struct QueryBuilder<Row: Codable>: Filterable {
     enum CompileMode {
         case select
         case delete
+        case count
     }
     
     private func compile(_ mode: CompileMode) throws -> CompileResult {
@@ -74,6 +81,11 @@ public struct QueryBuilder<Row: Codable>: Filterable {
         case .delete:
             sql = sql
                 .delete()
+                .from(collection.table)
+        case .count:
+            sql = sql
+                .select()
+                .raw("COUNT(*)")
                 .from(collection.table)
         }
         

@@ -15,7 +15,7 @@ class InternalCollectionTests: SwiftDBTestCase {
         // index created with default collation "string"
         XCTAssertTrue(sql.contains(#"CREATE INDEX "Row-value-string" ON "Row" ( "value" COLLATE "string" )"#))
 
-        let _ = try c.filter(\.value, is: 4).orderBy(\.value).fetchMany()
+        let _ = try c.filter(\.value, equalTo: 4).orderBy(\.value).fetchMany()
         assertString(sql, contains: #"WHERE "value" COLLATE "string" IS"#)
         assertString(sql, contains: #"ORDER BY "value" COLLATE "string""#)
     }
@@ -34,7 +34,7 @@ class InternalCollectionTests: SwiftDBTestCase {
 
         
         // "binary" collation used in filter and order by
-        let _ = try c.filter(\.value, is: 4).orderBy(\.value).fetchMany()
+        let _ = try c.filter(\.value, equalTo: 4).orderBy(\.value).fetchMany()
         assertString(sql, contains: #"WHERE "value" COLLATE "binary" IS"#)
         assertString(sql, contains: #"ORDER BY "value" COLLATE "binary""#)
     }
@@ -53,7 +53,7 @@ class InternalCollectionTests: SwiftDBTestCase {
         
         // override collation used in filter and order by
         let _ = try c
-            .filter(\.value, is: 4, collation: .string)
+            .filter(\.value, equalTo: 4, collation: .string)
             .orderBy(\.value, collation: .localized)
             .fetchMany()
         assertString(sql, contains: #"WHERE "value" COLLATE "string" IS"#)

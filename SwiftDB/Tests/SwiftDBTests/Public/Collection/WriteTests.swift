@@ -1,7 +1,7 @@
 import XCTest
 import SwiftDB
 
-class InsertTests: SwiftDBTestCase {
+class WriteTests: SwiftDBTestCase {
     
     func testInsert() throws {
         let c = try db.collection(KitchenSinkEntity.self)
@@ -26,13 +26,26 @@ class InsertTests: SwiftDBTestCase {
         XCTAssertEqual(try c.all().fetchMany(), [])
     }
     
-    func testInsertSpeed() throws {
+    func testDelete() throws {
         let c = try db.collection(RowWithId.self)
-        let startingPoint = Date()
-        for _ in 0..<10_000 {
-            let _ = try? c.insert(RowWithId())
-        }
-        print(Int(startingPoint.timeIntervalSinceNow * -1000))
+        let r1 = RowWithId()
+        let r2 = RowWithId()
+        let r3 = RowWithId()
+        let r4 = RowWithId()
+        let r5 = RowWithId()
+        try c.insert([r1, r2, r3, r4, r5])
+        
+        try c.filter(\.id, equalTo: r2.id).delete()
+        XCTAssertEqual(try c.all().fetchMany(), [r1, r3, r4, r5])
+        
+        try c.filter(id: r4.id).delete()
+        XCTAssertEqual(try c.all().fetchMany(), [r1, r3, r5])
+        
+        try c.filter(id: r3).delete()
+        XCTAssertEqual(try c.all().fetchMany(), [r1, r5])
+        
+        try c.all().delete()
+        XCTAssertEqual(try c.all().fetchMany(), [])
     }
 }
 

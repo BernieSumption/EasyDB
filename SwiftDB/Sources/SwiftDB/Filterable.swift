@@ -19,15 +19,15 @@ public protocol Filterable {
 extension Filterable {
     /// Select records where `property == value`.
     ///
-    /// This uses the SQL `IS` operator which has the same semantics as Swift's `==` when comparing null values
-    public func filter<V: Codable>(_ property: KeyPath<Row, V>, is value: V, collation: Collation? = nil) -> QueryBuilder<Row> {
+    /// This uses the SQL `IS` operator which has the same semantics as Swift's `==` when comparing null values.
+    public func filter<V: Codable>(_ property: KeyPath<Row, V>, equalTo value: V, collation: Collation? = nil) -> QueryBuilder<Row> {
         return filter("\(property) IS \(value)", collation: collation)
     }
 
     /// Select records where `property != value`.
     ///
     /// This uses the SQL `IS NOT` operator which has the same semantics as Swift's `!=` when comparing null values.
-    public func filter<V: Codable>(_ property: KeyPath<Row, V>, isNot value: V, collation: Collation? = nil) -> QueryBuilder<Row> {
+    public func filter<V: Codable>(_ property: KeyPath<Row, V>, notEqualTo value: V, collation: Collation? = nil) -> QueryBuilder<Row> {
         return filter("\(property) IS NOT \(value)", collation: collation)
     }
 
@@ -64,5 +64,17 @@ extension Filterable {
     /// Select records where `property NOT LIKE value`
     public func filter(_ property: KeyPath<Row, String>, notLike: String) -> QueryBuilder<Row> {
         return filter("\(property) NOT LIKE \(notLike)")
+    }
+}
+
+extension Filterable where Row: Identifiable, Row.ID: Codable {
+    /// Select records whose `id` property is equal to the provided value
+    public func filter(id: Row.ID) -> QueryBuilder<Row> {
+        return filter(\.id, equalTo: id)
+    }
+    
+    /// Select records whose `id` property is equal to the id pf the provided instance
+    public func filter(id row: Row) -> QueryBuilder<Row> {
+        return filter(\.id, equalTo: row.id)
     }
 }

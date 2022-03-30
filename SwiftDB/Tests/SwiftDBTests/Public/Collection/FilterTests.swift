@@ -6,21 +6,21 @@ class FilterTests: SwiftDBTestCase {
     func testEquals() throws {
         try testFilter(
             [1, 2, 3, 4, 5],
-            { $0.filter(\.value, is: 3) },
+            { $0.filter(\.value, equalTo: 3) },
             [3])
     }
     
     func testNoResults() throws {
         try testFilter(
             [1, 2, 3, 4, 5],
-            { $0.filter(\.value, is: 20) },
+            { $0.filter(\.value, equalTo: 20) },
             [])
     }
     
     func testEqualsWithArrayValue() throws {
         try testFilter(
             [[1, 2], [2, 2], [3, 1]],
-            { $0.filter(\.value, is: [2, 2]) },
+            { $0.filter(\.value, equalTo: [2, 2]) },
             [[2, 2]])
     }
     
@@ -29,14 +29,14 @@ class FilterTests: SwiftDBTestCase {
         let b = Struct(foo: "b")
         try testFilter(
             [a, b],
-            { $0.filter(\.value, is: b) },
+            { $0.filter(\.value, equalTo: b) },
             [b])
     }
     
     func testNotEquals() throws {
         try testFilter(
             [1, 2, 3, 4, 5],
-            { $0.filter(\.value, isNot: 3) },
+            { $0.filter(\.value, notEqualTo: 3) },
             [1, 2, 4, 5])
     }
 
@@ -83,7 +83,7 @@ class FilterTests: SwiftDBTestCase {
         
         try testFilter(
             [1, nil, 3, nil, 5],
-            { $0.filter(\.value, is: nil) },
+            { $0.filter(\.value, equalTo: nil) },
             [nil, nil])
     }
 
@@ -95,7 +95,7 @@ class FilterTests: SwiftDBTestCase {
         
         try testFilter(
             [1, nil, 3, nil, 5],
-            { $0.filter(\.value, isNot: nil) },
+            { $0.filter(\.value, notEqualTo: nil) },
             [1, 3, 5])
     }
 
@@ -126,19 +126,19 @@ class FilterTests: SwiftDBTestCase {
     func testErrorMessage() throws {
         let c = try db.collection(RowT<Struct>.self)
         assertErrorMessage(
-            try c.filter(\.value.foo, is: "foo").fetchMany(),
+            try c.filter(\.value.foo, equalTo: "foo").fetchMany(),
             contains: #"filtering by nested KeyPaths (\.value.foo) is not implemented"#)
     }
     
     func testFiltersWithCollation() throws {
         try testFilter(
             ["æ", "Æ"],
-            { $0.filter(\.value, is: "æ") },
+            { $0.filter(\.value, equalTo: "æ") },
             ["æ"])
         
         try testFilter(
             ["æ", "Æ"],
-            { $0.filter(\.value, is: "æ", collation: .caseInsensitive) },
+            { $0.filter(\.value, equalTo: "æ", collation: .caseInsensitive) },
             ["æ", "Æ"])
         
         try testFilter(
@@ -150,6 +150,18 @@ class FilterTests: SwiftDBTestCase {
             ["æ", "Æ"],
             { $0.filter(\.value, greaterThanOrEqualTo: "æ", collation: .caseInsensitive) },
             ["æ", "Æ"])
+    }
+    
+    func testFilterCount() throws {
+        try testFilter(
+            [1, 2, 3, 4, 5],
+            { try $0.filter(\.value, greaterThanOrEqualTo: 3).fetchCount() },
+            3)
+        
+        try testFilter(
+            [1, 2, 3, 4, 5],
+            { try $0.all().fetchCount() },
+            5)
     }
 }
 

@@ -114,11 +114,23 @@ class SwiftDBTestCase: XCTestCase {
         _ expected: [T],
         logSQL: Bool = false
     ) throws {
+        try testFilter(
+            data,
+            { try filter($0).fetchMany().map(\.value) },
+            expected)
+    }
+    
+    func testFilter<T: Codable & Equatable, V: Equatable>(
+        _ data: [T],
+        _ callback: (Collection<RowT<T>>) throws -> V,
+        _ expected: V,
+        logSQL: Bool = false
+    ) throws {
         let c = try db.collection(RowT<T>.self)
         try db.execute("DELETE FROM RowT")
         try c.insert(data.map(RowT<T>.init))
         XCTAssertEqual(
-            try filter(c).fetchMany().map(\.value),
+            try callback(c),
             expected)
     }
     

@@ -66,7 +66,7 @@ class CollectionTests: SwiftDBTestCase {
         let c = try db.collection(RowWithString.self)
         try c.insert([RowWithString(eWithAcute), RowWithString(eWithAcuteCombining)])
         
-        let all = try c.filter(\.string, is: eWithAcute).fetchMany()
+        let all = try c.filter(\.string, equalTo: eWithAcute).fetchMany()
         XCTAssertEqual(all.count, 2)
     }
     
@@ -95,7 +95,7 @@ class CollectionTests: SwiftDBTestCase {
             contains: "UNIQUE constraint failed: RowWithString.string")
         
         XCTAssertEqual(
-            try c.filter(\.string, is: "A").fetchOne(),
+            try c.filter(\.string, equalTo: "A").fetchOne(),
             RowWithString("a"))
         
         
@@ -120,7 +120,7 @@ class CollectionTests: SwiftDBTestCase {
             contains: "UNIQUE constraint failed: RowWithString.string")
         
         XCTAssertEqual(
-            try c.filter(\.string, is: "A").fetchOne(),
+            try c.filter(\.string, equalTo: "A").fetchOne(),
             RowWithString("a"))
         
         
