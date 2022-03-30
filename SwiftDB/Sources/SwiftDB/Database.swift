@@ -91,7 +91,7 @@ public class Database {
     
     @TaskLocal static var isInAccessQueue = false
     
-    func inAccessQueue<T>(block: () throws -> T) rethrows -> T {
+    func inAccessQueue<T>(_ block: () throws -> T) rethrows -> T {
         if Database.isInAccessQueue {
             // Avoid deadlock through reentrance: don't use accessQueue.sync if we're currently being
             // executed by the same dispatch queue

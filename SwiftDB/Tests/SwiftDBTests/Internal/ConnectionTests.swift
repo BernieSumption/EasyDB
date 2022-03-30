@@ -6,7 +6,7 @@ class ConnectionTests: XCTestCase {
 
     func testRead() throws {
         let c = try Database(path: ":memory:").getConnection()
-        let s = try c.prepare(sql: """
+        let s = try c.notThreadSafe_prepare(sql: """
             SELECT
                 1 as int,
                 1.5 as double,
@@ -29,11 +29,11 @@ class ConnectionTests: XCTestCase {
 
     func testWrite() throws {
         let c = try Database(path: ":memory:").getConnection()
-        let create = try c.prepare(sql: "CREATE TABLE tmp (a)")
+        let create = try c.notThreadSafe_prepare(sql: "CREATE TABLE tmp (a)")
         XCTAssertEqual(try create.step(), .done)
 
-        let insertStmt = try c.prepare(sql: "INSERT INTO tmp VALUES (?)")
-        let selectStmt = try c.prepare(sql: "SELECT a FROM tmp ORDER BY rowid DESC LIMIT 1")
+        let insertStmt = try c.notThreadSafe_prepare(sql: "INSERT INTO tmp VALUES (?)")
+        let selectStmt = try c.notThreadSafe_prepare(sql: "SELECT a FROM tmp ORDER BY rowid DESC LIMIT 1")
 
         func test(_ parameter: DatabaseValue) throws {
             insertStmt.reset()

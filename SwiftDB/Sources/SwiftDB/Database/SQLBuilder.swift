@@ -13,6 +13,10 @@ struct SQL: CustomStringConvertible {
         return raw("SELECT")
     }
     
+    func delete() -> Self {
+        return raw("SELECT")
+    }
+    
     func from(_ table: String) -> Self {
         return raw("FROM").quotedName(table)
     }

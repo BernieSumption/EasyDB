@@ -25,5 +25,14 @@ class InsertTests: SwiftDBTestCase {
         assertErrorMessage(try c.insert([a, b, a]), contains: "UNIQUE constraint failed")
         XCTAssertEqual(try c.all().fetchMany(), [])
     }
+    
+    func testInsertSpeed() throws {
+        let c = try db.collection(RowWithId.self)
+        let startingPoint = Date()
+        for _ in 0..<10_000 {
+            let _ = try? c.insert(RowWithId())
+        }
+        print(Int(startingPoint.timeIntervalSinceNow * -1000))
+    }
 }
 

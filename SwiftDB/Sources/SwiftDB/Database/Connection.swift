@@ -19,16 +19,15 @@ class Connection {
         registerCollation(.localizedCaseInsensitive)
     }
 
-    /// Compile a prepared statement. **WARNING:** Make sure that the resulting statement is only
-    /// used inside a `database.inAccessQueue` block to ensure thread safety.
-    func prepare(sql: String) throws -> Statement {
+    /// Compile a prepared statement. Callers must ensure thread safety using  e.g.  `database.inAccessQueue`
+    func notThreadSafe_prepare(sql: String) throws -> Statement {
         return try Statement(connectionPointer, sql, logSQL: database.logSQL)
     }
     
     /// Compile and execute an SQL query, decoding the results into an instance of `T`
     func execute<T: Decodable>(_ resultType: T.Type, sql: String, parameters: [DatabaseValue] = []) throws -> T {
         return try database.inAccessQueue {
-            let statement = try prepare(sql: sql)
+            let statement = try notThreadSafe_prepare(sql: sql)
             defer { statement.reset() }
             try statement.bind(parameters)
             return try StatementDecoder.decode(resultType, from: statement)
@@ -38,7 +37,7 @@ class Connection {
     /// Compile and execute an SQL query that returns no results
     func execute(sql: String, parameters: [DatabaseValue] = []) throws {
         return try database.inAccessQueue {
-            let statement = try prepare(sql: sql)
+            let statement = try notThreadSafe_prepare(sql: sql)
             defer { statement.reset() }
             try statement.bind(parameters)
             let _ = try statement.step()

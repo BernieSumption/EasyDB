@@ -11,16 +11,21 @@ public struct QueryBuilder<Row: Codable>: Filterable {
     }
     
     public func fetchOne() throws -> Row? {
-        let query = try limit(1).compile()
+        let query = try limit(1).compile(.select)
         let rows = try getConnection().execute(
             [Row].self, sql: query.sql, parameters: query.parameters)
         return rows.first
     }
     
     public func fetchMany() throws -> [Row] {
-        let query = try compile()
+        let query = try compile(.select)
         return try getConnection().execute(
             [Row].self, sql: query.sql, parameters: query.parameters)
+    }
+    
+    public func delete() throws {
+        let query = try compile(.delete)
+        try getConnection().execute(sql: query.sql, parameters: query.parameters)
     }
     
     public func filter(_ sqlFragment: SQLFragment<Row>, collation: Collation?) -> Self {
@@ -52,12 +57,25 @@ public struct QueryBuilder<Row: Codable>: Filterable {
         return copy
     }
     
-    private func compile() throws -> CompileResult {
+    enum CompileMode {
+        case select
+        case delete
+    }
+    
+    private func compile(_ mode: CompileMode) throws -> CompileResult {
         var parameters = [DatabaseValue]()
         var sql = SQL()
-            .select()
-            .quotedNames(collection.columns)
-            .from(collection.table)
+        switch mode {
+        case .select:
+            sql = sql
+                .select()
+                .quotedNames(collection.columns)
+                .from(collection.table)
+        case .delete:
+            sql = sql
+                .delete()
+                .from(collection.table)
+        }
         
         let connection = try getConnection()
         

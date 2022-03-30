@@ -5,7 +5,7 @@ class StatementEncoderTests: SwiftDBTestCase {
     
     func testEncodeCodable() throws {
         
-        let s = try db.getConnection().prepare(sql: """
+        let s = try db.getConnection().notThreadSafe_prepare(sql: """
             SELECT
             :i AS i,
             :ioy AS ioy,
@@ -59,7 +59,7 @@ class StatementEncoderTests: SwiftDBTestCase {
     }
     
     func testEncodeDictionary() throws {
-        let s = try db.getConnection().prepare(sql: """
+        let s = try db.getConnection().notThreadSafe_prepare(sql: """
             SELECT
             :ioy AS ioy,
             :ion AS ion
@@ -76,7 +76,7 @@ class StatementEncoderTests: SwiftDBTestCase {
     }
     
     func testEncodeCodableArray() throws {
-        let s = try db.getConnection().prepare(sql: "SELECT ?, ?, ?")
+        let s = try db.getConnection().notThreadSafe_prepare(sql: "SELECT ?, ?, ?")
         
         XCTAssertThrowsError(try StatementEncoder.encode([1, 2, 3], into: s)) { error in
             XCTAssertTrue(String(describing: error).contains("providing arrays of parameter values"))
@@ -84,7 +84,7 @@ class StatementEncoderTests: SwiftDBTestCase {
     }
     
     func testEncodeCodableScalars() throws {
-        let s = try db.getConnection().prepare(sql: "SELECT ?")
+        let s = try db.getConnection().notThreadSafe_prepare(sql: "SELECT ?")
         
         XCTAssertThrowsError(try StatementEncoder.encode(1, into: s)) { error in
             XCTAssertTrue(String(describing: error).contains("providing single parameter values"), String(describing: error))
@@ -92,7 +92,7 @@ class StatementEncoderTests: SwiftDBTestCase {
     }
     
     func testEncodeDate() throws {
-        let s = try db.getConnection().prepare(sql: "SELECT :date as date")
+        let s = try db.getConnection().notThreadSafe_prepare(sql: "SELECT :date as date")
         
         let date = Date(timeIntervalSinceReferenceDate: 20)
         try StatementEncoder.encode(["date": date], into: s)
