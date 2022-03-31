@@ -64,7 +64,7 @@ class IndexTests: SwiftDBTestCase {
         let sql = try db.execute([String].self, #"SELECT sql FROM sqlite_schema WHERE type = 'index' AND tbl_name = 'RowT'"#)
         
         XCTAssertEqual(sql.count, 1)
-        XCTAssertTrue(sql[0].contains(#""value" COLLATE "caseInsensitive""#))
+        XCTAssertTrue(sql[0].contains("`value` COLLATE `caseInsensitive`"))
     }
     
     func testErrorIfColumnConfiguredTwice() throws {

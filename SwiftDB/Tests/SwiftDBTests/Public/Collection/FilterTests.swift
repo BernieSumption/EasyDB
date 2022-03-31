@@ -240,6 +240,22 @@ class FilterTests: SwiftDBTestCase {
         let a: String
         let c: String
     }
+    
+    struct AE: Codable, Equatable {
+        let a: String
+        let e: String
+    }
+    
+    func testSelectManyError() throws {
+        let c = try populateCollection([
+            ABC(a: "a1", b: "b1", c: "c1"),
+            ABC(a: "a2", b: "b2", c: "c2")
+        ])
+        
+        assertErrorMessage(
+            try c.all().fetchMany(AE.self),
+            contains: "no such column: e")
+    }
 }
 
 extension FilterTests {

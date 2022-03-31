@@ -13,11 +13,11 @@ class InternalCollectionTests: SwiftDBTestCase {
         let c = try db.collection(Row.self)
         
         // index created with default collation "string"
-        XCTAssertTrue(sql.contains(#"CREATE INDEX "Row-value-string" ON "Row" ( "value" COLLATE "string" )"#))
+        assertString(sql, contains: "CREATE INDEX `Row-value-string` ON `Row` ( `value` COLLATE `string` )")
 
         let _ = try c.filter(\.value, equalTo: 4).orderBy(\.value).fetchMany()
-        assertString(sql, contains: #"WHERE "value" COLLATE "string" IS"#)
-        assertString(sql, contains: #"ORDER BY "value" COLLATE "string""#)
+        assertString(sql, contains: "WHERE `value` COLLATE `string` IS")
+        assertString(sql, contains: "ORDER BY `value` COLLATE `string`")
     }
     
     func testExplicitDefaultCollectionCollationUsedInSQL() throws {
@@ -30,13 +30,13 @@ class InternalCollectionTests: SwiftDBTestCase {
         let c = try db.collection(Row.self)
         
         // index created with "binary" collation
-        assertString(sql, contains:#"CREATE INDEX "Row-value-binary" ON "Row" ( "value" COLLATE "binary" )"#)
+        assertString(sql, contains: "CREATE INDEX `Row-value-binary` ON `Row` ( `value` COLLATE `binary` )")
 
         
         // "binary" collation used in filter and order by
         let _ = try c.filter(\.value, equalTo: 4).orderBy(\.value).fetchMany()
-        assertString(sql, contains: #"WHERE "value" COLLATE "binary" IS"#)
-        assertString(sql, contains: #"ORDER BY "value" COLLATE "binary""#)
+        assertString(sql, contains: "WHERE `value` COLLATE `binary` IS")
+        assertString(sql, contains: "ORDER BY `value` COLLATE `binary`")
     }
     
     func testOverrideCollationUsedInSQL() throws {
@@ -48,7 +48,7 @@ class InternalCollectionTests: SwiftDBTestCase {
         let c = try db.collection(Row.self)
         
         // index created with "caseInsensitive" collation
-        assertString(sql, contains:#"CREATE INDEX "Row-value-caseInsensitive" ON "Row" ( "value" COLLATE "caseInsensitive" )"#)
+        assertString(sql, contains: "CREATE INDEX `Row-value-caseInsensitive` ON `Row` ( `value` COLLATE `caseInsensitive` )")
 
         
         // override collation used in filter and order by
@@ -56,8 +56,8 @@ class InternalCollectionTests: SwiftDBTestCase {
             .filter(\.value, equalTo: 4, collation: .string)
             .orderBy(\.value, collation: .localized)
             .fetchMany()
-        assertString(sql, contains: #"WHERE "value" COLLATE "string" IS"#)
-        assertString(sql, contains: #"ORDER BY "value" COLLATE "localized""#)
+        assertString(sql, contains: "WHERE `value` COLLATE `string` IS")
+        assertString(sql, contains: "ORDER BY `value` COLLATE `localized`")
     }
 
 }

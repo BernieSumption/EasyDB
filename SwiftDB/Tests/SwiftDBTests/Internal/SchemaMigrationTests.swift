@@ -179,8 +179,10 @@ class SchemaMigrationTests: SwiftDBTestCase {
     }
     
     func testQuotedNames() throws {
-        let tableName = "special\" -- ch.ar;[s"
-        let columnName = "w! -- \"onk;"
+        let tableName = "speci`al\" -- ch.ar;[s"
+        let columnName = "w! -- \"on`k;"
+        
+        db.logSQL = .print
         
         try sm.ensureTableExists(table: tableName, columns: [columnName])
         XCTAssertEqual(try sm.getColumns(table: tableName) ,[columnName])

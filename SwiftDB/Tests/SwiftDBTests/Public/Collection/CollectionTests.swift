@@ -76,7 +76,7 @@ class CollectionTests: SwiftDBTestCase {
         
         // check that the index has been created with the correct collation
         let sql = try db.execute(String.self, #"SELECT sql FROM sqlite_schema WHERE type = 'index' AND tbl_name = 'RowWithString'"#)
-        XCTAssertTrue(sql.contains(#""string" COLLATE "string"#))
+        XCTAssertTrue(sql.contains("`string` COLLATE `string`"))
     }
     
     func testDefaultCollation() throws {

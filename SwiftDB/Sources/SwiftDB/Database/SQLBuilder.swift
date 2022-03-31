@@ -100,7 +100,12 @@ struct SQL: CustomStringConvertible {
     }
     
     static func quoteName(_ name: String) -> String {
-        return "\"" + name.replacingOccurrences(of: "\"", with: "\"\"") + "\""
+        // Use backticks to quote names, even though they're non-standard SQL, because
+        // double quotes (as required by the SQL standard) will be magically resolved
+        // to a string literal if the identifier doesn't exist, whereas we want use of
+        // undefined identifiers to be an error
+        // https://sqlite.org/lang_keywords.html
+        return "`" + name.replacingOccurrences(of: "`", with: "``") + "`"
     }
     
     /// Convert lowercase ASCII characters to uppercase without affecting non-ASCII unicode characters. This matches
