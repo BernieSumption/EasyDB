@@ -158,7 +158,7 @@ private struct SingleRowKeyedContainer<Key: CodingKey>: KeyedDecodingContainerPr
 private class ManyRowsUnkeyedContainer: UnkeyedDecodingContainer {
     private let statement: Statement
     private var needsStep = false
-    private var errorFromIsAtEnd: Error? = nil
+    private var errorFromIsAtEnd: Error?
     
     let codingPath: [CodingKey]
     

@@ -9,5 +9,5 @@ disabled_rules:
   - opening_brace
 #  - colon
 #  - leading_whitespace
-  - redundant_optional_initialization
+#  - redundant_optional_initialization
   - redundant_void_return
