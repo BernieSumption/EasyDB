@@ -32,7 +32,7 @@ private let codeNames: [CInt: String] = [
     27: "SQLITE_NOTICE",
     28: "SQLITE_WARNING",
     100: "SQLITE_ROW",
-    101: "SQLITE_DONE",
+    101: "SQLITE_DONE"
 ]
 
 public enum ResultCode: CInt, Error, CustomStringConvertible {

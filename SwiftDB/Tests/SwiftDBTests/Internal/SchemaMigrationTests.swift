@@ -130,7 +130,7 @@ class SchemaMigrationTests: SwiftDBTestCase {
                 Index([
                     Index.Part(["b"], collation: nil),
                     Index.Part(["a"], collation: nil, .descending)
-                ]),
+                ])
             ])
         XCTAssertEqual(
             try sm.getIndexNames(table: "foo"),
@@ -140,13 +140,13 @@ class SchemaMigrationTests: SwiftDBTestCase {
         try sm.migrateIndices(
             table: "foo",
             indices: [
-            Index([
-                Index.Part(["b"], collation: nil)
-            ]),
-            Index([
-                Index.Part(["b"], collation: nil),
-                Index.Part(["a"], collation: nil, .descending)
-            ]),
+                Index([
+                    Index.Part(["b"], collation: nil)
+                ]),
+                Index([
+                    Index.Part(["b"], collation: nil),
+                    Index.Part(["a"], collation: nil, .descending)
+                ])
         ])
         XCTAssertEqual(
             try sm.getIndexNames(table: "foo"),

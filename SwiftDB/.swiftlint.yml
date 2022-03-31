@@ -1,7 +1,7 @@
 
 disabled_rules:
   - trailing_whitespace
-  - trailing_comma
+#  - trailing_comma
 #  - redundant_discardable_let
 #  - vertical_whitespace
 #  - comma

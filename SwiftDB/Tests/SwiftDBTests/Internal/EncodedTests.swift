@@ -38,7 +38,7 @@ class EncodedTests: XCTestCase {
                 ]),
                 .array([
                     .object(["b": .string("5")])
-                ]),
+                ])
             ])
         )
     }
@@ -56,8 +56,8 @@ class EncodedTests: XCTestCase {
                     "foo": .array([]),
                     "bar": .array([
                         .object(["i": .number(3)])
-                    ]),
-                ]),
+                    ])
+                ])
             ])
         )
     }
@@ -96,7 +96,7 @@ class EncodedTests: XCTestCase {
                 ["c", "c1"],
                 ["c", "c2"],
                 ["c", "c2", "c21"],
-                ["d"],
+                ["d"]
             ]
         )
     }
@@ -107,7 +107,7 @@ class EncodedTests: XCTestCase {
             "o1": .object(["o11": .number(1)]),
             "o2": .object([
                 "o21": .object(["o211": .number(3)])
-            ]),
+            ])
         ])
         XCTAssertEqual(json.value(at: []), json)
         XCTAssertEqual(json.value(at: ["b"]), .boolean(true))

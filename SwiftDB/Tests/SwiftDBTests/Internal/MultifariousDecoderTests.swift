@@ -19,7 +19,7 @@ final class MultifariousDecoderTests: XCTestCase {
             instances,
             [
                 ThreeBools(a: false, b: true, c: false),
-                ThreeBools(a: false, b: false, c: true),
+                ThreeBools(a: false, b: false, c: true)
             ])
     }
     struct ThreeBools: Decodable, Equatable {
@@ -33,7 +33,7 @@ final class MultifariousDecoderTests: XCTestCase {
             [
                 FiveBools(a: false, b: true, c: false, d: true, e: false),
                 FiveBools(a: false, b: false, c: true, d: true, e: false),
-                FiveBools(a: false, b: false, c: false, d: false, e: true),
+                FiveBools(a: false, b: false, c: false, d: false, e: true)
             ])
     }
     struct FiveBools: Decodable, Equatable {
@@ -55,7 +55,7 @@ final class MultifariousDecoderTests: XCTestCase {
             instances,
             [
                 Mixed(id: uuid0, s: "1", i: 0, d: 1),
-                Mixed(id: uuid0, s: "0", i: 1, d: 1),
+                Mixed(id: uuid0, s: "0", i: 1, d: 1)
             ])
     }
     struct Mixed: Decodable, Equatable {
@@ -105,7 +105,7 @@ final class MultifariousDecoderTests: XCTestCase {
                         o: .init(b: 1)
                     ),
                     s3: .init(b: 0)
-                ),
+                )
             ])
     }
     struct Nested: Codable, Equatable {
@@ -142,7 +142,7 @@ final class MultifariousDecoderTests: XCTestCase {
                 .init(
                     arr: [.init(b: false), .init(b: false)],
                     i: [1, 1]
-                ),
+                )
             ])
     }
     struct Arrays: Codable, Equatable {
@@ -166,7 +166,7 @@ final class MultifariousDecoderTests: XCTestCase {
                 .init(
                     sDict: ["0": .init(b: false)],
                     iDict: [1: 1]
-                ),
+                )
             ])
     }
     struct Dictionaries: Codable, Equatable {

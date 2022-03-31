@@ -12,7 +12,7 @@ let package = Package(
         .library(
             name: "SwiftDB",
             targets: ["SwiftDB"]
-        ),
+        )
     ],
     dependencies: [
     ],

@@ -131,19 +131,19 @@ class MultifariousValuesTests: XCTestCase {
             first2Values(UUID.self),
             [
                 UUID(uuid: (0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0)),
-                UUID(uuid: (0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 1)),
+                UUID(uuid: (0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 1))
             ])
         XCTAssertEqual(
             first2Values(Date.self),
             [
                 Date(timeIntervalSince1970: 0),
-                Date(timeIntervalSince1970: 1),
+                Date(timeIntervalSince1970: 1)
             ])
         XCTAssertEqual(
             first2Values(Data.self),
             [
                 Data(repeating: 0, count: 1),
-                Data(repeating: 1, count: 1),
+                Data(repeating: 1, count: 1)
             ])
     }
     
