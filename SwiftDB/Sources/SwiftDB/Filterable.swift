@@ -17,53 +17,57 @@ public protocol Filterable {
 }
 
 extension Filterable {
-    /// Select records where `property == value`.
+    /// Add a filter limiting the query to records where `property == value`.
     ///
     /// This uses the SQL `IS` operator which has the same semantics as Swift's `==` when comparing null values.
     public func filter<V: Codable>(_ property: KeyPath<Row, V>, equalTo value: V, collation: Collation? = nil) -> QueryBuilder<Row> {
         return filter("\(property) IS \(value)", collation: collation)
     }
 
-    /// Select records where `property != value`.
+    /// Add a filter limiting the query to records where `property != value`.
     ///
     /// This uses the SQL `IS NOT` operator which has the same semantics as Swift's `!=` when comparing null values.
     public func filter<V: Codable>(_ property: KeyPath<Row, V>, notEqualTo value: V, collation: Collation? = nil) -> QueryBuilder<Row> {
         return filter("\(property) IS NOT \(value)", collation: collation)
     }
 
-    /// Select records where `property > value`
+    /// Add a filter limiting the query to records where `property > value`
     public func filter<V: Codable>(_ property: KeyPath<Row, V>, greaterThan value: V, collation: Collation? = nil) -> QueryBuilder<Row> {
         return filter("\(property) > \(value)", collation: collation)
     }
 
-    /// Select records where `property < value`
+    /// Add a filter limiting the query to records where `property < value`
     public func filter<V: Codable>(_ property: KeyPath<Row, V>, lessThan value: V, collation: Collation? = nil) -> QueryBuilder<Row> {
         return filter("\(property) < \(value)", collation: collation)
     }
 
-    /// Select records where `property >= value`
+    /// Add a filter limiting the query to records where `property >= value`
     public func filter<V: Codable>(_ property: KeyPath<Row, V>, greaterThanOrEqualTo value: V, collation: Collation? = nil) -> QueryBuilder<Row> {
         return filter("\(property) >= \(value)", collation: collation)
     }
 
-    /// Select records where `property <= value`
+    /// Add a filter limiting the query to records where `property <= value`
     public func filter<V: Codable>(_ property: KeyPath<Row, V>, lessThanOrEqualTo value: V, collation: Collation? = nil) -> QueryBuilder<Row> {
         return filter("\(property) <= \(value)", collation: collation)
     }
 
-    /// Select records where `property ISNULL` (if `isNull` is `true`) or `property NOTNULL` otherwise
-    public func filter<V: Codable>(_ property: KeyPath<Row, V>, isNull: Bool, collation: Collation? = nil) -> QueryBuilder<Row> {
-        return filter(isNull ? "\(property) ISNULL" : "\(property) NOTNULL", collation: collation)
+    /// Add a filter limiting the query to records where `property` is (or is not) `nil` 
+    public func filter<V: Codable>(_ property: KeyPath<Row, V>, isNull: Bool) -> QueryBuilder<Row> {
+        return filter(isNull ? "\(property) ISNULL" : "\(property) NOTNULL")
     }
 
-    /// Select records where `property LIKE value`
-    public func filter(_ property: KeyPath<Row, String>, like: String) -> QueryBuilder<Row> {
-        return filter("\(property) LIKE \(like)")
+    /// Select records where `property` matches `pattern` using the SQL `LIKE` operator.
+    /// Matching of ASCII characters is case-insensitive, `_` matches any character and `%` matches any
+    /// string of characters.
+    public func filter(_ property: KeyPath<Row, String>, like pattern: String) -> QueryBuilder<Row> {
+        return filter("\(property) LIKE \(pattern)")
     }
 
-    /// Select records where `property NOT LIKE value`
-    public func filter(_ property: KeyPath<Row, String>, notLike: String) -> QueryBuilder<Row> {
-        return filter("\(property) NOT LIKE \(notLike)")
+    /// Select records where `property` does not match `pattern` using the SQL `LIKE` operator.
+    /// Matching of ASCII characters is case-insensitive, `_` matches any character and `%` matches any
+    /// string of characters.
+    public func filter(_ property: KeyPath<Row, String>, notLike pattern: String) -> QueryBuilder<Row> {
+        return filter("\(property) NOT LIKE \(pattern)")
     }
 }
 
@@ -71,10 +75,5 @@ extension Filterable where Row: Identifiable, Row.ID: Codable {
     /// Select records whose `id` property is equal to the provided value
     public func filter(id: Row.ID) -> QueryBuilder<Row> {
         return filter(\.id, equalTo: id)
-    }
-    
-    /// Select records whose `id` property is equal to the id pf the provided instance
-    public func filter(id row: Row) -> QueryBuilder<Row> {
-        return filter(\.id, equalTo: row.id)
     }
 }

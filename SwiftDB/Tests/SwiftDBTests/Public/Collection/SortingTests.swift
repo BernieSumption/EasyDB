@@ -10,6 +10,14 @@ class SortingTests: SwiftDBTestCase {
             [1, 2, 3])
     }
     
+    func testOrderByCustomSQL() throws {
+        try testFilter(
+            [1, 6, 2, 5, 3, 4],
+            // even numbers first, then by numeric order
+            { $0.all().orderBy("\(\.value) % \(2), \(\.value)") },
+            [2, 4, 6, 1, 3, 5])
+    }
+    
     func testOrderByDirection() throws {
         try testFilter(
             [3, 1, 2],
@@ -44,13 +52,28 @@ class SortingTests: SwiftDBTestCase {
             ["a", "b", "C", "D"],
             { $0.all().orderBy(\.value, collation: .binary) },
             ["C", "D", "a", "b"])
+    }
+
+    func testOrderByDefaultCollation() throws {
+        db = Database(path: ":memory:", .collection(RowT<String>.self, .column(\.value, collation: .caseInsensitive)))
         
         try testFilter(
             ["a", "b", "C", "D"],
-            { $0.all().orderBy(\.value, collation: .caseInsensitive) },
+            { $0.all().orderBy(\.value) },
             ["a", "b", "C", "D"])
+        
+        try testFilter(
+            ["a", "b", "C", "D"],
+            { $0.all().orderBy("\(\.value)") },
+            ["a", "b", "C", "D"])
+        
+        // default collation can be overridden
+        try testFilter(
+            ["a", "b", "C", "D"],
+            { $0.all().orderBy(\.value, collation: .binary) },
+            ["C", "D", "a", "b"])
     }
-    
+
     func testOrderByUnicodeCompare() throws {
         try testFilter(
             ["z", "Z", "u", "ü"],
@@ -64,7 +87,6 @@ class SortingTests: SwiftDBTestCase {
     }
     
     func testOrderByCustomCollation() throws {
-        
         try testFilter(
             ["x", "me first!", "a"],
             { $0.all().orderBy(\.value) },

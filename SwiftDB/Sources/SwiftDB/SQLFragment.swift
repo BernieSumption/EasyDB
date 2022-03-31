@@ -8,16 +8,26 @@ public struct SQLFragment<Row: Codable>: ExpressibleByStringInterpolation {
         case parameter(() throws -> DatabaseValue)
     }
     
-    init(_ value: String) {
-        parts.append(.literal(value))
-    }
+    init() {}
     
     public init(stringLiteral value: String) {
-        self.init(value)
+        parts.append(.literal(value))
     }
     
     public init(stringInterpolation: StringInterpolation) {
         parts = stringInterpolation.parts
+    }
+    
+    mutating func append(literal: String) {
+        parts.append(.literal(literal))
+    }
+    
+    mutating func append<V: Codable>(parameter value: V) {
+        parts.append(.parameter({ try DatabaseValueEncoder.encode(value) }))
+    }
+    
+    mutating func append<V: Codable>(property: KeyPath<Row, V>) {
+        parts.append(.property(PartialCodableKeyPath(property)))
     }
     
     public struct StringInterpolation: StringInterpolationProtocol {

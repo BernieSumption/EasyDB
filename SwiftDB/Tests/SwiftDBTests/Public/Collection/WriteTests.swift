@@ -41,9 +41,6 @@ class WriteTests: SwiftDBTestCase {
         try c.filter(id: r4.id).delete()
         XCTAssertEqual(try c.all().fetchMany(), [r1, r3, r5])
         
-        try c.filter(id: r3).delete()
-        XCTAssertEqual(try c.all().fetchMany(), [r1, r5])
-        
         try c.all().delete()
         XCTAssertEqual(try c.all().fetchMany(), [])
     }

@@ -48,22 +48,32 @@ public struct QueryBuilder<Row: Codable>: Filterable {
     /// Change the order in which results are returned
     ///
     /// - Parameters:
-    ///   - keyPath: the property t order by
+    ///   - property: a `KeyPath` indicating the property to order by, e.g. `\.myProperty`
     ///   - direction: `.ascending` (lower values first) or `.descending` (lower values last)
     ///   - collation: The collating sequence to use, e.g. `.caseInsensitive` to ignore case while sorting. Note:
     ///                is is possible to set a default collation on a field while configuring a collation. Only use this option
     ///                when you need to order by a different field to the default.
     ///   - nulls: where nulls should appear in the sorted result, `.first` or `.last`
     public func orderBy<T: Codable>(
-        _ keyPath: KeyPath<Row, T>,
+        _ property: KeyPath<Row, T>,
         _ direction: Direction? = nil,
         collation: Collation? = nil,
         nulls: Nulls? = nil
     ) -> QueryBuilder<Row> {
         var copy = self
-        let collation = collation ?? collection.defaultCollation(for: keyPath)
-        copy.orders.append(
-            Order(keyPath: PartialCodableKeyPath(keyPath), direction: direction, collation: collation, nulls: nulls))
+        let order = Order(
+            keyPath: property,
+            collation: collation,
+            direction: direction,
+            nulls: nulls)
+        copy.orders.append(order)
+        return copy
+    }
+    
+    /// Order by an SQL expression.
+    public func orderBy(_ sqlFragment: SQLFragment<Row>) -> Self {
+        var copy = self
+        copy.orders.append(Order(sqlFragment))
         return copy
     }
     
@@ -108,7 +118,7 @@ public struct QueryBuilder<Row: Codable>: Filterable {
     /// Execute an update query. Values to update should have been set using `updating(...)`.
     public func update() throws {
         if updates.count == 0 {
-            return
+            throw SwiftDBError.misuse(message: "No updates provided. The no-argument form of update() requires that updating(...) be called first")
         }
         let query = try compile(.update)
         return try getConnection().execute(sql: query.sql, parameters: query.parameters)
@@ -174,9 +184,12 @@ public struct QueryBuilder<Row: Codable>: Filterable {
                 .raw("ORDER BY")
                 .raw(
                     try orders
-                        .map({ try $0.sql() })
+                        .map({ try $0.sqlFragment.sql(collations: collection, overrideCollation: $0.collation) })
                         .joined(separator: ", ")
                 )
+            for order in orders {
+                parameters.append(contentsOf: try order.sqlFragment.parameters())
+            }
         }
         
         for order in orders {
@@ -202,26 +215,32 @@ public struct QueryBuilder<Row: Codable>: Filterable {
     }
     
     struct Order {
-        let keyPath: PartialCodableKeyPath<Row>
-        let direction: Direction?
+        let sqlFragment: SQLFragment<Row>
         let collation: Collation?
-        let nulls: Nulls?
         
-        func sql() throws -> String {
-            var sql = try keyPath.nameExpression(operation: "ordering")
+        init<T: Codable>(keyPath: KeyPath<Row, T>, collation: Collation?, direction: QueryBuilder<Row>.Direction?, nulls: QueryBuilder<Row>.Nulls?) {
+            var sql = SQLFragment<Row>()
+            // TODO: use SQLFragment for collation
+            sql.append(property: keyPath)
             if let collation = collation {
-                sql += " COLLATE "
-                sql += SQL.quoteName(collation.name)
+                sql.append(literal: " COLLATE ")
+                sql.append(literal: SQL.quoteName(collation.name))
             }
             if let direction = direction {
-                sql += " "
-                sql += direction.name
+                sql.append(literal: " ")
+                sql.append(literal: direction.name)
             }
             if let nulls = nulls {
-                sql += " NULLS "
-                sql += nulls.name
+                sql.append(literal: " NULLS ")
+                sql.append(literal: nulls.name)
             }
-            return sql
+            self.sqlFragment = sql
+            self.collation = collation
+        }
+        
+        init(_ sqlFragment: SQLFragment<Row>) {
+            self.sqlFragment = sqlFragment
+            self.collation = nil
         }
     }
     
@@ -267,17 +286,4 @@ public struct QueryBuilder<Row: Codable>: Filterable {
     private func getConnection() throws -> Connection {
         return try collection.database.getConnection()
     }
-}
-
-public protocol UpdateQueryBuilder {
-    associatedtype Row
-    
-    /// Add a field to update
-    func updating<V: Codable>(_ property: KeyPath<Row, V>, _ value: V) -> Self
-    
-    /// Add a field to update and execute the update. This is shorthand for `updating()`
-    func update<V: Codable>(_ property: KeyPath<Row, V>, _ value: V) throws
-    
-    /// Execute an update. Values to update should have been set using `updating(_:_)`
-    func update()
 }
