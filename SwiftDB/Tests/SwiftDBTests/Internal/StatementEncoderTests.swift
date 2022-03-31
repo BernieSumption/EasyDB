@@ -58,6 +58,31 @@ class StatementEncoderTests: SwiftDBTestCase {
         XCTAssertEqual(try s.read(column: "sub"), .text(#"{"a":21,"d":"2001-01-01T00:00:20Z"}"#))
     }
     
+    func testRegressionEncodeNulls() throws {
+        let s = try db.getConnection().notThreadSafe_prepare(sql: """
+            SELECT :a AS a
+        """)
+        
+        try StatementEncoder.encode(A(a: 1), into: s)
+        
+        let _ = try s.step()
+        XCTAssertEqual(try s.read(column: "a"), .int(1))
+        
+        s.reset()
+        
+        // In a previous buggy version, nulls were not encoded because they came through to
+        // to the encoder through `encodeIfPresent` which by default does nothing for
+        // null values, which had the effect of leaving the previously bound value active
+        try StatementEncoder.encode(A(a: nil), into: s)
+        
+        let _ = try s.step()
+        XCTAssertEqual(try s.read(column: "a"), .null)
+    }
+    
+    struct A: Codable {
+        let a: Int?
+    }
+    
     func testEncodeDictionary() throws {
         let s = try db.getConnection().notThreadSafe_prepare(sql: """
             SELECT

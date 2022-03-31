@@ -19,6 +19,10 @@ public struct QueryBuilder<Row: Codable>: Filterable {
         return try limit(1).fetchMany(property).first
     }
     
+    public func fetchOne<V: Codable>(_ properties: V.Type) throws -> V? {
+        return try limit(1).fetchMany(properties).first
+    }
+    
     public func fetchMany() throws -> [Row] {
         let query = try compile(.select)
         return try getConnection().execute(
@@ -29,6 +33,13 @@ public struct QueryBuilder<Row: Codable>: Filterable {
         let query = try compile(.selectProperty(PartialCodableKeyPath(property)))
         return try getConnection().execute(
             [V].self, sql: query.sql, parameters: query.parameters)
+    }
+    
+    public func fetchMany<T: Codable>(_ properties: T.Type) throws -> [T] {
+        let mapper = try KeyPathMapper.forType(properties)
+        let query = try compile(.selectProperties(mapper.rootProperties))
+        return try getConnection().execute(
+            [T].self, sql: query.sql, parameters: query.parameters)
     }
     
     public func fetchCount() throws -> Int {
@@ -134,6 +145,7 @@ public struct QueryBuilder<Row: Codable>: Filterable {
     enum CompileMode {
         case select
         case selectProperty(PartialCodableKeyPath<Row>)
+        case selectProperties([String])
         case delete
         case count
         case update
@@ -148,25 +160,31 @@ public struct QueryBuilder<Row: Codable>: Filterable {
                 .raw("SELECT")
                 .quotedNames(collection.columns)
                 .raw("FROM")
-                .quotedName(collection.table)
+                .quotedName(collection.tableName)
         case .selectProperty(let keyPath):
             sql = sql
                 .raw("SELECT")
                 .raw(try keyPath.nameExpression())
                 .raw("FROM")
-                .quotedName(collection.table)
+                .quotedName(collection.tableName)
+        case .selectProperties(let properties):
+            sql = sql
+                .raw("SELECT")
+                .quotedNames(properties)
+                .raw("FROM")
+                .quotedName(collection.tableName)
         case .delete:
             sql = sql
                 .raw("DELETE FROM")
-                .quotedName(collection.table)
+                .quotedName(collection.tableName)
         case .count:
             sql = sql
                 .raw("SELECT COUNT(*) FROM")
-                .quotedName(collection.table)
+                .quotedName(collection.tableName)
         case .update:
             sql = sql
                 .raw("UPDATE")
-                .quotedName(collection.table)
+                .quotedName(collection.tableName)
                 .raw("SET")
             for update in updates {
                 sql = sql.raw(try update.sql(collations: nil, overrideCollation: nil))

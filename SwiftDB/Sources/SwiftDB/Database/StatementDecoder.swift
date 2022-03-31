@@ -1,7 +1,7 @@
 import Foundation
 
 /// Decodes a statement's results into a `Codable` type, making an effort to do something pretty
-/// sensible for any codable type.
+/// sensible for any codable type. See TODO: URL for query decoding
 struct StatementDecoder {
     static func decode<T: Decodable>(_ type: T.Type, from statement: Statement) throws -> T {
         let _ = try statement.step()

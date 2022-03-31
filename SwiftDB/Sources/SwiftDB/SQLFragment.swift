@@ -46,6 +46,17 @@ public struct SQLFragment<Row: Codable>: ExpressibleByStringInterpolation {
         public mutating func appendInterpolation<V: Codable>(_ property: KeyPath<Row, V>) {
             parts.append(.property(PartialCodableKeyPath(property)))
         }
+        
+        /// Insert a name such as a table name column name, quoted and escaped to avoid syntax errors if the name
+        /// contains special characters
+        public mutating func appendInterpolation(name: String) {
+            parts.append(.literal(SQL.quoteName(name)))
+        }
+        
+        /// Insert a literal SQL string that is directly unmodified into query.
+        public mutating func appendInterpolation(raw sql: String) {
+            parts.append(.literal(sql))
+        }
     }
     
     func sql(collations: DefaultCollations?, overrideCollation: Collation?) throws -> String {

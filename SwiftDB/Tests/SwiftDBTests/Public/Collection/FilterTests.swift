@@ -11,10 +11,15 @@ class FilterTests: SwiftDBTestCase {
     }
     
     func testNoResults() throws {
-        try assertFilter(
-            [1, 2, 3, 4, 5],
-            { $0.filter(\.value, equalTo: 20) },
+        let c = try populateCollectionOfRowT([1, 2, 3, 4, 5])
+        
+        XCTAssertEqual(
+            try c.filter(\.value, equalTo: 10).fetchMany(),
             [])
+        
+        XCTAssertEqual(
+            try c.filter(\.value, equalTo: 10).fetchOne(),
+            nil)
     }
     
     func testEqualsWithArrayValue() throws {
@@ -178,6 +183,62 @@ class FilterTests: SwiftDBTestCase {
         XCTAssertEqual(
             try c.all().fetchMany(\.value),
             [1, 2, 3, 4, 5])
+        
+        try c.all().delete()
+        
+        XCTAssertEqual(
+            try c.all().fetchMany(\.value),
+            [])
+    }
+    
+    func testSelectOneByProperties() throws {
+        let c = try populateCollection([
+            ABC(a: "a1", b: "b1", c: "c1"),
+            // validate that only one row is fetched, because the nil value
+            // would cause an error if decoded
+            ABC(a: "a2", b: "b2", c: nil)
+        ])
+        
+        XCTAssertEqual(
+            try c.all().fetchOne(AC.self),
+            AC(a: "a1", c: "c1"))
+        
+        try c.all().delete()
+        
+        XCTAssertEqual(
+            try c.all().fetchOne(AC.self),
+            nil)
+    }
+    
+    func testSelectManyByProperties() throws {
+        let c = try populateCollection([
+            ABC(a: "a1", b: "b1", c: "c1"),
+            ABC(a: "a2", b: "b2", c: "c2")
+        ])
+        
+        XCTAssertEqual(
+            try c.all().fetchMany(AC.self),
+            [
+                AC(a: "a1", c: "c1"),
+                AC(a: "a2", c: "c2")
+            ])
+        
+        try c.all().delete()
+        
+        XCTAssertEqual(
+            try c.all().fetchMany(AC.self),
+            [])
+    }
+    
+    struct ABC: Codable, Equatable {
+        let a: String?
+        let b: String?
+        let c: String?
+    }
+    
+    struct AC: Codable, Equatable {
+        let a: String
+        let c: String
     }
 }
 

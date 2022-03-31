@@ -4,9 +4,10 @@
 /// `Collection` is the main interface to data in SwiftDB, handling reading and writing data as well as
 /// migrating the underlying table to fit `Row`
 public class Collection<Row: Codable>: Filterable, DefaultCollations {
+    public let tableName: String
+    
     let database: Database
     let columns: [String]
-    let table: String
     let mapper: KeyPathMapper<Row>
     let defaultCollations: [AnyKeyPath: Collation]
     
@@ -20,7 +21,7 @@ public class Collection<Row: Codable>: Filterable, DefaultCollations {
         let config = config ?? .collection(type)
         let propertyConfigs = try config.typedPropertyConfigs(type)
         
-        self.table = config.tableName ?? defaultTableName(for: Row.self)
+        self.tableName = config.tableName ?? defaultTableName(for: Row.self)
         
         var defaultCollations = [AnyKeyPath: Collation]()
         for property in propertyConfigs {
@@ -34,7 +35,7 @@ public class Collection<Row: Codable>: Filterable, DefaultCollations {
         for property in propertyConfigs {
             let propertyPath = try mapper.propertyPath(for: property.keyPath)
             if configuredColumns.contains(propertyPath) {
-                throw SwiftDBError.misuse(message: "Column \(self.table).\(propertyPath.joined(separator: ".")) has been configured more than once")
+                throw SwiftDBError.misuse(message: "Column \(self.tableName).\(propertyPath.joined(separator: ".")) has been configured more than once")
             }
             configuredColumns.insert(propertyPath)
             for indexSpec in property.indices {
@@ -71,8 +72,8 @@ public class Collection<Row: Codable>: Filterable, DefaultCollations {
     /// - Parameter dropColumns: Remove unused columns. This defaults to `false`
     public func migrate(dropColumns: Bool = false) throws {
         let migration = SchemaMigration(connection: try database.getConnection())
-        try migration.migrateColumns(table: table, columns: columns)
-        try migration.migrateIndices(table: table, indices: indices)
+        try migration.migrateColumns(table: tableName, columns: columns)
+        try migration.migrateIndices(table: tableName, indices: indices)
     }
     
     /// Insert one row into the collection
@@ -109,6 +110,7 @@ public class Collection<Row: Codable>: Filterable, DefaultCollations {
                 let statement = try connection.notThreadSafe_prepare(sql: sql)
                 try connection.execute(sql: "BEGIN TRANSACTION")
                 for row in rows {
+                    try statement.clearBoundParameters()
                     try StatementEncoder.encode(row, into: statement)
                     let _ = try statement.step()
                     statement.reset()
@@ -135,7 +137,7 @@ public class Collection<Row: Codable>: Filterable, DefaultCollations {
     
     private func getInsertSQL(onConflict: OnConflict?) -> String {
         return SQL()
-            .insertInto(table, columns: columns, onConflict: onConflict)
+            .insertInto(tableName, columns: columns, onConflict: onConflict)
             .values()
             .bracketed(namedParameters: columns)
             .text
@@ -172,7 +174,7 @@ protocol DefaultCollations {
     func defaultCollation(for columnKeyPath: AnyKeyPath) -> Collation
 }
 
-private func defaultTableName<T>(for type: T.Type) -> String {
+func defaultTableName<T>(for type: T.Type) -> String {
     if let custom = type as? CustomTableName.Type {
         return custom.tableName
     }

@@ -26,11 +26,15 @@ class Statement {
         try SwiftDB.checkOK(sqlite3_prepare_v2(db, sql, -1, &statement, nil), sql: sql, db: db)
         self.statement = try checkPointer(statement, from: "sqlite3_prepare_v2")
     }
+    
+    func clearBoundParameters() throws {
+        self.parameters.removeAll()
+        try checkOK(sqlite3_clear_bindings(statement))
+    }
 
     /// Bind `N` parameters to the statement in positions `1..N`, clearing any previously bound parameters.
     func bind(_ parameters: [DatabaseValue]) throws {
-        self.parameters.removeAll()
-        try checkOK(sqlite3_clear_bindings(statement))
+        try clearBoundParameters()
 
         var index: Int = 1
         for parameter in parameters {
