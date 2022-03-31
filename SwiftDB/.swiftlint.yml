@@ -8,6 +8,6 @@ disabled_rules:
 #  - trailing_newline
   - opening_brace
 #  - colon
-  - leading_whitespace
+#  - leading_whitespace
   - redundant_optional_initialization
   - redundant_void_return

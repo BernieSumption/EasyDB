@@ -1,4 +1,3 @@
-
 public struct SQLFragment<Row: Codable>: ExpressibleByStringInterpolation {
     var parts = [Part]()
     

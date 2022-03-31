@@ -1,4 +1,3 @@
-
 struct SQL: CustomStringConvertible {
     let text: String
     

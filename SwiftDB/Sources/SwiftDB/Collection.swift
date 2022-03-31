@@ -1,4 +1,3 @@
-
 /// A collection of Codable objects, backed by an SQLite table
 ///
 /// `Collection` is the main interface to data in SwiftDB, handling reading and writing data as well as

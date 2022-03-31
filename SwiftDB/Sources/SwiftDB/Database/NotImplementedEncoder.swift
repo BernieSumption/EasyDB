@@ -1,4 +1,3 @@
-
 /// An `Encoder` that throws an error for every method
 ///
 /// This is required because various methods on the `Encoder` protocol are not marked `throws` so if

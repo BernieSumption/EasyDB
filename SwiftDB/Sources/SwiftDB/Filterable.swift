@@ -1,4 +1,3 @@
-
 public protocol Filterable {
     associatedtype Row: Codable
     

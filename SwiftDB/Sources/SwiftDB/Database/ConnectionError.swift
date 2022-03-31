@@ -1,4 +1,3 @@
-
 public struct ConnectionError: Error, CustomStringConvertible {
     public let resultCode: ResultCode
     public let message: String?
