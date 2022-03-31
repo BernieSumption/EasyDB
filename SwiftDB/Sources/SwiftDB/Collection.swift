@@ -112,7 +112,7 @@ public class Collection<Row: Codable>: Filterable, DefaultCollations {
                 for row in rows {
                     try statement.clearBoundParameters()
                     try StatementEncoder.encode(row, into: statement)
-                    let _ = try statement.step()
+                    _ = try statement.step()
                     statement.reset()
                 }
                 try connection.execute(sql: "COMMIT TRANSACTION")

@@ -32,7 +32,7 @@ class StatementEncoderTests: SwiftDBTestCase {
         
         try StatementEncoder.encode(KitchenSinkEntity.standard, into: s)
         
-        let _ = try s.step()
+        _ = try s.step()
         
         XCTAssertEqual(try s.read(column: "i"), .int(1))
         XCTAssertEqual(try s.readNull(column: "ioy"), false)
@@ -65,7 +65,7 @@ class StatementEncoderTests: SwiftDBTestCase {
         
         try StatementEncoder.encode(A(a: 1), into: s)
         
-        let _ = try s.step()
+        _ = try s.step()
         XCTAssertEqual(try s.read(column: "a"), .int(1))
         
         s.reset()
@@ -75,7 +75,7 @@ class StatementEncoderTests: SwiftDBTestCase {
         // null values, which had the effect of leaving the previously bound value active
         try StatementEncoder.encode(A(a: nil), into: s)
         
-        let _ = try s.step()
+        _ = try s.step()
         XCTAssertEqual(try s.read(column: "a"), .null)
     }
     
@@ -93,7 +93,7 @@ class StatementEncoderTests: SwiftDBTestCase {
         let value: [String: Int?] = ["ioy": 1, "ion": nil]
         try StatementEncoder.encode(value, into: s)
         
-        let _ = try s.step()
+        _ = try s.step()
         
         XCTAssertEqual(try s.readNull(column: "ioy"), false)
         XCTAssertEqual(try s.read(column: "ioy"), .int(1))
@@ -122,7 +122,7 @@ class StatementEncoderTests: SwiftDBTestCase {
         let date = Date(timeIntervalSinceReferenceDate: 20)
         try StatementEncoder.encode(["date": date], into: s)
         
-        let _ = try s.step()
+        _ = try s.step()
         XCTAssertEqual(try s.read(column: "date"), .text("2001-01-01T00:00:20Z"))
     }
 }

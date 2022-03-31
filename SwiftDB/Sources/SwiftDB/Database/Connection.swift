@@ -35,7 +35,7 @@ class Connection {
             let statement = try notThreadSafe_prepare(sql: sql)
             defer { statement.reset() }
             try statement.bind(parameters)
-            let _ = try statement.step()
+            _ = try statement.step()
         }
     }
     
@@ -45,7 +45,7 @@ class Connection {
             let statement = try notThreadSafe_prepare(sql: sql)
             defer { statement.reset() }
             try StatementEncoder.encode(namedParameters, into: statement)
-            let _ = try statement.step()
+            _ = try statement.step()
         }
     }
     

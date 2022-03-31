@@ -72,7 +72,7 @@ class CollectionTests: SwiftDBTestCase {
     
     func testDefaultColumnCollationIndex() throws {
         db = Database(path: ":memory:", .collection(RowWithString.self, .column(\.string, unique: true)))
-        let _ = try db.collection(RowWithString.self)
+        _ = try db.collection(RowWithString.self)
         
         // check that the index has been created with the correct collation
         let sql = try db.execute(String.self, #"SELECT sql FROM sqlite_schema WHERE type = 'index' AND tbl_name = 'RowWithString'"#)

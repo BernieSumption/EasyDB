@@ -4,7 +4,7 @@ import Foundation
 /// sensible for any codable type. See TODO: URL for query decoding
 struct StatementDecoder {
     static func decode<T: Decodable>(_ type: T.Type, from statement: Statement) throws -> T {
-        let _ = try statement.step()
+        _ = try statement.step()
         let decoder = StatementDecoderImpl(statement)
         if type is DatabaseValueConvertible.Type  {
             return try decoder.singleValueContainer().decode(type)

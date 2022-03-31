@@ -1,0 +1,13 @@
+
+disabled_rules:
+  - trailing_whitespace
+  - trailing_comma
+#  - redundant_discardable_let
+  - vertical_whitespace
+  - comma
+  - trailing_newline
+  - opening_brace
+  - colon
+  - leading_whitespace
+  - redundant_optional_initialization
+  - redundant_void_return
