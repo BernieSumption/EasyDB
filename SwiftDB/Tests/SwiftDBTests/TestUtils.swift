@@ -96,14 +96,14 @@ class SwiftDBTestCase: XCTestCase {
 
     func populateCollection<T: Codable>(_ data: [T]) throws -> Collection<T> {
         let c = try db.collection(T.self)
-        try db.execute("DELETE FROM \(name: c.tableName)")
+        try c.all().delete()
         try c.insert(data)
         return c
     }
 
     func populateCollectionOfRowT<T: Codable>(_ data: [T]) throws -> Collection<RowT<T>> {
         let c = try db.collection(RowT<T>.self)
-        try db.execute("DELETE FROM RowT")
+        try c.all().delete()
         try c.insert(data.map(RowT<T>.init))
         return c
     }
