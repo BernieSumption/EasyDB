@@ -133,4 +133,3 @@ class WriteTests: SwiftDBTestCase {
             ["a-updated", "b-updated", "c-updated"])
     }
 }
-

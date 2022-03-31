@@ -122,4 +122,3 @@ struct SQL: CustomStringConvertible {
         return result
     }
 }
-

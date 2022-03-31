@@ -5,7 +5,7 @@ disabled_rules:
 #  - redundant_discardable_let
 #  - vertical_whitespace
 #  - comma
-  - trailing_newline
+#  - trailing_newline
   - opening_brace
   - colon
   - leading_whitespace

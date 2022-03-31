@@ -11,4 +11,3 @@ class DatabaseTests: SwiftDBTestCase {
         XCTAssertEqual(result, [["c", "d"], ["e", "f"]])
     }
 }
-

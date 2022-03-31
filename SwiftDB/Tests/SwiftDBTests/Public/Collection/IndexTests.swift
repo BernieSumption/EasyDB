@@ -100,4 +100,3 @@ class IndexTests: SwiftDBTestCase {
         XCTAssertNoThrow(try db.collection(RowT<UUID>.self))
     }
 }
-
