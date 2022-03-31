@@ -5,7 +5,7 @@ public struct SQLFragment<Row: Codable>: ExpressibleByStringInterpolation {
     enum Part {
         case literal(String)
         case property(PartialCodableKeyPath<Row>)
-        case parameter(DatabaseValue)
+        case parameter(() throws -> DatabaseValue)
     }
     
     init(_ value: String) {
@@ -30,9 +30,7 @@ public struct SQLFragment<Row: Codable>: ExpressibleByStringInterpolation {
         }
         
         public mutating func appendInterpolation<V: Codable>(_ value: V) {
-            // TODO: remove force try
-            let value = try! DatabaseValueEncoder.encode(value)
-            parts.append(.parameter(value))
+            parts.append(.parameter({ try DatabaseValueEncoder.encode(value) }))
         }
         
         public mutating func appendInterpolation<V: Codable>(_ property: KeyPath<Row, V>) {
@@ -60,10 +58,10 @@ public struct SQLFragment<Row: Codable>: ExpressibleByStringInterpolation {
     }
     
     func parameters() throws -> [DatabaseValue] {
-        return parts.compactMap { part -> DatabaseValue? in
+        return try parts.compactMap { part -> DatabaseValue? in
             switch part {
             case .parameter(let value):
-                return value
+                return try value()
             default:
                 return nil
             }
