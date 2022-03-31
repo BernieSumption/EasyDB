@@ -185,7 +185,7 @@ class SchemaMigrationTests: SwiftDBTestCase {
         db.logSQL = .print
         
         try sm.ensureTableExists(table: tableName, columns: [columnName])
-        XCTAssertEqual(try sm.getColumns(table: tableName) ,[columnName])
+        XCTAssertEqual(try sm.getColumns(table: tableName), [columnName])
         
         // new set of indices
         try sm.migrateIndices(
