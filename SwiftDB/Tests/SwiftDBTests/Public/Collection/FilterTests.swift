@@ -4,21 +4,21 @@ import SwiftDB
 class FilterTests: SwiftDBTestCase {
     
     func testEquals() throws {
-        try testFilter(
+        try assertFilter(
             [1, 2, 3, 4, 5],
             { $0.filter(\.value, equalTo: 3) },
             [3])
     }
     
     func testNoResults() throws {
-        try testFilter(
+        try assertFilter(
             [1, 2, 3, 4, 5],
             { $0.filter(\.value, equalTo: 20) },
             [])
     }
     
     func testEqualsWithArrayValue() throws {
-        try testFilter(
+        try assertFilter(
             [[1, 2], [2, 2], [3, 1]],
             { $0.filter(\.value, equalTo: [2, 2]) },
             [[2, 2]])
@@ -27,87 +27,87 @@ class FilterTests: SwiftDBTestCase {
     func testEqualsWithStructValue() throws {
         let a = Struct(foo: "a")
         let b = Struct(foo: "b")
-        try testFilter(
+        try assertFilter(
             [a, b],
             { $0.filter(\.value, equalTo: b) },
             [b])
     }
     
     func testNotEquals() throws {
-        try testFilter(
+        try assertFilter(
             [1, 2, 3, 4, 5],
             { $0.filter(\.value, notEqualTo: 3) },
             [1, 2, 4, 5])
     }
 
     func testLessThan() throws {
-        try testFilter(
+        try assertFilter(
             [1, 2, 3, 4, 5],
             { $0.filter(\.value, lessThan: 3) },
             [1, 2])
     }
 
     func testLessThanOrEqualTo() throws {
-        try testFilter(
+        try assertFilter(
             [1, 2, 3, 4, 5],
             { $0.filter(\.value, lessThanOrEqualTo: 3) },
             [1, 2, 3])
     }
 
     func testGreaterThan() throws {
-        try testFilter(
+        try assertFilter(
             [1, 2, 3, 4, 5],
             { $0.filter(\.value, greaterThan: 3) },
             [4, 5])
     }
 
     func testGreaterThanOrEqualTo() throws {
-        try testFilter(
+        try assertFilter(
             [1, 2, 3, 4, 5],
             { $0.filter(\.value, greaterThanOrEqualTo: 3) },
             [3, 4, 5])
     }
 
     func testFilterChaining() throws {
-        try testFilter(
+        try assertFilter(
             [1, 2, 3, 4, 5],
             { $0.filter(\.value, lessThan: 4).filter(\.value, greaterThan: 1) },
             [2, 3])
     }
     
     func testIsNull() throws {
-        try testFilter(
+        try assertFilter(
             [1, nil, 3, nil, 5],
             { $0.filter(\.value, isNull: true) },
             [nil, nil])
         
-        try testFilter(
+        try assertFilter(
             [1, nil, 3, nil, 5],
             { $0.filter(\.value, equalTo: nil) },
             [nil, nil])
     }
 
     func testIsNotNull() throws {
-        try testFilter(
+        try assertFilter(
             [1, nil, 3, nil, 5],
             { $0.filter(\.value, isNull: false) },
             [1, 3, 5])
         
-        try testFilter(
+        try assertFilter(
             [1, nil, 3, nil, 5],
             { $0.filter(\.value, notEqualTo: nil) },
             [1, 3, 5])
     }
 
     func testLike() throws {
-        try testFilter(
+        try assertFilter(
             ["foo", "food", "shizfoo", "FOO"],
             { $0.filter(\.value, like: "foo%") },
             ["foo", "food", "FOO"])
     }
     
     func testNotLike() throws {
-        try testFilter(
+        try assertFilter(
             ["foo", "food", "shizfoo", "FOO"],
             { $0.filter(\.value, notLike: "foo%") },
             ["shizfoo"])
@@ -117,7 +117,7 @@ class FilterTests: SwiftDBTestCase {
         let search = "'"
         let replace = ""
         let match = "ab"
-        try testFilter(
+        try assertFilter(
             ["a'b", "a'c", "'a'b'"],
             { $0.filter("replace(\(\.value), \(search), \(replace)) = \(match)") },
             ["a'b", "'a'b'"])
@@ -127,41 +127,57 @@ class FilterTests: SwiftDBTestCase {
         let c = try db.collection(RowT<Struct>.self)
         assertErrorMessage(
             try c.filter(\.value.foo, equalTo: "foo").fetchMany(),
-            contains: #"filtering by nested KeyPaths (\.value.foo) is not implemented"#)
+            contains: #"querying by nested KeyPaths (\.value.foo) is not implemented"#)
     }
     
     func testFiltersWithCollation() throws {
-        try testFilter(
+        try assertFilter(
             ["æ", "Æ"],
             { $0.filter(\.value, equalTo: "æ") },
             ["æ"])
         
-        try testFilter(
+        try assertFilter(
             ["æ", "Æ"],
             { $0.filter(\.value, equalTo: "æ", collation: .caseInsensitive) },
             ["æ", "Æ"])
         
-        try testFilter(
+        try assertFilter(
             ["æ", "Æ"],
             { $0.filter(\.value, greaterThanOrEqualTo: "æ") },
             ["æ"])
         
-        try testFilter(
+        try assertFilter(
             ["æ", "Æ"],
             { $0.filter(\.value, greaterThanOrEqualTo: "æ", collation: .caseInsensitive) },
             ["æ", "Æ"])
     }
     
     func testFilterCount() throws {
-        try testQuery(
-            [1, 2, 3, 4, 5],
-            { try $0.filter(\.value, greaterThanOrEqualTo: 3).fetchCount() },
+        let c = try populateCollectionOfRowT([1, 2, 3, 4, 5])
+        
+        XCTAssertEqual(
+            try c.filter(\.value, greaterThanOrEqualTo: 3).fetchCount(),
             3)
         
-        try testQuery(
-            [1, 2, 3, 4, 5],
-            { try $0.all().fetchCount() },
+        XCTAssertEqual(
+            try c.all().fetchCount(),
             5)
+    }
+    
+    func testSelectOneByProperty() throws {
+        let c = try populateCollectionOfRowT([1, 2, 3, 4, 5])
+        
+        XCTAssertEqual(
+            try c.all().fetchOne(\.value),
+            1)
+    }
+    
+    func testSelectManyByProperty() throws {
+        let c = try populateCollectionOfRowT([1, 2, 3, 4, 5])
+        
+        XCTAssertEqual(
+            try c.all().fetchMany(\.value),
+            [1, 2, 3, 4, 5])
     }
 }
 

@@ -12,16 +12,23 @@ public struct QueryBuilder<Row: Codable>: Filterable {
     }
     
     public func fetchOne() throws -> Row? {
-        let query = try limit(1).compile(.select)
-        let rows = try getConnection().execute(
-            [Row].self, sql: query.sql, parameters: query.parameters)
-        return rows.first
+        return try limit(1).fetchMany().first
+    }
+    
+    public func fetchOne<V: Codable>(_ property: KeyPath<Row, V>) throws -> V? {
+        return try limit(1).fetchMany(property).first
     }
     
     public func fetchMany() throws -> [Row] {
         let query = try compile(.select)
         return try getConnection().execute(
             [Row].self, sql: query.sql, parameters: query.parameters)
+    }
+    
+    public func fetchMany<V: Codable>(_ property: KeyPath<Row, V>) throws -> [V] {
+        let query = try compile(.selectProperty(PartialCodableKeyPath(property)))
+        return try getConnection().execute(
+            [V].self, sql: query.sql, parameters: query.parameters)
     }
     
     public func fetchCount() throws -> Int {
@@ -126,6 +133,7 @@ public struct QueryBuilder<Row: Codable>: Filterable {
     
     enum CompileMode {
         case select
+        case selectProperty(PartialCodableKeyPath<Row>)
         case delete
         case count
         case update
@@ -139,6 +147,12 @@ public struct QueryBuilder<Row: Codable>: Filterable {
             sql = sql
                 .raw("SELECT")
                 .quotedNames(collection.columns)
+                .raw("FROM")
+                .quotedName(collection.table)
+        case .selectProperty(let keyPath):
+            sql = sql
+                .raw("SELECT")
+                .raw(try keyPath.nameExpression())
                 .raw("FROM")
                 .quotedName(collection.table)
         case .delete:

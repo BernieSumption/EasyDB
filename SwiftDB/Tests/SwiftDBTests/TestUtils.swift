@@ -94,38 +94,30 @@ class SwiftDBTestCase: XCTestCase {
         db = Database(path: ":memory:")
     }
     
-    func testFilter<T: Codable & Equatable>(
+    func populateCollectionOfRowT<T: Codable & Equatable>(_ data: [T]) throws -> Collection<RowT<T>> {
+        let c = try db.collection(RowT<T>.self)
+        try db.execute("DELETE FROM RowT")
+        try c.insert(data.map(RowT<T>.init))
+        return c
+    }
+    
+    func assertFilter<T: Codable & Equatable>(
         _ data: [T],
         _ filter: (Collection<RowT<T>>) throws -> QueryBuilder<RowT<T>>,
         _ expected: [T]
     ) throws {
-        try testQuery(
-            data,
-            { try filter($0).fetchMany().map(\.value) },
+        let c = try populateCollectionOfRowT(data)
+        XCTAssertEqual(
+            try filter(c).fetchMany().map(\.value),
             expected)
     }
     
-    func testQuery<T: Codable & Equatable, V: Equatable>(
-        _ data: [T],
-        _ callback: (Collection<RowT<T>>) throws -> V,
-        _ expectedCallbackReturn: V
-    ) throws {
-        let c = try db.collection(RowT<T>.self)
-        try db.execute("DELETE FROM RowT")
-        try c.insert(data.map(RowT<T>.init))
-        XCTAssertEqual(
-            try callback(c),
-            expectedCallbackReturn)
-    }
-    
-    func testModification<T: Codable & Equatable>(
+    func assertModification<T: Codable & Equatable>(
         _ data: [T],
         _ callback: (Collection<RowT<T>>) throws -> Void,
         _ expectedDataAfterCallback: [T]
     ) throws {
-        let c = try db.collection(RowT<T>.self)
-        try db.execute("DELETE FROM RowT")
-        try c.insert(data.map(RowT<T>.init))
+        let c = try populateCollectionOfRowT(data)
         try callback(c)
         XCTAssertEqual(
             try c.all().fetchMany().map(\.value),

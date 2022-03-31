@@ -114,12 +114,12 @@ struct PartialCodableKeyPath<Row: Codable>: Hashable {
         hasher.combine(cacheKey)
     }
     
-    func nameExpression(operation: String) throws -> String {
+    func nameExpression() throws -> String {
         let mapper = try KeyPathMapper.forType(Row.self)
         let path = try mapper.propertyPath(for: self)
         guard path.count == 1 else {
             let pathString = path.joined(separator: ".")
-            throw SwiftDBError.notImplemented(feature: "\(operation) by nested KeyPaths (\\.\(pathString))")
+            throw SwiftDBError.notImplemented(feature: "querying by nested KeyPaths (\\.\(pathString))")
         }
         return SQL.quoteName(path[0])
     }

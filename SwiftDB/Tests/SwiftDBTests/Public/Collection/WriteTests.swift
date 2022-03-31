@@ -127,7 +127,7 @@ class WriteTests: SwiftDBTestCase {
         
         XCTAssertEqual(try c.all().fetchMany().map(\.value), [1, 2, 0])
         
-        try testModification(
+        try assertModification(
             ["a", "b", "c"],
             { try $0.all().update("\(\.value) = \(\.value) || '-updated'") },
             ["a-updated", "b-updated", "c-updated"])
