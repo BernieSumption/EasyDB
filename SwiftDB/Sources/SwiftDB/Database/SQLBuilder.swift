@@ -9,18 +9,6 @@ struct SQL: CustomStringConvertible {
     
     var description: String { text }
     
-    func select() -> Self {
-        return raw("SELECT")
-    }
-    
-    func delete() -> Self {
-        return raw("DELETE")
-    }
-    
-    func from(_ table: String) -> Self {
-        return raw("FROM").quotedName(table)
-    }
-    
     func limit(_ limit: Int) -> Self {
         return raw("LIMIT \(limit)")
     }

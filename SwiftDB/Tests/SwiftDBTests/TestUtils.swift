@@ -47,8 +47,6 @@ struct Row: Codable, Equatable, CustomStringConvertible {
     var description: String {
         return "Row(\(value))"
     }
-    
-    static var tableName: String { "t" }
 }
 
 struct RowT<T: Codable & Equatable>: Codable, Equatable, CustomStringConvertible, CustomTableName {
@@ -89,18 +87,6 @@ struct RowWithString: Codable, Equatable, CustomStringConvertible {
     }
 }
 
-struct RowWithInt: Codable, Equatable, CustomStringConvertible {
-    let int: Int
-    
-    init(_ int: Int) {
-        self.int = int
-    }
-    
-    var description: String {
-        return "RowWithInt(\(int))"
-    }
-}
-
 class SwiftDBTestCase: XCTestCase {
     var db: Database!
     
@@ -113,23 +99,37 @@ class SwiftDBTestCase: XCTestCase {
         _ filter: (Collection<RowT<T>>) throws -> QueryBuilder<RowT<T>>,
         _ expected: [T]
     ) throws {
-        try testFilter(
+        try testQuery(
             data,
             { try filter($0).fetchMany().map(\.value) },
             expected)
     }
     
-    func testFilter<T: Codable & Equatable, V: Equatable>(
+    func testQuery<T: Codable & Equatable, V: Equatable>(
         _ data: [T],
         _ callback: (Collection<RowT<T>>) throws -> V,
-        _ expected: V
+        _ expectedCallbackReturn: V
     ) throws {
         let c = try db.collection(RowT<T>.self)
         try db.execute("DELETE FROM RowT")
         try c.insert(data.map(RowT<T>.init))
         XCTAssertEqual(
             try callback(c),
-            expected)
+            expectedCallbackReturn)
+    }
+    
+    func testModification<T: Codable & Equatable>(
+        _ data: [T],
+        _ callback: (Collection<RowT<T>>) throws -> Void,
+        _ expectedDataAfterCallback: [T]
+    ) throws {
+        let c = try db.collection(RowT<T>.self)
+        try db.execute("DELETE FROM RowT")
+        try c.insert(data.map(RowT<T>.init))
+        try callback(c)
+        XCTAssertEqual(
+            try c.all().fetchMany().map(\.value),
+            expectedDataAfterCallback)
     }
     
     func assertErrorMessage(_ expression: @autoclosure () throws -> Any, _ message: String) {

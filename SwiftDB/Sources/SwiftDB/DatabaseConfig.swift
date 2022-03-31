@@ -26,28 +26,56 @@ public struct CollectionConfig {
         let collation: Collation?
         let indices: [Index]
         
+        /// Configure a column setting multiple indices
+        ///
+        /// - Parameters:
+        ///   - property: A KeyPath indicating the property to configure e.g. `\.myProperty`
+        ///   - collation: an optional default collation for the property, see TODO: collation docs URL
+        ///   - indices: any number of `Index` instances, e.g. `.unique()`
         public static func column<T: Codable>(
-            _ keyPath: KeyPath<Row, T>,
+            _ property: KeyPath<Row, T>,
             collation: Collation? = nil,
             _ indices: Index...
         ) -> PropertyConfig {
-            return PropertyConfig(keyPath: PartialCodableKeyPath(keyPath), collation: collation, indices: indices)
+            return PropertyConfig(keyPath: PartialCodableKeyPath(property), collation: collation, indices: indices)
         }
         
+        /// A convenience method used to create a single unique index or disable the default behaviour of
+        /// creating a unique index on the `id` property if it exists
+        ///
+        /// - Parameters:
+        ///   - property: A KeyPath indicating the property to configure e.g. `\.myProperty`
+        ///   - collation: an optional default collation for the property, see TODO: collation docs URL
+        ///   - unique: `true` to create a unique index, `false` to disable the default behaviour of
+        ///             creating a unique index on the `id` property if it exists
         public static func column<T: Codable>(
-            _ keyPath: KeyPath<Row, T>,
+            _ property: KeyPath<Row, T>,
             collation: Collation? = nil,
             unique: Bool
         ) -> PropertyConfig {
-            return column(keyPath, collation: collation, .index(unique: unique))
+            return column(
+                property,
+                collation: collation,
+                unique ? .index(unique: true) : .noDefaultUniqueId())
         }
         
+        /// Configure an index
         public struct Index: Equatable {
-            let collation: Collation?
-            let unique: Bool
+            let kind: Kind
             
+            /// Add an index
             public static func index(unique: Bool = false, collation: Collation? = nil) -> Index {
-                return Index(collation: collation, unique: unique)
+                return Index(kind: .index(unique: unique, collation: collation))
+            }
+            
+            /// Disable the default behaviour of creating a unique index on the `id` property if it exists
+            public static func noDefaultUniqueId() -> Index {
+                return Index(kind: .noDefaultUniqueId)
+            }
+            
+            enum Kind: Equatable {
+                case index(unique: Bool, collation: Collation?)
+                case noDefaultUniqueId
             }
         }
     }

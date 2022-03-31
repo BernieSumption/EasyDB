@@ -153,12 +153,12 @@ class FilterTests: SwiftDBTestCase {
     }
     
     func testFilterCount() throws {
-        try testFilter(
+        try testQuery(
             [1, 2, 3, 4, 5],
             { try $0.filter(\.value, greaterThanOrEqualTo: 3).fetchCount() },
             3)
         
-        try testFilter(
+        try testQuery(
             [1, 2, 3, 4, 5],
             { try $0.all().fetchCount() },
             5)

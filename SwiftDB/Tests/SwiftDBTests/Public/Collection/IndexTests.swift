@@ -35,6 +35,18 @@ class IndexTests: SwiftDBTestCase {
         XCTAssertNoThrow(try c.insert(rowB))
     }
     
+    func testDisableAutoIndexForIdentifiable() throws {
+        db = Database(path: ":memory:", .collection(RowWithId.self, .column(\.id, unique: false)))
+        let c = try db.collection(RowWithId.self)
+        
+        let row = RowWithId()
+        
+        XCTAssertNoThrow(try c.insert([row, row]))
+        
+        let indices = try db.execute([String].self, #"SELECT sql FROM sqlite_schema WHERE type = 'index'"#)
+        XCTAssertEqual(indices, [])
+    }
+    
     func testNoUniqueId() throws {
         db = Database(path: ":memory:", .collection(RowWithId.self, .column(\.id, .index(unique: false))))
         let c = try db.collection(RowWithId.self)

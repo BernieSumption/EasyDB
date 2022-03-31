@@ -49,9 +49,9 @@ class WriteTests: SwiftDBTestCase {
     }
     
     func testUpsertOfIdentifiable() throws {
-        let r1 = TestUpsertOfIdentifiable(id: UUID(), name: "r1")
-        let r2 = TestUpsertOfIdentifiable(id: UUID(), name: "r2")
-        let c = try db.collection(TestUpsertOfIdentifiable.self)
+        let r1 = IdAndName(id: UUID(), name: "r1")
+        let r2 = IdAndName(id: UUID(), name: "r2")
+        let c = try db.collection(IdAndName.self)
         
         try c.insert([r1, r2])
         
@@ -69,16 +69,16 @@ class WriteTests: SwiftDBTestCase {
         assertErrorMessage(try c.insert(r1v3, onConflict: .abort), contains: "UNIQUE constraint failed")
     }
     
-    struct TestUpsertOfIdentifiable: Codable, Equatable, Identifiable {
+    struct IdAndName: Codable, Equatable, Identifiable {
         var id: UUID
         var name: String
     }
     
     func testUpsertOfUnique() throws {
-        db = Database(path: ":memory:", .collection(TestUpsertOfUnique.self, .column(\.handle, unique: true)))
-        let r1 = TestUpsertOfUnique(handle: "a", name: "r1")
-        let r2 = TestUpsertOfUnique(handle: "b", name: "r2")
-        let c = try db.collection(TestUpsertOfUnique.self)
+        db = Database(path: ":memory:", .collection(HandleAndName.self, .column(\.handle, unique: true)))
+        let r1 = HandleAndName(handle: "a", name: "r1")
+        let r2 = HandleAndName(handle: "b", name: "r2")
+        let c = try db.collection(HandleAndName.self)
         
         try c.insert([r1, r2])
         
@@ -96,9 +96,44 @@ class WriteTests: SwiftDBTestCase {
         assertErrorMessage(try c.insert(r1v3, onConflict: .abort), contains: "UNIQUE constraint failed")
     }
     
-    struct TestUpsertOfUnique: Codable, Equatable {
+    struct HandleAndName: Codable, Equatable {
         var handle: String
         var name: String
+    }
+    
+    func testUpdate() throws {
+        let c = try db.collection(Row.self)
+        
+        try c.insert([Row(1), Row(2), Row(3)])
+        
+        try c.filter(\.value, equalTo: 2).update(\.value, 0)
+        
+        XCTAssertEqual(try c.all().fetchMany().map(\.value), [1, 0, 3])
+    }
+    
+    func testUpdateWithOrderAndLimit() throws {
+        let c = try db.collection(Row.self)
+        
+        try c.insert([Row(1), Row(2), Row(3)])
+        
+        try c.all().orderBy(\.value, .descending).limit(1).update(\.value, 0)
+        
+        XCTAssertEqual(try c.all().fetchMany().map(\.value), [1, 2, 0])
+    }
+    
+    func testUpdateWithCustomSQL() throws {
+        let c = try db.collection(Row.self)
+        
+        try c.insert([Row(1), Row(2), Row(3)])
+        
+        try c.all().orderBy(\.value, .descending).limit(1).update(\.value, 0)
+        
+        XCTAssertEqual(try c.all().fetchMany().map(\.value), [1, 2, 0])
+        
+        try testModification(
+            ["a", "b", "c"],
+            { try $0.all().update("\(\.value) = \(\.value) || '-updated'") },
+            ["a-updated", "b-updated", "c-updated"])
     }
 }
 

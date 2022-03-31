@@ -28,7 +28,7 @@ public class Collection<Row: Codable>: Filterable, DefaultCollations {
         }
         self.defaultCollations = defaultCollations
         
-        var hasIdIndex = false
+        var disableDefaultIdIndex = false
         var indices = [Index]()
         var configuredColumns = Set<[String]>()
         for property in propertyConfigs {
@@ -38,20 +38,24 @@ public class Collection<Row: Codable>: Filterable, DefaultCollations {
             }
             configuredColumns.insert(propertyPath)
             for indexSpec in property.indices {
-                let collation = indexSpec.collation ?? defaultCollations[property.keyPath.cacheKey] ?? .string
-                let index = Index(
-                    [Index.Part(propertyPath, collation: collation)],
-                    unique: indexSpec.unique)
-                indices.append(index)
-                print(index.parts.map(\.name))
-                if index.parts.map(\.path) == [["id"]] {
-                    hasIdIndex = true
+                switch indexSpec.kind {
+                case .noDefaultUniqueId:
+                    disableDefaultIdIndex = true
+                case .index(unique: let unique, collation: let collation):
+                    let collation = collation ?? defaultCollations[property.keyPath.cacheKey] ?? .string
+                    let index = Index(
+                        [Index.Part(propertyPath, collation: collation)],
+                        unique: unique)
+                    indices.append(index)
+                    if index.parts.map(\.path) == [["id"]] {
+                        disableDefaultIdIndex = true
+                    }
                 }
             }
         }
         let hasId = mapper.rootProperties.contains("id")
-        if hasId && !hasIdIndex {
-            let index = Index([Index.Part(["id"], collation: .string, .ascending)], unique: true)
+        if hasId && !disableDefaultIdIndex {
+            let index = Index([Index.Part(["id"], collation: .string)], unique: true)
             indices.append(index)
         }
         self.indices = indices
