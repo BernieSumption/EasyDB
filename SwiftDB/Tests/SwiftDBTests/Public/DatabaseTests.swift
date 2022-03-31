@@ -2,7 +2,7 @@ import XCTest
 import SwiftDB
 
 class DatabaseTests: SwiftDBTestCase {
-    
+
     func testExecute() throws {
         try db.execute("CREATE TABLE foo (a, b)")
         try db.execute("INSERT INTO foo (a, b) VALUES ('a', 'b'), ('c', 'd'), ('e', 'f')")

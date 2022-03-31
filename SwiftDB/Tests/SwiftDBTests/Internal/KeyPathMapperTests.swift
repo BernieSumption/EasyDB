@@ -3,7 +3,7 @@ import XCTest
 @testable import SwiftDB
 
 class KeyPathMapperTests: XCTestCase {
-    
+
     func testFlat() throws {
         let mapper = try KeyPathMapper.forType(Flat.self)
         XCTAssertEqual(try mapper.propertyPath(for: \.a), ["a"])
@@ -87,7 +87,7 @@ class KeyPathMapperTests: XCTestCase {
             let b: Bool
         }
     }
-    
+
     func testCodingKeys() throws {
         let mapper = try KeyPathMapper.forType(WithCustomNames.self)
         XCTAssertEqual(try mapper.propertyPath(for: \.a), ["foo"])
@@ -99,7 +99,7 @@ class KeyPathMapperTests: XCTestCase {
             case a = "foo"
         }
     }
-    
+
     func testCaching() throws {
         XCTAssertTrue(try KeyPathMapper.forType(Flat.self) === KeyPathMapper.forType(Flat.self))
     }

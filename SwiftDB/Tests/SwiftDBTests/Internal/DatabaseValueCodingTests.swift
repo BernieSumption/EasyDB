@@ -2,7 +2,7 @@ import XCTest
 @testable import SwiftDB
 
 class DatabaseValueCodingTests: XCTestCase {
-    
+
     func testEncodeBuiltInTypes() throws {
         try testTypeAndOptionals(Int8(-5), .int(-5))
         try testTypeAndOptionals(Int32(10), .int(10))
@@ -15,7 +15,7 @@ class DatabaseValueCodingTests: XCTestCase {
         try testTypeAndOptionals(["a": 1, "b": 2], .text(#"{"a":1,"b":2}"#))
         try testTypeAndOptionals(#"{"a":1,"b":2}"#, .text(#"{"a":1,"b":2}"#))
     }
-    
+
     func testEncodeStructures() throws {
         try testStructure(Int8(-5), "-5")
         try testStructure(Int32(10), "10")
@@ -28,25 +28,25 @@ class DatabaseValueCodingTests: XCTestCase {
         try testStructure(["a": 1, "b": 2], #"{"a":1,"b":2}"#)
         try testStructure(#"{"a":1,"b":2}"#, #""{\"a\":1,\"b\":2}""#)
     }
-    
+
     func testEncodeUUID() throws {
         let uuid = UUID(uuid: (0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 1))
         try testBuiltInType(uuid, .text("00000000-0000-0000-0000-000000000001"))
         try testStructure(uuid, #""00000000-0000-0000-0000-000000000001""#)
     }
-    
+
     func testEncodeDate() throws {
         let date = Date(timeIntervalSinceReferenceDate: 20)
         try testBuiltInType(date, .text("2001-01-01T00:00:20Z"))
         try testStructure(date, #""2001-01-01T00:00:20Z""#)
     }
-    
+
     func testEncodeData() throws {
         let data = Data([0x12, 0x34])
         try testBuiltInType(data, .blob(data))
         try testStructure(data, #""EjQ=""#)
     }
-    
+
 }
 
 extension DatabaseValueCodingTests {

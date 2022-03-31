@@ -5,7 +5,7 @@ import Foundation
 /// Types that encode themselves as single strings or numbers are stored directly, other
 /// types are represented as JSON strings
 struct DatabaseValueEncoder {
-    
+
     static func encode<T: Encodable>(_ value: T) throws -> DatabaseValue {
         // This looks inefficient, but since T is known at compile time all
         // non-matching conditions will be eliminated by the compiler
@@ -24,11 +24,11 @@ struct DatabaseValueEncoder {
         if T.self == UInt16.self  { return DatabaseValue(value as! UInt16) }
         if T.self == UInt32.self  { return DatabaseValue(value as! UInt32) }
         if T.self == UInt64.self  { return DatabaseValue(value as! UInt64) }
-        
+
         if let value = value as? DatabaseValueConvertible {
             return value.databaseValue
         }
-        
+
         do {
             let encoder = DatabaseValueEncoderImpl()
             try value.encode(to: encoder)
@@ -42,7 +42,7 @@ struct DatabaseValueEncoder {
             return value
         }
     }
-    
+
     static func encodeAll<T: Encodable>(_ values: [T]) throws -> [DatabaseValue] {
         return try values.map(encode)
     }
@@ -51,27 +51,27 @@ struct DatabaseValueEncoder {
 private struct DatabaseValueEncoderImpl: Encoder {
     let codingPath = [CodingKey]()
     let userInfo = [CodingUserInfoKey: Any]()
-    
+
     func container<Key>(keyedBy type: Key.Type) -> KeyedEncodingContainer<Key> where Key: CodingKey {
         return NotImplementedEncoder(error: Result.useJsonEncoder).container(keyedBy: type)
     }
-    
+
     func unkeyedContainer() -> UnkeyedEncodingContainer {
         return NotImplementedEncoder(error: Result.useJsonEncoder).unkeyedContainer()
     }
-    
+
     func singleValueContainer() -> SingleValueEncodingContainer {
         return SingleValueContainer()
     }
-    
+
     struct SingleValueContainer: SingleValueEncodingContainer {
         let codingPath = [CodingKey]()
         let userInfo = [CodingUserInfoKey: Any]()
-        
+
         mutating func encodeNil() throws {
             throw Result.value(.null)
         }
-        
+
         mutating func encode<T: Encodable>(_ value: T) throws {
             let value = try DatabaseValueEncoder.encode(value)
             throw Result.value(value)
@@ -83,7 +83,7 @@ private struct DatabaseValueEncoderImpl: Encoder {
 private enum Result: Error {
     /// The type does not encode to a primitive value and JSON encoding should be used instead
     case useJsonEncoder
-    
+
     /// The type was successfully encoded
     case value(DatabaseValue)
 }

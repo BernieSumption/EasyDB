@@ -1,6 +1,6 @@
 public protocol Filterable {
     associatedtype Row: Codable
-    
+
     /// Add an SQL filter using string interpolation to provide parameters. String interpolation is used to
     /// provide parameters safely (i.e. without the possibility of SQL injection). This low-level method is
     /// useful to construct complex SQL filters e.g. by invoking SQLite functions.
@@ -10,7 +10,7 @@ public protocol Filterable {
     ///
     /// The optional `collation` parameter defines a collating sequence for the
     func filter(_ sqlFragment: SQLFragment<Row>, collation: Collation?) -> QueryBuilder<Row>
-    
+
     /// Equivalent to `filter(sqlFragment, collation: nil)`
     func filter(_ sqlFragment: SQLFragment<Row>) -> QueryBuilder<Row>
 }

@@ -6,63 +6,63 @@ public struct QueryBuilder<Row: Codable>: Filterable {
     private var orders = [Order]()
     private var updates = [SQLFragment<Row>]()
     private var limit: Int?
-    
+
     internal init(_ collection: Collection<Row>) {
         self.collection = collection
     }
-    
+
     public func fetchOne() throws -> Row? {
         return try limit(1).fetchMany().first
     }
-    
+
     public func fetchOne<V: Codable>(_ property: KeyPath<Row, V>) throws -> V? {
         return try limit(1).fetchMany(property).first
     }
-    
+
     public func fetchOne<V: Codable>(_ properties: V.Type) throws -> V? {
         return try limit(1).fetchMany(properties).first
     }
-    
+
     public func fetchMany() throws -> [Row] {
         let query = try compile(.select)
         return try getConnection().execute(
             [Row].self, sql: query.sql, parameters: query.parameters)
     }
-    
+
     public func fetchMany<V: Codable>(_ property: KeyPath<Row, V>) throws -> [V] {
         let query = try compile(.selectProperty(PartialCodableKeyPath(property)))
         return try getConnection().execute(
             [V].self, sql: query.sql, parameters: query.parameters)
     }
-    
+
     public func fetchMany<T: Codable>(_ properties: T.Type) throws -> [T] {
         let mapper = try KeyPathMapper.forType(properties)
         let query = try compile(.selectProperties(mapper.rootProperties))
         return try getConnection().execute(
             [T].self, sql: query.sql, parameters: query.parameters)
     }
-    
+
     public func fetchCount() throws -> Int {
         let query = try compile(.count)
         return try getConnection().execute(
             Int.self, sql: query.sql, parameters: query.parameters)
     }
-    
+
     public func delete() throws {
         let query = try compile(.delete)
         try getConnection().execute(sql: query.sql, parameters: query.parameters)
     }
-    
+
     public func filter(_ sqlFragment: SQLFragment<Row>, collation: Collation?) -> Self {
         var copy = self
         copy.filters.append(Filter(sqlFragment: sqlFragment, collation: collation))
         return copy
     }
-    
+
     public func filter(_ sqlFragment: SQLFragment<Row>) -> Self {
         return filter(sqlFragment, collation: nil)
     }
-    
+
     /// Change the order in which results are returned
     ///
     /// - Parameters:
@@ -87,21 +87,21 @@ public struct QueryBuilder<Row: Codable>: Filterable {
         copy.orders.append(order)
         return copy
     }
-    
+
     /// Order by an SQL expression.
     public func orderBy(_ sqlFragment: SQLFragment<Row>) -> Self {
         var copy = self
         copy.orders.append(Order(sqlFragment))
         return copy
     }
-    
+
     /// Add an SQL `LIMIT` clause to this query, limiting the number of rows that will be fetched, updated or deleted
     public func limit(_ limit: Int) -> Self {
         var copy = self
         copy.limit = limit
         return copy
     }
-    
+
     /// Append an update clause that sets `property = value` but do not execute the update yet.
     ///
     /// Call `update()` on the return value to execute the update.
@@ -110,7 +110,7 @@ public struct QueryBuilder<Row: Codable>: Filterable {
     public func updating<V: Codable>(_ property: KeyPath<Row, V>, _ value: V) -> Self {
         return updating("\(property) = \(value)")
     }
-    
+
     /// Append an SQL update clause but do not execute the update yet. , e.g. `.updating("\(\.a) = \(\.a) + 1")`
     /// will increment the value of `a` by 1.
     ///
@@ -122,17 +122,17 @@ public struct QueryBuilder<Row: Codable>: Filterable {
         copy.updates.append(sqlFragment)
         return copy
     }
-    
+
     /// Append an update clause that sets `property = value` and execute the update.
     public func update<V: Codable>(_ property: KeyPath<Row, V>, _ value: V) throws {
         try updating(property, value).update()
     }
-    
+
     /// Append an SQL update clause and execute the update, e.g. `.updating("\(\.a) = \(\.a) + 1")` will increment the value of `a` by 1.
     public func update(_ sqlFragment: SQLFragment<Row>) throws {
         try updating(sqlFragment).update()
     }
-    
+
     /// Execute an update query. Values to update should have been set using `updating(...)`.
     public func update() throws {
         if updates.count == 0 {
@@ -141,7 +141,7 @@ public struct QueryBuilder<Row: Codable>: Filterable {
         let query = try compile(.update)
         return try getConnection().execute(sql: query.sql, parameters: query.parameters)
     }
-    
+
     enum CompileMode {
         case select
         case selectProperty(PartialCodableKeyPath<Row>)
@@ -150,7 +150,7 @@ public struct QueryBuilder<Row: Codable>: Filterable {
         case count
         case update
     }
-    
+
     private func compile(_ mode: CompileMode) throws -> CompileResult {
         var parameters = [DatabaseValue]()
         var sql = SQL()
@@ -191,9 +191,9 @@ public struct QueryBuilder<Row: Codable>: Filterable {
                 parameters.append(contentsOf: try update.parameters())
             }
         }
-        
+
         let connection = try getConnection()
-        
+
         if !filters.isEmpty {
             sql = sql
                 .raw("WHERE")
@@ -202,7 +202,7 @@ public struct QueryBuilder<Row: Codable>: Filterable {
                         .map({ try $0.sql(collection) })
                         .joined(separator: " AND ")
                 )
-            
+
             for filter in filters {
                 parameters += try filter.sqlFragment.parameters()
                 if let collation = filter.collation {
@@ -210,7 +210,7 @@ public struct QueryBuilder<Row: Codable>: Filterable {
                 }
             }
         }
-        
+
         if !orders.isEmpty {
             sql = sql
                 .raw("ORDER BY")
@@ -223,33 +223,33 @@ public struct QueryBuilder<Row: Codable>: Filterable {
                 parameters.append(contentsOf: try order.sqlFragment.parameters())
             }
         }
-        
+
         for order in orders {
             if let collation = order.collation {
                 connection.registerCollation(collation)
             }
         }
-        
+
         if let limit = limit {
             sql = sql.limit(limit)
         }
-        
+
         return CompileResult(sql: sql.text, parameters: parameters)
     }
-    
+
     struct Filter {
         let sqlFragment: SQLFragment<Row>
         let collation: Collation?
-        
+
         func sql(_ collection: Collection<Row>) throws -> String {
             return try sqlFragment.sql(collations: collection, overrideCollation: collation)
         }
     }
-    
+
     struct Order {
         let sqlFragment: SQLFragment<Row>
         let collation: Collation?
-        
+
         init<T: Codable>(keyPath: KeyPath<Row, T>, collation: Collation?, direction: QueryBuilder<Row>.Direction?, nulls: QueryBuilder<Row>.Nulls?) {
             var sql = SQLFragment<Row>()
             // TODO: use SQLFragment for collation
@@ -269,20 +269,20 @@ public struct QueryBuilder<Row: Codable>: Filterable {
             self.sqlFragment = sql
             self.collation = collation
         }
-        
+
         init(_ sqlFragment: SQLFragment<Row>) {
             self.sqlFragment = sqlFragment
             self.collation = nil
         }
     }
-    
+
     /// Define a sort order
     public enum Direction {
         /// Lower values come first
         case ascending
         /// Higher values come first
         case descending
-        
+
         var name: String {
             switch self {
             case .ascending:
@@ -292,14 +292,14 @@ public struct QueryBuilder<Row: Codable>: Filterable {
             }
         }
     }
-    
+
     /// Define a sorting order for NULL values
     public enum Nulls {
         /// NULL values should sort before other values
         case first
         /// NULL values should sort after other values
         case last
-        
+
         var name: String {
             switch self {
             case .first:
@@ -309,12 +309,12 @@ public struct QueryBuilder<Row: Codable>: Filterable {
             }
         }
     }
-    
+
     private struct CompileResult {
         let sql: String
         let parameters: [DatabaseValue]
     }
-    
+
     private func getConnection() throws -> Connection {
         return try collection.database.getConnection()
     }

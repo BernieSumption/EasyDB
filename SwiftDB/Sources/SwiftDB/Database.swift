@@ -4,19 +4,19 @@ import Foundation
 /// of data is done on the `Collection` objects returned by `database.collection(EntityType.self)`
 public class Database {
     let path: String
-    
+
     private let autoMigrate: Bool
     private let autoDropColumns: Bool
     private let collectionConfigs: [CollectionConfig]
-    
+
     private var collections = [ObjectIdentifier: Any]()
-    
+
     private let collectionCreateQueue = DispatchQueue(label: "SwiftDB.collectionCreateQueue")
     private let accessQueue = DispatchQueue(label: "SwiftDB.databaseAccessQueue")
-    
+
     /// An `SQLLogger` instance to
     public var logSQL: SQLLogger = .none
-    
+
     /// Initialise and  configure a `Database`
     ///
     /// - Parameters:
@@ -40,7 +40,7 @@ public class Database {
         self.autoDropColumns = autoDropColumns
         self.collectionConfigs = collections
     }
-    
+
     /// Return a collection. Unless automatic migration is disabled for this database, the table will be automatically
     /// created or any missing columns added
     public func collection<T: Codable>(_ type: T.Type) throws -> Collection<T> {
@@ -64,13 +64,13 @@ public class Database {
             return collection
         }
     }
-    
+
     /// Execute an SQL statement. If the statement has results, they will be ignored
     public func execute(_ sqlFragment: SQLFragment<NoProperties>) throws {
         let sql = try sqlFragment.sql(collations: nil, overrideCollation: nil)
         try getConnection().execute(sql: sql)
     }
-    
+
     /// Execute an SQL statement and return the results as an instance of T. T can be any codable type, see the rules
     /// for decoding queries TODO: link to docs for "selecting results into other types"
     public func execute<T: Codable>(_ resultType: T.Type, _ sqlFragment: SQLFragment<NoProperties>) throws -> T {
@@ -78,7 +78,7 @@ public class Database {
         let parameters = try sqlFragment.parameters()
         return try getConnection().execute(resultType, sql: sql, parameters: parameters)
     }
-    
+
     private var _connection: Connection?
     func getConnection() throws -> Connection {
         if let c = _connection {
@@ -88,9 +88,9 @@ public class Database {
         _connection = c
         return c
     }
-    
+
     @TaskLocal static var isInAccessQueue = false
-    
+
     func inAccessQueue<T>(_ block: () throws -> T) rethrows -> T {
         if Database.isInAccessQueue {
             // Avoid deadlock through reentrance: don't use accessQueue.sync if we're currently being
@@ -111,7 +111,7 @@ extension Database {
     /// The standard database - most applications can use this unless they need multiple
     /// databases or want to save the data file somewhere other than `Database.standardPath`
     public static let standard = Database(path: Database.standardPath)
-    
+
     /// The path of the standard
     public static var standardPath: String {
         return FileManager

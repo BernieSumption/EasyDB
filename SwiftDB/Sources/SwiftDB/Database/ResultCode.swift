@@ -82,7 +82,7 @@ public enum ResultCode: CInt, Error, CustomStringConvertible {
         }
         self = resultCode
     }
-    
+
     static func nameForCode(_ code: CInt) -> String {
         return codeNames[code] ?? "UNKNOWN CODE \(code)"
     }

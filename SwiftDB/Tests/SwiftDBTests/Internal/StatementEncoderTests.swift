@@ -2,9 +2,9 @@ import XCTest
 @testable import SwiftDB
 
 class StatementEncoderTests: SwiftDBTestCase {
-    
+
     func testEncodeCodable() throws {
-        
+
         let s = try db.getConnection().notThreadSafe_prepare(sql: """
             SELECT
             :i AS i,
@@ -29,11 +29,11 @@ class StatementEncoderTests: SwiftDBTestCase {
             :date AS date,
             :sub AS sub
         """)
-        
+
         try StatementEncoder.encode(KitchenSinkEntity.standard, into: s)
-        
+
         _ = try s.step()
-        
+
         XCTAssertEqual(try s.read(column: "i"), .int(1))
         XCTAssertEqual(try s.readNull(column: "ioy"), false)
         XCTAssertEqual(try s.read(column: "ioy"), .int(1))
@@ -57,71 +57,71 @@ class StatementEncoderTests: SwiftDBTestCase {
         XCTAssertEqual(try s.read(column: "date"), .text("2001-01-01T00:00:20Z"))
         XCTAssertEqual(try s.read(column: "sub"), .text(#"{"a":21,"d":"2001-01-01T00:00:20Z"}"#))
     }
-    
+
     func testRegressionEncodeNulls() throws {
         let s = try db.getConnection().notThreadSafe_prepare(sql: """
             SELECT :a AS a
         """)
-        
+
         try StatementEncoder.encode(A(a: 1), into: s)
-        
+
         _ = try s.step()
         XCTAssertEqual(try s.read(column: "a"), .int(1))
-        
+
         s.reset()
-        
+
         // In a previous buggy version, nulls were not encoded because they came through to
         // to the encoder through `encodeIfPresent` which by default does nothing for
         // null values, which had the effect of leaving the previously bound value active
         try StatementEncoder.encode(A(a: nil), into: s)
-        
+
         _ = try s.step()
         XCTAssertEqual(try s.read(column: "a"), .null)
     }
-    
+
     struct A: Codable {
         let a: Int?
     }
-    
+
     func testEncodeDictionary() throws {
         let s = try db.getConnection().notThreadSafe_prepare(sql: """
             SELECT
             :ioy AS ioy,
             :ion AS ion
         """)
-        
+
         let value: [String: Int?] = ["ioy": 1, "ion": nil]
         try StatementEncoder.encode(value, into: s)
-        
+
         _ = try s.step()
-        
+
         XCTAssertEqual(try s.readNull(column: "ioy"), false)
         XCTAssertEqual(try s.read(column: "ioy"), .int(1))
         XCTAssertEqual(try s.readNull(column: "ion"), true)
     }
-    
+
     func testEncodeCodableArray() throws {
         let s = try db.getConnection().notThreadSafe_prepare(sql: "SELECT ?, ?, ?")
-        
+
         XCTAssertThrowsError(try StatementEncoder.encode([1, 2, 3], into: s)) { error in
             XCTAssertTrue(String(describing: error).contains("providing arrays of parameter values"))
         }
     }
-    
+
     func testEncodeCodableScalars() throws {
         let s = try db.getConnection().notThreadSafe_prepare(sql: "SELECT ?")
-        
+
         XCTAssertThrowsError(try StatementEncoder.encode(1, into: s)) { error in
             XCTAssertTrue(String(describing: error).contains("providing single parameter values"), String(describing: error))
         }
     }
-    
+
     func testEncodeDate() throws {
         let s = try db.getConnection().notThreadSafe_prepare(sql: "SELECT :date as date")
-        
+
         let date = Date(timeIntervalSinceReferenceDate: 20)
         try StatementEncoder.encode(["date": date], into: s)
-        
+
         _ = try s.step()
         XCTAssertEqual(try s.read(column: "date"), .text("2001-01-01T00:00:20Z"))
     }

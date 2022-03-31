@@ -1,25 +1,25 @@
 import Foundation
 public enum SwiftDBError: Error, CustomStringConvertible {
-    
+
     /// An attempt to access a column that does not exist in the current results.
     case noSuchColumn(columnName: String, availableColumns: [String])
-    
+
     /// An attempt to bind a parameter that does not exist in the current query
     case noSuchParameter(name: String)
-    
+
     /// An attempt to read data from a statement when no row is available - either `step()` has not
     /// been called, or returned `StepResult.done`
     case noRow
-    
+
     /// Data was in the wrong format
     case codingError(message: String, codingPath: [CodingKey])
-    
+
     /// An unexpected error - this is an indication of a bug in SwiftDB.
     case unexpected(message: String)
-    
+
     /// A feature implied by the API is not implemented.
     case notImplemented(feature: String)
-    
+
     /// Invalid data was passed to an API method
     case misuse(message: String)
 

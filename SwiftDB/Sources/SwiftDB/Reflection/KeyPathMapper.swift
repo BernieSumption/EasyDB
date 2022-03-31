@@ -55,12 +55,12 @@ class KeyPathMapper<T: Codable> {
         }
         self.valuesToPropertyPath = valuesToPropertyPath
     }
-    
+
     /// Given a KeyPath, return the path of key names that locates the same value in the type's encoded representation
     func propertyPath<V: Encodable>(for keyPath: KeyPath<T, V>) throws -> [String] {
         return try propertyPath(for: PartialCodableKeyPath(keyPath))
     }
-    
+
     /// A type-erased version of `propertyPath(for:)`
     func propertyPath(for keyPath: PartialCodableKeyPath<T>) throws -> [String] {
         if let cached = keyPathToPropertyPath[keyPath.cacheKey] {
@@ -73,7 +73,7 @@ class KeyPathMapper<T: Codable> {
         keyPathToPropertyPath[keyPath.cacheKey] = path
         return path
     }
-    
+
     var rootProperties: [String] {
         [String](Set(valuesToPropertyPath.values.map(\.[0])))
     }
@@ -100,20 +100,20 @@ extension KeyPathMapper {
 struct PartialCodableKeyPath<Row: Codable>: Hashable {
     let encode: (Row) throws -> Encoded
     let cacheKey: AnyKeyPath
-    
+
     init<V: Encodable>(_ keyPath: KeyPath<Row, V>) {
         self.encode = { try Encoded($0[keyPath: keyPath]) }
         self.cacheKey = keyPath
     }
-    
+
     static func == (lhs: PartialCodableKeyPath<Row>, rhs: PartialCodableKeyPath<Row>) -> Bool {
         return lhs.cacheKey == rhs.cacheKey
     }
-    
+
     func hash(into hasher: inout Hasher) {
         hasher.combine(cacheKey)
     }
-    
+
     func nameExpression() throws -> String {
         let mapper = try KeyPathMapper.forType(Row.self)
         let path = try mapper.propertyPath(for: self)

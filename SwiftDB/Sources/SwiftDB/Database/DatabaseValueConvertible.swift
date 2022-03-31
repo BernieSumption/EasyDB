@@ -9,7 +9,7 @@ import Foundation
 public protocol DatabaseValueConvertible {
     /// convert an instance to its database representation
     var databaseValue: DatabaseValue { get }
-    
+
     /// construct an instance from its database representation
     init(from value: DatabaseValue) throws
 }
@@ -24,7 +24,7 @@ extension Date: DatabaseValueConvertible {
     public var databaseValue: DatabaseValue {
         .text(iso8601Formatter.string(from: self))
     }
-    
+
     public init(from value: DatabaseValue) throws {
         let string = try value.as(String.self)
         guard let date = iso8601Formatter.date(from: string) else {
@@ -39,7 +39,7 @@ extension Data: DatabaseValueConvertible {
     public var databaseValue: DatabaseValue {
         .blob(self)
     }
-    
+
     public init(from value: DatabaseValue) throws {
         self = try value.as(Data.self)
     }

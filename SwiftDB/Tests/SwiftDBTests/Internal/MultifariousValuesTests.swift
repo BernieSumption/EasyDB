@@ -104,7 +104,7 @@ class MultifariousValuesTests: XCTestCase {
         XCTAssertEqual(mv.next(UInt8.self), 0)
         XCTAssertEqual(mv.next(Float32.self), 1)
     }
-    
+
     func first2Values<T: Equatable>(_ type: T.Type) -> [T?] {
         let mv = MultifariousValues()
         return [mv.next(type), mv.next(type)]
@@ -146,11 +146,11 @@ class MultifariousValuesTests: XCTestCase {
                 Data(repeating: 1, count: 1)
             ])
     }
-    
+
     func testCustomType() throws {
         XCTAssertEqual(first2Values(CustomType.self), [CustomType(v: 10), CustomType(v: -10)])
     }
-    
+
     struct CustomType: SampleValueSource, Codable, Equatable {
         let v: Int
 

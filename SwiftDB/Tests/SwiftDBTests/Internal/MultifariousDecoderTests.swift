@@ -3,7 +3,7 @@ import XCTest
 @testable import SwiftDB
 
 final class MultifariousDecoderTests: XCTestCase {
-    
+
     func testTwoBools() throws {
         let instances = try MultifariousDecoder.instances(for: TwoBools.self)
         XCTAssertEqual(

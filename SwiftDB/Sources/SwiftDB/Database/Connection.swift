@@ -18,7 +18,7 @@ class Connection {
         registerCollation(.localized)
         registerCollation(.localizedCaseInsensitive)
     }
-    
+
     /// Compile and execute an SQL query, decoding the results into an instance of `T`
     func execute<T: Decodable>(_ resultType: T.Type, sql: String, parameters: [DatabaseValue] = []) throws -> T {
         return try database.inAccessQueue {
@@ -28,7 +28,7 @@ class Connection {
             return try StatementDecoder.decode(resultType, from: statement)
         }
     }
-    
+
     /// Compile and execute an SQL query that returns no results
     func execute(sql: String, parameters: [DatabaseValue] = []) throws {
         return try database.inAccessQueue {
@@ -38,7 +38,7 @@ class Connection {
             _ = try statement.step()
         }
     }
-    
+
     /// Compile and execute an SQL query that returns no results, getting named parameters from the provided struct or dictionary
     func execute<P: Codable>(sql: String, namedParameters: P) throws {
         return try database.inAccessQueue {
@@ -48,21 +48,21 @@ class Connection {
             _ = try statement.step()
         }
     }
-    
+
     func notThreadSafe_prepare(sql: String) throws -> Statement {
         return try Statement(connectionPointer, sql, logSQL: database.logSQL)
     }
-    
+
     func registerCollation(_ collation: Collation) {
         guard !registeredCollationNames.contains(collation.normalizedName) else {
             return
         }
         registeredCollationNames.insert(collation.normalizedName)
-        
+
         guard let compare = collation.compare else {
             return
         }
-        
+
         let function = CollationFunction(compare)
         collationFunctions.append(function) // keep a reference to the function so that ti is not freed
         let functionPointer = Unmanaged.passUnretained(function).toOpaque()
@@ -84,7 +84,7 @@ class Connection {
 /// Wrapper for a collation function - required because we need a reference type for `Unmanaged.passRetained(_:)`
 class CollationFunction {
     let compare: SQLiteCustomCollationFunction
-    
+
     init(_ compare: @escaping SQLiteCustomCollationFunction) {
         self.compare = compare
     }

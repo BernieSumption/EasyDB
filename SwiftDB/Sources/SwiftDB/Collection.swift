@@ -4,30 +4,30 @@
 /// migrating the underlying table to fit `Row`
 public class Collection<Row: Codable>: Filterable, DefaultCollations {
     public let tableName: String
-    
+
     let database: Database
     let columns: [String]
     let mapper: KeyPathMapper<Row>
     let defaultCollations: [AnyKeyPath: Collation]
-    
+
     private let indices: [Index]
-    
+
     internal init(_ type: Row.Type, _ database: Database, _ config: CollectionConfig?) throws {
         self.database = database
         self.mapper = try KeyPathMapper.forType(type)
         self.columns = mapper.rootProperties
-        
+
         let config = config ?? .collection(type)
         let propertyConfigs = try config.typedPropertyConfigs(type)
-        
+
         self.tableName = config.tableName ?? defaultTableName(for: Row.self)
-        
+
         var defaultCollations = [AnyKeyPath: Collation]()
         for property in propertyConfigs {
             defaultCollations[property.keyPath.cacheKey] = property.collation
         }
         self.defaultCollations = defaultCollations
-        
+
         var disableDefaultIdIndex = false
         var indices = [Index]()
         var configuredColumns = Set<[String]>()
@@ -60,12 +60,12 @@ public class Collection<Row: Codable>: Filterable, DefaultCollations {
         }
         self.indices = indices
     }
-    
+
     struct Config: Equatable {
         var tableName: String?
         var indices = [Index]()
     }
-    
+
     /// Create the table if required, and add missing columns
     ///
     /// - Parameter dropColumns: Remove unused columns. This defaults to `false`
@@ -74,7 +74,7 @@ public class Collection<Row: Codable>: Filterable, DefaultCollations {
         try migration.migrateColumns(table: tableName, columns: columns)
         try migration.migrateIndices(table: tableName, indices: indices)
     }
-    
+
     /// Insert one row into the collection
     ///
     /// - Parameters:
@@ -87,7 +87,7 @@ public class Collection<Row: Codable>: Filterable, DefaultCollations {
         let sql = getInsertSQL(onConflict: onConflict)
         try database.getConnection().execute(sql: sql, namedParameters: row)
     }
-    
+
     /// Insert many rows into the collection, using a transaction so that if any row can not
     /// be inserted due to a uniqueness constraint, no rows will be inserted
     ///
@@ -123,17 +123,17 @@ public class Collection<Row: Codable>: Filterable, DefaultCollations {
             }
         }
     }
-    
+
     /// Equivalent to `insert(row, onConflict: .replace)`
     public func save(_ row: Row) throws {
         try insert(row, onConflict: .replace)
     }
-    
+
     /// Equivalent to `insert(rows, onConflict: .replace)`
     public func save(_ rows: [Row]) throws {
         try insert(rows, onConflict: .replace)
     }
-    
+
     private func getInsertSQL(onConflict: OnConflict?) -> String {
         return SQL()
             .insertInto(tableName, columns: columns, onConflict: onConflict)
@@ -141,19 +141,19 @@ public class Collection<Row: Codable>: Filterable, DefaultCollations {
             .bracketed(namedParameters: columns)
             .text
     }
-    
+
     public func all() -> QueryBuilder<Row> {
         return QueryBuilder(self)
     }
-    
+
     public func filter(_ sqlFragment: SQLFragment<Row>, collation: Collation?) -> QueryBuilder<Row> {
         return QueryBuilder(self).filter(sqlFragment, collation: collation)
     }
-    
+
     public func filter(_ sqlFragment: SQLFragment<Row>) -> QueryBuilder<Row> {
         return filter(sqlFragment, collation: nil)
     }
-    
+
     func defaultCollation(for columnKeyPath: AnyKeyPath) -> Collation {
         return defaultCollations[columnKeyPath] ?? .string
     }

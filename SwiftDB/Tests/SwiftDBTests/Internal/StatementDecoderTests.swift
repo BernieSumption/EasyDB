@@ -9,7 +9,7 @@ class StatementDecoderTests: SwiftDBTestCase {
             testSelectAs("SELECT \(T.max)", type, T.max)
             testSelectAs("SELECT \(T.min)", type.self, T.min)
         }
-        
+
         testInteger(Int.self)
         testInteger(Int8.self)
         testInteger(Int16.self)
@@ -18,19 +18,19 @@ class StatementDecoderTests: SwiftDBTestCase {
         testInteger(UInt8.self)
         testInteger(UInt16.self)
         testInteger(UInt32.self)
-        
+
         testSelectError("SELECT 12345", Int8.self, "could not exactly represent 12345 as Int8")
     }
-    
+
     func testDecodeConversionsToInteger() throws {
         testSelectAs("SELECT 1.0", Int.self, 1)
-        
+
         testSelectError("SELECT 1.7", Int.self, "could not exactly represent 1.7 as Int")
         testSelectError("SELECT NULL", Int.self, "expected int got null")
         testSelectError("SELECT 'foo'", Int.self, "expected int got text")
         testSelectError("SELECT x'12'", Int.self, "expected int got blob")
     }
-    
+
     func testDecodeDouble() throws {
         testSelectAs("SELECT 1.0", Float.self, 1)
         testSelectAs("SELECT -1000.123", Float.self, -1000.123)
@@ -43,28 +43,28 @@ class StatementDecoderTests: SwiftDBTestCase {
         testSelectAs("SELECT 1.0", Float16.self, 1)
         testSelectAs("SELECT -1000.123", Float16.self, -1000.123)
     }
-    
+
     func testDecodeConversionsToDouble() throws {
         testSelectAs("SELECT 1", Double.self, 1)
-        
+
         testSelectError("SELECT NULL", Double.self, "expected double got null")
         testSelectError("SELECT 'foo'", Double.self, "expected double got text")
         testSelectError("SELECT x'12'", Double.self, "expected double got blob")
     }
-    
+
     func testDecodeString() throws {
         testSelectAs("SELECT ''", String.self, "")
         testSelectAs("SELECT 'Unicode 统一码 😘'", String.self, "Unicode 统一码 😘")
     }
-    
+
     func testDecodeConversionsToString() throws {
         testSelectAs("SELECT 1", String.self, "1")
         testSelectAs("SELECT 1.0", String.self, "1.0")
-        
+
         testSelectError("SELECT NULL", String.self, "expected text got null")
         testSelectError("SELECT x'12'", String.self, "expected text got blob")
     }
-    
+
     func testDecodeSingleCodable() throws {
         testSelectAs(
             #"SELECT '{"a": 2, "b": "foo", "data": "ERIT"}'"#,
@@ -72,38 +72,38 @@ class StatementDecoderTests: SwiftDBTestCase {
             MySingleCodable(a: 2, b: "foo", data: Data([17, 18, 19]))
         )
     }
-    
+
     /// A type that stores a single Decodable property in a single value container
     ///
     /// This is an odd thing to do over using a keyed container (as far as I know synthesised
     /// decodable implementations never do it) but the Decoder API allows it
     struct MySingleCodable: Codable, Equatable {
         let mc: MyCodable
-        
+
         init(a: Int, b: String, data: Data) {
             self.mc = MyCodable(a: a, b: b, data: data)
         }
-        
+
         init(from decoder: Decoder) throws {
             mc = try decoder.singleValueContainer().decode(MyCodable.self)
         }
-        
+
         struct MyCodable: Codable & Equatable {
             let a: Int
             let b: String
             let data: Data
         }
     }
-    
+
     func testDecodeSingleData() throws {
         testSelectAs("SELECT x''", Data.self, Data())
         testSelectAs("SELECT x'FF0600B3'", Data.self, Data([255, 6, 0, 179]))
     }
-    
+
     func testDecodeSingleDate() throws {
         testSelectAs("SELECT '2001-01-01T00:00:20Z'", Date.self, Date(timeIntervalSinceReferenceDate: 20))
     }
-    
+
     func testDecodeSingleOptionals() throws {
         testSelectAs("SELECT NULL", Int?.self, nil)
         testSelectAs("SELECT 4", Int?.self, 4)
@@ -113,7 +113,7 @@ class StatementDecoderTests: SwiftDBTestCase {
             MySingleCodable?.self,
             MySingleCodable(a: 2, b: "foo", data: Data([17, 18, 19])))
     }
-    
+
     func testDecodeCodable() throws {
         testSelectAs(
             """
@@ -143,7 +143,7 @@ class StatementDecoderTests: SwiftDBTestCase {
             KitchenSinkEntity.self,
             KitchenSinkEntity.standard)
     }
-    
+
     func testDecodeDictionary() throws {
         testSelectAs("SELECT 1 as foo, 2 as bar", [String: Int].self, ["foo": 1, "bar": 2])
         testSelectAs("SELECT 'x' as foo, '🎉' as bar", [String: String].self, ["foo": "x", "bar": "🎉"])
@@ -151,19 +151,19 @@ class StatementDecoderTests: SwiftDBTestCase {
             #"SELECT '{"a":1}' as foo, '{"a":2}' as bar"#,
             [String: Sub].self,
             ["foo": Sub(a: 1), "bar": Sub(a: 2)])
-        
+
         struct Sub: Codable, Equatable {
             let a: Int
         }
-        
+
         testSelectAs("SELECT 1 as foo, NULL as bar", [String: Int?].self, ["foo": 1, "bar": nil])
     }
-    
+
     func testDecodeScalarArray() throws {
         testSelectAs("SELECT 1 as foo", [Int].self, [1])
         testSelectAs("SELECT 1 as foo UNION SELECT 2 as foo", [String].self, ["1", "2"])
     }
-    
+
     func testDecodeStructArray() throws {
         testSelectAs("SELECT 1 as i, 'foo' as s", [Row].self, [Row(i: 1, s: "foo")])
         testSelectAs(
@@ -178,13 +178,13 @@ class StatementDecoderTests: SwiftDBTestCase {
                 Row(i: 2, s: "bar")
             ]
         )
-        
+
         struct Row: Codable, Equatable {
             let i: Int
             let s: String
         }
     }
-    
+
     func testDecodeScalarArrays() throws {
         testSelectAs("SELECT 1 as foo, 2 as bar, 8 as baz", [[Int]].self, [[1, 2, 8]])
         testSelectAs(
@@ -203,7 +203,7 @@ class StatementDecoderTests: SwiftDBTestCase {
 }
 
 extension StatementDecoderTests {
-    
+
     func selectAs<T: Decodable & Equatable>(_ sql: String, _ type: T.Type) throws -> T {
         let s = try db.getConnection().notThreadSafe_prepare(sql: sql)
         return try StatementDecoder.decode(type, from: s)
@@ -212,7 +212,7 @@ extension StatementDecoderTests {
     func testSelectAs<T: Decodable & Equatable>(_ sql: String, _ type: T.Type, _ expected: T) {
         XCTAssertEqual(try selectAs(sql, type), expected)
     }
-    
+
     func testSelectError<T: Decodable & Equatable>(_ sql: String, _ type: T.Type, _ message: String) {
         XCTAssertThrowsError(try selectAs(sql, type)) { error in
             XCTAssertEqual(String(describing: error), message)

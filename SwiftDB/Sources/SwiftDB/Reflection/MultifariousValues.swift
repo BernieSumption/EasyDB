@@ -52,7 +52,7 @@ private func __debug__valuesEncodeDifferently<T1: Encodable, T2: Encodable>(_ a:
 
 private class SampleValues: SampleValueReceiver {
     private var typeToSamples = [ObjectIdentifier: (Any, Any)]()
-    
+
     init() {
         setSampleValues(false, true)
         setSampleValues("0", "1")
@@ -82,7 +82,7 @@ private class SampleValues: SampleValueReceiver {
             Data(repeating: 0, count: 1),
             Data(repeating: 1, count: 1))
     }
-    
+
     func setSampleValues<T: Encodable>(_ zero: T, _ one: T) {
         assert(__debug__valuesEncodeDifferently(zero, one), "sample values must be different")
         assert(
@@ -99,25 +99,25 @@ private class SampleValues: SampleValueReceiver {
             "A sample value for one must not encode as `0`!")
         typeToSamples[ObjectIdentifier(T.self)] = (zero, one)
     }
-    
+
     func get<T>(_ type: T.Type) -> (T, T)? {
         if let cached = getFromCache(type) {
             return cached
         }
-        
+
         guard let source = type as? SampleValueSource.Type else {
             return nil
         }
-        
+
         source.provideSampleValues(self)
-        
+
         let samples = getFromCache(type)
-        
+
         assert(samples != nil, "\(type).provideSampleValues did not provide samples of the correct type")
-        
+
         return samples
     }
-    
+
     private func getFromCache<T>(_ type: T.Type) -> (T, T)? {
         let cacheRecord = typeToSamples[ObjectIdentifier(type)]
         if let cached = cacheRecord as? (T, T) {

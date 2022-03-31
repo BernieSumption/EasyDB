@@ -10,12 +10,12 @@ class Statement {
     private var hasColumnNames = false
     private let sql: String
     private let logSQL: SQLLogger
-    
+
     /// True if the most recent call to `step()` returned `.row`.
     ///
     /// Calling any of the `readXXX()` functions will throw an error if `hasRow` is false
     private(set) var hasRow = false
-    
+
     private var parameters = [Int: String]()
 
     init(_ db: OpaquePointer, _ sql: String, logSQL: SQLLogger = .none) throws {
@@ -26,7 +26,7 @@ class Statement {
         try SwiftDB.checkOK(sqlite3_prepare_v2(db, sql, -1, &statement, nil), sql: sql, db: db)
         self.statement = try checkPointer(statement, from: "sqlite3_prepare_v2")
     }
-    
+
     func clearBoundParameters() throws {
         self.parameters.removeAll()
         try checkOK(sqlite3_clear_bindings(statement))
@@ -42,7 +42,7 @@ class Statement {
             index += 1
         }
     }
-    
+
     /// Bind a value to a parameter by position, where `1` is the leftmost parameter
     func bind(_ parameter: DatabaseValue, to position: Int) throws {
         if logSQL.enabled {
@@ -66,12 +66,12 @@ class Statement {
             }
         }
     }
-    
+
     /// Bind a value to a parameter by index
     func bind(_ parameter: DatabaseValue, to name: String) throws {
         try bind(parameter, to: getParameterIndex(name))
     }
-    
+
     /// Get the index of a named parameter
     ///
     /// - Throws: SwiftDBError.noSuchParameter if there is no parameter with that name
@@ -99,7 +99,7 @@ class Statement {
                 .sorted(by: { $0.key < $1.key })
                 .map({ "\($0.key)=\($0.value)" })
                 .joined(separator: ", ")
-            
+
             logSQL.log("Executing statement: \"\(sql)\" (parameters: \(parameters))")
         }
         let resultCode = sqlite3_step(statement)
@@ -133,61 +133,61 @@ class Statement {
         /// There are no more rows
         case done
     }
-    
+
     func read(column name: String) throws -> DatabaseValue {
         return try read(column: try getColumnIndex(name))
     }
-    
+
     func read(column index: Int) throws -> DatabaseValue {
         try checkRowAvailable()
         let index = Int32(index)
         let type = sqlite3_column_type(statement, index)
-        
+
         switch type {
         case SQLITE_INTEGER:
             return .int(sqlite3_column_int64(statement, index))
-            
+
         case SQLITE_FLOAT:
             return .double(sqlite3_column_double(statement, index))
-            
+
         case SQLITE_TEXT:
             guard let cString = sqlite3_column_text(statement, index) else {
                 return .text("")
             }
             return .text(String(cString: cString))
-            
+
         case SQLITE_BLOB:
             guard let bytes = sqlite3_column_blob(statement, index) else {
                 return .blob(Data())
             }
             let count = Int(sqlite3_column_bytes(statement, index))
             return .blob(Data(bytes: bytes, count: count))
-            
+
         case SQLITE_NULL:
             return .null
-            
+
         default:
             throw SwiftDBError.unexpected(message: "sqlite3_column_type returned unknown code \(type)")
         }
     }
-    
+
     func readNull(column name: String) throws -> Bool {
         return try readNull(column: try getColumnIndex(name))
     }
-    
+
     func readNull(column index: Int) throws -> Bool {
         try checkRowAvailable()
         return sqlite3_column_type(statement, Int32(index)) == SQLITE_NULL
     }
-    
+
     var columnNames: [String] {
         return [String](columnNameToIndex.keys)
     }
-    
+
     var columnCount: Int {
         return columnNameToIndex.count
     }
-    
+
     func hasColumn(_ columnName: String) -> Bool {
         return columnNameToIndex[columnName] != nil
     }
@@ -198,7 +198,7 @@ class Statement {
         }
         return index
     }
-    
+
     private func checkRowAvailable() throws {
         if !hasRow {
             throw SwiftDBError.noRow
@@ -213,7 +213,7 @@ class Statement {
     deinit {
         sqlite3_finalize(statement)
     }
-    
+
     private func checkOK(_ code: CInt) throws {
         try SwiftDB.checkOK(code, sql: self.sql, db: db)
     }
