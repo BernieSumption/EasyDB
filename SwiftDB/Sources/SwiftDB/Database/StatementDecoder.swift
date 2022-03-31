@@ -17,7 +17,7 @@ struct StatementDecoder {
 private struct StatementDecoderImpl: Decoder {
     private let statement: Statement
     let codingPath = [CodingKey]() // always top level so empty coding path
-    let userInfo = [CodingUserInfoKey : Any]()
+    let userInfo = [CodingUserInfoKey: Any]()
     
     init(_ statement: Statement) {
         self.statement = statement
@@ -44,7 +44,7 @@ private struct StatementDecoderImpl: Decoder {
 private struct SingleRowDecoderImpl: Decoder {
     private let statement: Statement
     let codingPath: [CodingKey]
-    let userInfo = [CodingUserInfoKey : Any]()
+    let userInfo = [CodingUserInfoKey: Any]()
     
     init(_ statement: Statement, codingPath: [CodingKey]) {
         self.statement = statement
@@ -74,7 +74,7 @@ private struct SingleRowSingleColumnDecoderImpl: Decoder {
     private let column: Int
     
     let codingPath: [CodingKey]
-    let userInfo = [CodingUserInfoKey : Any]()
+    let userInfo = [CodingUserInfoKey: Any]()
     
     init(_ statement: Statement, column: Int, codingPath: [CodingKey]) {
         self.statement = statement

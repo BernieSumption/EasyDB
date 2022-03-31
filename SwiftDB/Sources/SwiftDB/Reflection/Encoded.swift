@@ -38,8 +38,7 @@ enum Encoded: Hashable {
         } else if value is NSNull {
             self = .null
         } else {
-            throw SwiftDBError.unexpected(message: 
-                "JSONSerialization.jsonObject produced unexpected type \(value), \(type(of: value))"
+            throw SwiftDBError.unexpected(message: "JSONSerialization.jsonObject produced unexpected type \(value), \(type(of: value))"
             )
         }
     }

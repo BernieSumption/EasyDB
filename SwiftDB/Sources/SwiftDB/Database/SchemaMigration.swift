@@ -75,7 +75,7 @@ struct SchemaMigration {
         let existingNames = Set(try getIndexNames(table: table))
         let expectedNames = Set(indices.map({ $0.name(forTable: table) }))
         let namesToDrop = existingNames.subtracting(expectedNames)
-        for name in namesToDrop  {
+        for name in namesToDrop {
             try dropIndex(name: name)
         }
         let indicesToAdd = indices.filter({ index in

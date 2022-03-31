@@ -45,7 +45,7 @@ private struct DatabaseValueDecoderImpl: Decoder {
     let value: DatabaseValue
     let codingPath: [CodingKey]
     
-    let userInfo = [CodingUserInfoKey : Any]()
+    let userInfo = [CodingUserInfoKey: Any]()
 
     func container<Key: CodingKey>(keyedBy type: Key.Type) throws -> KeyedDecodingContainer<Key> {
         throw Result.useJsonDecoder
@@ -64,7 +64,7 @@ private struct DatabaseValueDecoderImpl: Decoder {
         let value: DatabaseValue
 
         let codingPath = [CodingKey]()
-        let userInfo = [CodingUserInfoKey : Any]()
+        let userInfo = [CodingUserInfoKey: Any]()
 
         func decodeNil() -> Bool {
             return value == .null

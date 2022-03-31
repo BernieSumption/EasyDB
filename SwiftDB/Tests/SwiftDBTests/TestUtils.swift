@@ -140,7 +140,7 @@ class SwiftDBTestCase: XCTestCase {
     func assertErrorMessage(_ expression: @autoclosure () throws -> Any, contains: String) {
         XCTAssertThrowsError(try expression()) { error in
             let message = "\(error)"
-            assertString(message, contains:contains)
+            assertString(message, contains: contains)
         }
     }
     

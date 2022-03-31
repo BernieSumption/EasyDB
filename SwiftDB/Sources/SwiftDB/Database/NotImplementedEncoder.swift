@@ -6,7 +6,7 @@
 struct NotImplementedEncoder: Encoder {
     let error: Error
     let codingPath = [CodingKey]()
-    let userInfo = [CodingUserInfoKey : Any]()
+    let userInfo = [CodingUserInfoKey: Any]()
     
     func container<Key: CodingKey>(keyedBy type: Key.Type) -> KeyedEncodingContainer<Key> {
         return KeyedEncodingContainer(KeyedContainer(error: error))
@@ -23,7 +23,7 @@ struct NotImplementedEncoder: Encoder {
     private struct KeyedContainer<Key: CodingKey>: KeyedEncodingContainerProtocol {
         let error: Error
         let codingPath = [CodingKey]()
-        let userInfo = [CodingUserInfoKey : Any]()
+        let userInfo = [CodingUserInfoKey: Any]()
         
         mutating func encodeNil(forKey key: Key) throws {
             throw error
@@ -53,7 +53,7 @@ struct NotImplementedEncoder: Encoder {
     private struct UnkeyedContainer: UnkeyedEncodingContainer {
         let error: Error
         let codingPath = [CodingKey]()
-        let userInfo = [CodingUserInfoKey : Any]()
+        let userInfo = [CodingUserInfoKey: Any]()
         
         let count: Int = 0
         
@@ -82,7 +82,7 @@ struct NotImplementedEncoder: Encoder {
     private struct SingleValueContainer: SingleValueEncodingContainer {
         let error: Error
         let codingPath = [CodingKey]()
-        let userInfo = [CodingUserInfoKey : Any]()
+        let userInfo = [CodingUserInfoKey: Any]()
         
         let count: Int = 0
         

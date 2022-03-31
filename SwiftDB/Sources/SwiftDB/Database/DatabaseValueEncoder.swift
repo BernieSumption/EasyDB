@@ -50,9 +50,9 @@ struct DatabaseValueEncoder {
 
 private struct DatabaseValueEncoderImpl: Encoder {
     let codingPath = [CodingKey]()
-    let userInfo = [CodingUserInfoKey : Any]()
+    let userInfo = [CodingUserInfoKey: Any]()
     
-    func container<Key>(keyedBy type: Key.Type) -> KeyedEncodingContainer<Key> where Key : CodingKey {
+    func container<Key>(keyedBy type: Key.Type) -> KeyedEncodingContainer<Key> where Key: CodingKey {
         return NotImplementedEncoder(error: Result.useJsonEncoder).container(keyedBy: type)
     }
     
@@ -66,7 +66,7 @@ private struct DatabaseValueEncoderImpl: Encoder {
     
     struct SingleValueContainer: SingleValueEncodingContainer {
         let codingPath = [CodingKey]()
-        let userInfo = [CodingUserInfoKey : Any]()
+        let userInfo = [CodingUserInfoKey: Any]()
         
         mutating func encodeNil() throws {
             throw Result.value(.null)
