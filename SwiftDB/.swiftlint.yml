@@ -10,4 +10,4 @@ disabled_rules:
 #  - colon
 #  - leading_whitespace
 #  - redundant_optional_initialization
-  - redundant_void_return
+#  - redundant_void_return

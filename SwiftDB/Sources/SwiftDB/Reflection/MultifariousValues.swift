@@ -133,7 +133,7 @@ private class SampleValues: SampleValueReceiver {
 /// Note: SwiftDB will attempt to automatically generate sample values for most codable types. Conform to this
 /// protocol only if the automatic process doesn't work. See [codable structure discovery](TODO: url)
 public protocol SampleValueSource {
-    static func provideSampleValues(_ receiver: SampleValueReceiver) -> Void
+    static func provideSampleValues(_ receiver: SampleValueReceiver)
 }
 
 /// Used by `SampleValueSource` during [codable structure discovery](TODO: url)
