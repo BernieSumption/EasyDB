@@ -1,6 +1,5 @@
 import Foundation
 
-
 /// Encodes a value by binding its properties to named parameters of a query
 struct StatementEncoder {
     static func encode<T: Encodable>(_ value: T, into statement: Statement) throws {

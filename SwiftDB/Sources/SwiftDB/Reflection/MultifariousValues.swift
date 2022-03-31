@@ -25,7 +25,6 @@ class MultifariousValues {
         item += 1
         return index == 0 ? samples.0 : samples.1
     }
-    
 
     func nextRow() {
         let didRollOver = runLength * 2 < item

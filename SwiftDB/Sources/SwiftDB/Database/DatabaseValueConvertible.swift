@@ -14,7 +14,6 @@ public protocol DatabaseValueConvertible {
     init(from value: DatabaseValue) throws
 }
 
-
 private var iso8601Formatter: ISO8601DateFormatter = {
     let formatter = ISO8601DateFormatter()
     formatter.formatOptions = .withInternetDateTime
@@ -35,7 +34,6 @@ extension Date: DatabaseValueConvertible {
         self = date
     }
 }
-
 
 extension Data: DatabaseValueConvertible {
     public var databaseValue: DatabaseValue {

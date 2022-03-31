@@ -98,7 +98,6 @@ class CollectionTests: SwiftDBTestCase {
             try c.filter(\.string, equalTo: "A").fetchOne(),
             RowWithString("a"))
         
-        
         XCTAssertEqual(
             try c.all().fetchMany().map(\.string),
             ["a", "B", "c"])
@@ -122,7 +121,6 @@ class CollectionTests: SwiftDBTestCase {
         XCTAssertEqual(
             try c.filter(\.string, equalTo: "A").fetchOne(),
             RowWithString("a"))
-        
         
         XCTAssertEqual(
             try c.all().fetchMany().map(\.string),

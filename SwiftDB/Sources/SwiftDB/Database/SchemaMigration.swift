@@ -1,5 +1,4 @@
 
-
 struct SchemaMigration {
     private let connection: Connection
     

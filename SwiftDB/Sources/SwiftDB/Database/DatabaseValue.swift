@@ -36,6 +36,7 @@ public enum DatabaseValue: Equatable, CustomStringConvertible, CustomDebugString
     public init(_ value: Bool) {
         self = .int(value ? 1 : 0)
     }
+    
     /// Get this value as a Bool or throw an error if it is not exactly `0` or `1`
     public func `as`(_: Bool.Type) throws -> Bool {
         let value = try self.as(Int64.self)
@@ -45,12 +46,12 @@ public enum DatabaseValue: Equatable, CustomStringConvertible, CustomDebugString
         default: throw DatabaseValueError("expected 0 or 1 got \(value)")
         }
     }
-
     
     /// Create a text value
     public init(_ value: String) {
         self = .text(value)
     }
+    
     /// Get this value as a String
     ///
     /// - text is returned as-is
@@ -73,6 +74,7 @@ public enum DatabaseValue: Equatable, CustomStringConvertible, CustomDebugString
     public init<T: BinaryFloatingPoint>(_ value: T) {
         self = .double(Double(value))
     }
+    
     /// Get this value as a floating point type `T`
     ///
     /// - double and int values are converted to `T`
@@ -93,6 +95,7 @@ public enum DatabaseValue: Equatable, CustomStringConvertible, CustomDebugString
         // allow 64 bit unsigned integers to overflow into SQLite's signed 64 bit storage
         self = .int(Int64(truncatingIfNeeded: value))
     }
+    
     /// Get this value as an integer type `T`
     ///
     /// - double and int values are converted to `T` and an error is thrown if `T` is not large or precise enough to hold the value
@@ -122,6 +125,7 @@ public enum DatabaseValue: Equatable, CustomStringConvertible, CustomDebugString
     public init(_ value: Data) {
         self = .blob(value)
     }
+    
     /// Get this value as a `Data`
     ///
     /// - blob values return their data
@@ -138,6 +142,7 @@ public enum DatabaseValue: Equatable, CustomStringConvertible, CustomDebugString
     init(_ value: DatabaseValueConvertible) {
         self = value.databaseValue
     }
+    
     func `as`<T: DatabaseValueConvertible>(_: T.Type) throws -> T {
         return try T(from: self)
     }

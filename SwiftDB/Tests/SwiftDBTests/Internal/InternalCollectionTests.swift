@@ -31,7 +31,6 @@ class InternalCollectionTests: SwiftDBTestCase {
         
         // index created with "binary" collation
         assertString(sql, contains: "CREATE INDEX `Row-value-binary` ON `Row` ( `value` COLLATE `binary` )")
-
         
         // "binary" collation used in filter and order by
         _ = try c.filter(\.value, equalTo: 4).orderBy(\.value).fetchMany()
@@ -49,7 +48,6 @@ class InternalCollectionTests: SwiftDBTestCase {
         
         // index created with "caseInsensitive" collation
         assertString(sql, contains: "CREATE INDEX `Row-value-caseInsensitive` ON `Row` ( `value` COLLATE `caseInsensitive` )")
-
         
         // override collation used in filter and order by
         _ = try c

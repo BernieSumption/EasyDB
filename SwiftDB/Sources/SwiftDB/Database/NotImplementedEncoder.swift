@@ -50,7 +50,6 @@ struct NotImplementedEncoder: Encoder {
         }
     }
 
-
     private struct UnkeyedContainer: UnkeyedEncodingContainer {
         let error: Error
         let codingPath = [CodingKey]()
@@ -79,7 +78,6 @@ struct NotImplementedEncoder: Encoder {
         }
         
     }
-
 
     private struct SingleValueContainer: SingleValueEncodingContainer {
         let error: Error

@@ -3,7 +3,7 @@ disabled_rules:
   - trailing_whitespace
   - trailing_comma
 #  - redundant_discardable_let
-  - vertical_whitespace
+#  - vertical_whitespace
   - comma
   - trailing_newline
   - opening_brace

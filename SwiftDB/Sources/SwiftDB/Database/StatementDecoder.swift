@@ -224,7 +224,6 @@ private class ManyRowsUnkeyedContainer: UnkeyedDecodingContainer {
     }
 }
 
-
 /// Decodes a single row into an array, each column becoming an element in the array
 private class SingleRowUnkeyedContainer: UnkeyedDecodingContainer {
     private let statement: Statement
