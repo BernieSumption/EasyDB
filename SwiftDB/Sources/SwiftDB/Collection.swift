@@ -12,7 +12,12 @@ public class Collection<Row: Codable>: Filterable, DefaultCollations {
 
     private let indices: [Index]
 
-    internal init(_ type: Row.Type, _ database: Database, _ config: CollectionConfig?) throws {
+    internal init(
+        _ type: Row.Type,
+        _ database: Database,
+        _ config: CollectionConfig?,
+        idProperty: PartialCodableKeyPath<Row>?
+    ) throws {
         self.database = database
         self.mapper = try KeyPathMapper.forType(type)
         self.columns = mapper.rootProperties
@@ -53,9 +58,9 @@ public class Collection<Row: Codable>: Filterable, DefaultCollations {
                 }
             }
         }
-        let hasId = mapper.rootProperties.contains("id")
-        if hasId && !disableDefaultIdIndex {
-            let index = Index([Index.Part(["id"], collation: .string)], unique: true)
+        if !disableDefaultIdIndex, let idProperty = idProperty {
+            let idPath = try mapper.propertyPath(for: idProperty)
+            let index = Index([Index.Part(idPath, collation: .string)], unique: true)
             indices.append(index)
         }
         self.indices = indices
@@ -103,7 +108,6 @@ public class Collection<Row: Codable>: Filterable, DefaultCollations {
         }
         let sql = getInsertSQL(onConflict: onConflict)
         try database.inAccessQueue {
-            // TODO: this spends about 20% of its time compiling the same SQL over and over again
             let connection = try database.getConnection()
             do {
                 let statement = try connection.notThreadSafe_prepare(sql: sql)

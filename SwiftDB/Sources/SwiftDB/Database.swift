@@ -42,8 +42,25 @@ public class Database {
     }
 
     /// Return a collection. Unless automatic migration is disabled for this database, the table will be automatically
-    /// created or any missing columns added
+    /// created or any missing columns added.
     public func collection<T: Codable>(_ type: T.Type) throws -> Collection<T> {
+        return try collection(type, idProperty: nil)
+    }
+
+    /// Return a collection. Unless automatic migration is disabled for this database, the table will be automatically
+    /// created or any missing columns added.
+    ///
+    /// By default, collections of identifiable types will be given a unique index for the `id` property. This behaviour
+    /// can be disabled in collection configuration
+    public func collection<T: Codable & Identifiable>(
+        _ type: T.Type
+    ) throws -> Collection<T> where T.ID: Codable {
+        return try collection(type, idProperty: PartialCodableKeyPath(\T.id))
+    }
+
+    /// Return a collection. Unless automatic migration is disabled for this database, the table will be automatically
+    /// created or any missing columns added
+    func collection<T: Codable>(_ type: T.Type, idProperty: PartialCodableKeyPath<T>?) throws -> Collection<T> {
         return try collectionCreateQueue.sync {
             let typeId = ObjectIdentifier(type)
             if let collection = collections[typeId] {
@@ -56,7 +73,7 @@ public class Database {
             if collectionConfig.count > 1 {
                 throw SwiftDBError.misuse(message: "Collection \(T.self) is configured twice")
             }
-            let collection = try Collection(type, self, collectionConfig.first)
+            let collection = try Collection(type, self, collectionConfig.first, idProperty: idProperty)
             if autoMigrate {
                 try collection.migrate(dropColumns: autoDropColumns)
             }

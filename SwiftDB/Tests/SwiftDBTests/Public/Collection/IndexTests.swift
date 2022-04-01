@@ -35,6 +35,31 @@ class IndexTests: SwiftDBTestCase {
         XCTAssertNoThrow(try c.insert(rowB))
     }
 
+    func testAutoIndexForIdentifiableWithCodingKeys() throws {
+        let c = try db.collection(RowWithIdUsingCodingKeys.self)
+        let rowA = RowWithIdUsingCodingKeys()
+        let rowB = RowWithIdUsingCodingKeys()
+        try c.insert(rowA)
+
+        assertErrorMessage(
+            try c.insert(rowA),
+            contains: "UNIQUE constraint failed: RowWithIdUsingCodingKeys.altIdField")
+
+        XCTAssertNoThrow(try c.insert(rowB))
+    }
+
+    struct RowWithIdUsingCodingKeys: Codable, Equatable, Identifiable {
+        let id: UUID
+
+        init(_ id: UUID = UUID()) {
+            self.id = id
+        }
+
+        enum CodingKeys: String, CodingKey {
+            case id = "altIdField"
+        }
+    }
+
     func testDisableAutoIndexForIdentifiable() throws {
         db = Database(path: ":memory:", .collection(RowWithId.self, .column(\.id, unique: false)))
         let c = try db.collection(RowWithId.self)
