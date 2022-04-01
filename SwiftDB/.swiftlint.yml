@@ -7,22 +7,9 @@ disabled_rules:
   - function_body_length
 
 identifier_name:
-  min_length: 1
-  max_length: 60
+  excluded: [id, db, ok, OK]
 
 line_length:
   warning: 150
   error: 150
   ignores_interpolated_strings: true
-
-custom_rules:
-  custom_line_length: # rule identifier
-    included: ".*\\.swift" # regex that defines paths to include during linting. optional.
-    name: "Line Length" # rule name. optional.
-    regex: "([nN]inja)" # matching pattern
-    capture_group: 0 # number of regex capture group to highlight the rule violation at. optional.
-    match_kinds: # SyntaxKinds to match. optional.
-      - comment
-      - identifier
-    message: "Pirates are better than ninjas." # violation message. optional.
-    severity: error # violation severity. optional.

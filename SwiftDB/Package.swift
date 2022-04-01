@@ -23,7 +23,8 @@ let package = Package(
         ),
         .testTarget(
             name: "SwiftDBTests",
-            dependencies: ["SwiftDB"]
+            dependencies: ["SwiftDB"],
+            plugins: ["SwiftLintXcode"]
         ),
 
         // 1. Specify where to download the compiled swiftlint tool from.

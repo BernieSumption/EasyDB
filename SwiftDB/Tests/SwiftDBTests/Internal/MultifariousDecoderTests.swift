@@ -70,7 +70,7 @@ final class MultifariousDecoderTests: XCTestCase {
         XCTAssertEqual(
             instances[0...1],
             [
-                /// first instance values run 0, 1, 0, 1 etc
+                // first instance values run 0, 1, 0, 1 etc
                 .init(
                     b: false,
                     s1: .init(
@@ -88,7 +88,7 @@ final class MultifariousDecoderTests: XCTestCase {
                     ),
                     s3: .init(b: 0)
                 ),
-                /// second instance values run 0, 0, 1, 1, 0, 0, 1, 1 etc
+                // second instance values run 0, 0, 1, 1, 0, 0, 1, 1 etc
                 .init(
                     b: false,
                     s1: .init(

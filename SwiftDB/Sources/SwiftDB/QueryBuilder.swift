@@ -90,9 +90,7 @@ public struct QueryBuilder<Row: Codable>: Filterable {
 
     /// Order by an SQL expression.
     public func orderBy(_ sqlFragment: SQLFragment<Row>) -> Self {
-
         var copy = self
-
         copy.orders.append(Order(sqlFragment))
         return copy
     }

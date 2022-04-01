@@ -1,0 +1,10 @@
+parent_config: ../.swiftlint_base.yml
+
+disabled_rules:
+  # these rules are useful in tests and don't matter as much
+  - nesting
+  - type_name
+
+identifier_name:
+  min_length: 1
+  max_length: 60

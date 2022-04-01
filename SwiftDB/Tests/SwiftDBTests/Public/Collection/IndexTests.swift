@@ -58,7 +58,6 @@ class IndexTests: SwiftDBTestCase {
     func testIndexWithCollation() throws {
         db = Database(path: ":memory:",
                       .collection(RowT<UUID>.self, .column(\.value, collation: .caseInsensitive, unique: true)))
-        // TODO: remove this when we move to up-front creation
         _ = try db.collection(RowT<UUID>.self)
 
         let sql = try db.execute([String].self, #"SELECT sql FROM sqlite_schema WHERE type = 'index' AND tbl_name = 'RowT'"#)
