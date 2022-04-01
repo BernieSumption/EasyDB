@@ -57,12 +57,12 @@ class Statement {
         case .null:
             try checkOK(sqlite3_bind_null(statement, index))
         case .text(let string):
-            try checkOK(sqlite3_bind_text(statement, index, string, -1, SQLITE_TRANSIENT))
+            try checkOK(sqlite3_bind_text(statement, index, string, -1, sqliteTransient))
         case .blob(let data):
             try data.withUnsafeBytes { bytes in
                 try checkOK(sqlite3_bind_blob(
                     statement, index, bytes.baseAddress, Int32(bytes.count),
-                    SQLITE_TRANSIENT))
+                    sqliteTransient))
             }
         }
     }
@@ -220,4 +220,4 @@ class Statement {
 }
 
 // https://stackoverflow.com/questions/26883131/sqlite-transient-undefined-in-swift
-private let SQLITE_TRANSIENT = unsafeBitCast(-1, to: sqlite3_destructor_type.self)
+private let sqliteTransient = unsafeBitCast(-1, to: sqlite3_destructor_type.self)

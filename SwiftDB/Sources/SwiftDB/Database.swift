@@ -79,14 +79,14 @@ public class Database {
         return try getConnection().execute(resultType, sql: sql, parameters: parameters)
     }
 
-    private var _connection: Connection?
+    private var cachedConnection: Connection?
     func getConnection() throws -> Connection {
-        if let c = _connection {
-            return c
+        if let cached = cachedConnection {
+            return cached
         }
-        let c = try Connection(self)
-        _connection = c
-        return c
+        let connection = try Connection(self)
+        cachedConnection = connection
+        return connection
     }
 
     @TaskLocal static var isInAccessQueue = false

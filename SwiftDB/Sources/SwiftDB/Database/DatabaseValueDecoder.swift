@@ -4,6 +4,8 @@ enum DatabaseValueDecoder {
     static func decode<T: Decodable>(_ type: T.Type, from value: DatabaseValue) throws -> T {
         // This looks inefficient, but since T is known at compile time all
         // non-matching conditions will be eliminated by the compiler
+        // Disable force cast lint rules because in this instance they are safe and unavoidable
+        // swiftlint:disable force_cast
         if T.self == Bool.self    { return try value.as(Bool.self) as! T }
         if T.self == String.self  { return try value.as(String.self) as! T }
         if T.self == Double.self  { return try value.as(Double.self) as! T }
@@ -23,6 +25,7 @@ enum DatabaseValueDecoder {
         if let type = type as? DatabaseValueConvertible.Type {
             return try type.init(from: value) as! T
         }
+        // swiftlint:enable force_cast
 
         do {
             let decoder = DatabaseValueDecoderImpl(value: value, codingPath: [])

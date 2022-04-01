@@ -1,4 +1,28 @@
 
 disabled_rules:
-  # disable this rule because it breaks carefully constructed formatting of multi-line statements
+  # this rule because it breaks carefully constructed formatting of multi-line statements
   - opening_brace
+  # I'll be the judge of whether my functions are too complex thank you very much
+  - cyclomatic_complexity
+  - function_body_length
+
+identifier_name:
+  min_length: 1
+  max_length: 60
+
+line_length:
+  warning: 150
+  error: 150
+  ignores_interpolated_strings: true
+
+custom_rules:
+  custom_line_length: # rule identifier
+    included: ".*\\.swift" # regex that defines paths to include during linting. optional.
+    name: "Line Length" # rule name. optional.
+    regex: "([nN]inja)" # matching pattern
+    capture_group: 0 # number of regex capture group to highlight the rule violation at. optional.
+    match_kinds: # SyntaxKinds to match. optional.
+      - comment
+      - identifier
+    message: "Pirates are better than ninjas." # violation message. optional.
+    severity: error # violation severity. optional.

@@ -32,7 +32,10 @@ struct NotImplementedEncoder: Encoder {
             throw error
         }
 
-        mutating func nestedContainer<NestedKey: CodingKey>(keyedBy keyType: NestedKey.Type, forKey key: Key) -> KeyedEncodingContainer<NestedKey> {
+        mutating func nestedContainer<NestedKey: CodingKey>(
+            keyedBy keyType: NestedKey.Type,
+            forKey key: Key
+        ) -> KeyedEncodingContainer<NestedKey> {
             return NotImplementedEncoder(error: error).container(keyedBy: keyType)
         }
 
@@ -64,7 +67,9 @@ struct NotImplementedEncoder: Encoder {
             throw error
         }
 
-        mutating func nestedContainer<NestedKey: CodingKey>(keyedBy keyType: NestedKey.Type) -> KeyedEncodingContainer<NestedKey> {
+        mutating func nestedContainer<NestedKey: CodingKey>(
+            keyedBy keyType: NestedKey.Type
+        ) -> KeyedEncodingContainer<NestedKey> {
             return NotImplementedEncoder(error: error).container(keyedBy: keyType)
         }
 

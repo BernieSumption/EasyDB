@@ -9,6 +9,8 @@ struct DatabaseValueEncoder {
     static func encode<T: Encodable>(_ value: T) throws -> DatabaseValue {
         // This looks inefficient, but since T is known at compile time all
         // non-matching conditions will be eliminated by the compiler
+        // Disable force cast lint rules because in this instance they are safe and unavoidable
+        // swiftlint:disable force_cast
         if T.self == Bool.self    { return DatabaseValue(value as! Bool) }
         if T.self == String.self  { return DatabaseValue(value as! String) }
         if T.self == Double.self  { return DatabaseValue(value as! Double) }
@@ -28,6 +30,7 @@ struct DatabaseValueEncoder {
         if let value = value as? DatabaseValueConvertible {
             return value.databaseValue
         }
+        // swiftlint:enable force_cast
 
         do {
             let encoder = DatabaseValueEncoderImpl()

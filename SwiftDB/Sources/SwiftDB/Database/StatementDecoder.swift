@@ -227,23 +227,23 @@ private class ManyRowsUnkeyedContainer: UnkeyedDecodingContainer {
 /// Decodes a single row into an array, each column becoming an element in the array
 private class SingleRowUnkeyedContainer: UnkeyedDecodingContainer {
     private let statement: Statement
+    private let internalCount: Int
 
     let codingPath: [CodingKey]
-    let _count: Int
 
     init(_ statement: Statement, codingPath: [CodingKey]) {
         self.statement = statement
         self.codingPath = codingPath
-        self._count = statement.columnCount
+        self.internalCount = statement.columnCount
     }
 
     private(set) var currentIndex: Int = 0
 
     var isAtEnd: Bool {
-        currentIndex >= _count
+        currentIndex >= internalCount
     }
 
-    var count: Int? { _count }
+    var count: Int? { internalCount }
 
     func decodeNil() throws -> Bool {
         return try statement.readNull(column: currentIndex)

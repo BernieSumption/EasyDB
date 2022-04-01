@@ -21,14 +21,18 @@ private struct StatementEncoderImpl: Encoder {
     }
 
     func unkeyedContainer() -> UnkeyedEncodingContainer {
+        let feature = "providing arrays of parameter values to a statement"
+                    + "(currently you must use structs or dictionaries to bind named parameters instead)"
         return NotImplementedEncoder(
-            error: SwiftDBError.notImplemented(feature: "providing arrays of parameter values to a statement (currently you must use structs or dictionaries to bind named parameters instead)")
+            error: SwiftDBError.notImplemented(feature: feature)
         ).unkeyedContainer()
     }
 
     func singleValueContainer() -> SingleValueEncodingContainer {
+        let feature = "providing single parameter values to a statement"
+                    + " (currently you must use structs or dictionaries to bind named parameters instead)"
         return NotImplementedEncoder(
-            error: SwiftDBError.notImplemented(feature: "providing single parameter values to a statement (currently you must use structs or dictionaries to bind named parameters instead)")
+            error: SwiftDBError.notImplemented(feature: feature)
         ).singleValueContainer()
     }
 }

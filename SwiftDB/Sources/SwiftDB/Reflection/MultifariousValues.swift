@@ -37,13 +37,11 @@ class MultifariousValues {
     }
 }
 
-private func __debug__valuesEncodeDifferently<T1: Encodable, T2: Encodable>(_ a: T1, _ b: T2)
+private func debugValuesEncodeDifferently<T1: Encodable, T2: Encodable>(_ first: T1, _ second: T2)
     -> Bool
 {
     do {
-        let a = try Encoded(a)
-        let b = try Encoded(b)
-        return a != b
+        return try Encoded(first) != Encoded(second)
     } catch {
         assert(false, "Error encoding values to check equality: \(error)")
         return false
@@ -84,18 +82,18 @@ private class SampleValues: SampleValueReceiver {
     }
 
     func setSampleValues<T: Encodable>(_ zero: T, _ one: T) {
-        assert(__debug__valuesEncodeDifferently(zero, one), "sample values must be different")
+        assert(debugValuesEncodeDifferently(zero, one), "sample values must be different")
         assert(
-            __debug__valuesEncodeDifferently(zero, 1),
+            debugValuesEncodeDifferently(zero, 1),
             "a sample value for zero must not encode as `1`!")
         assert(
-            __debug__valuesEncodeDifferently(zero, "1"),
+            debugValuesEncodeDifferently(zero, "1"),
             "a sample value for zero must not encode as `1`!")
         assert(
-            __debug__valuesEncodeDifferently(one, 0),
+            debugValuesEncodeDifferently(one, 0),
             "A sample value for one must not encode as `0`!")
         assert(
-            __debug__valuesEncodeDifferently(one, "0"),
+            debugValuesEncodeDifferently(one, "0"),
             "A sample value for one must not encode as `0`!")
         typeToSamples[ObjectIdentifier(T.self)] = (zero, one)
     }

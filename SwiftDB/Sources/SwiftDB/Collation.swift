@@ -38,26 +38,26 @@ typealias SQLiteCustomCollationFunction = (Int32, UnsafeRawPointer?, Int32, Unsa
 
 extension Collation {
     /// The default collation sequence for SwiftDB - sort strings case-sensitively using Swift's `==` and `<=` operators.
-    public static let string = Collation("string") { (a, b) in
-        if a == b {
+    public static let string = Collation("string") { (lhs, rhs) in
+        if lhs == rhs {
             return .orderedSame
         }
-        return a < b ? .orderedAscending : .orderedDescending
+        return lhs < rhs ? .orderedAscending : .orderedDescending
     }
 
     /// Sort unicode strings in a case-insensitive way using Swift's `String.caseInsensitiveCompare(_:)` function
-    public static let caseInsensitive = Collation("caseInsensitive") { (a, b) in
-        return a.caseInsensitiveCompare(b)
+    public static let caseInsensitive = Collation("caseInsensitive") { (lhs, rhs) in
+        return lhs.caseInsensitiveCompare(rhs)
     }
 
     /// Sort unicode strings using localized comparison with Swift's `String.localizedCompare(_:)` function
-    public static let localized = Collation("localized") { (a, b) in
-        return a.localizedCompare(b)
+    public static let localized = Collation("localized") { (lhs, rhs) in
+        return lhs.localizedCompare(rhs)
     }
 
     /// Sort unicode strings using case-insensitive localized comparison with Swift's `String.localizedCaseInsensitiveCompare(_:)` function
-    public static let localizedCaseInsensitive = Collation("localizedCaseInsensitive") { (a, b) in
-        return a.localizedCaseInsensitiveCompare(b)
+    public static let localizedCaseInsensitive = Collation("localizedCaseInsensitive") { (lhs, rhs) in
+        return lhs.localizedCaseInsensitiveCompare(rhs)
     }
 
     /// The built-in SQLite `binary` collation that compares strings using their in-memory binary representation,
