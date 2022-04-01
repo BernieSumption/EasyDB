@@ -25,7 +25,7 @@ let package = Package(
             name: "SwiftDBTests",
             dependencies: ["SwiftDB"]
         ),
-        
+
         // 1. Specify where to download the compiled swiftlint tool from.
         .binaryTarget(
             name: "SwiftLintBinary",
@@ -37,7 +37,7 @@ let package = Package(
             name: "SwiftLintXcode",
             capability: .buildTool(),
             dependencies: ["SwiftLintBinary"]
-        ),
+        )
 //        // 3. Use the plugin in your project.
 //        .executableTarget(
 //            name: "MyApp",

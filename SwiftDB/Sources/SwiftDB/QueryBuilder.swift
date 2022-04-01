@@ -80,7 +80,7 @@ public struct QueryBuilder<Row: Codable>: Filterable {
     ) -> QueryBuilder<Row> {
         var copy = self
         let order = Order(
-            keyPath: property,
+            property: property,
             collation: collation,
             direction: direction,
             nulls: nulls)
@@ -250,14 +250,13 @@ public struct QueryBuilder<Row: Codable>: Filterable {
         let sqlFragment: SQLFragment<Row>
         let collation: Collation?
 
-        init<T: Codable>(keyPath: KeyPath<Row, T>, collation: Collation?, direction: QueryBuilder<Row>.Direction?, nulls: QueryBuilder<Row>.Nulls?) {
-            var sql = SQLFragment<Row>()
-            // TODO: use SQLFragment for collation
-            sql.append(property: keyPath)
-            if let collation = collation {
-                sql.append(literal: " COLLATE ")
-                sql.append(literal: SQL.quoteName(collation.name))
-            }
+        init<T: Codable>(
+            property: KeyPath<Row, T>,
+            collation: Collation?,
+            direction: QueryBuilder<Row>.Direction?,
+            nulls: QueryBuilder<Row>.Nulls?
+        ) {
+            var sql: SQLFragment<Row> = "\(property)"
             if let direction = direction {
                 sql.append(literal: " ")
                 sql.append(literal: direction.name)

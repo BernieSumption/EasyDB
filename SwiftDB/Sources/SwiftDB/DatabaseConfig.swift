@@ -81,7 +81,7 @@ public struct PropertyConfig<Row: Codable>: Equatable {
             return Index(kind: .noDefaultUniqueId)
         }
     }
-    
+
     enum IndexKind: Equatable {
         case index(unique: Bool, collation: Collation?)
         case noDefaultUniqueId
