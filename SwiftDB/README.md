@@ -15,7 +15,8 @@ struct Book: Codable, Identifiable {
 }
 let db = SwiftDB()
 let collection = db.collection(Book.self)
-  // ^^ CREATE TABLE Book (id, name, author, price)
+//  ^^ CREATE TABLE Book (id, name, author, price)
+//     CREATE UNIQUE INDEX `book-unique-id` ON Book (`id`)
 
 collection.insert([
     Book(name: "Catch-22", author: "Joseph Heller", price: 1050),
@@ -23,11 +24,12 @@ collection.insert([
     Book(name: "Nineteen Eighty-Four", author: "George Orwell", price: 799),
     Book(name: "A Pattern Language", author: "Christopher Alexander et al.", price: 2250)
 ])
-  // ^^ INSERT INTO Book (name, author, price) VALUES (?, ?, ?) # executed 4 times in a transaction
-  //    Inserts of many instances are batched into fewer queries for performance
+//  ^^ BEGIN TRANSACTION
+//     (for each row) INSERT INTO Book (name, author, price) VALUES (?, ?, ?)
+//     COMMIT TRANSACTION
 
-let cheapBooks = collection.select().where(\.price, lessThan: 1000).fetchMany()
-  // ^^ SELECT * FROM Book WHERE price > 1000
+let cheapBooks = collection.all().where(\.price, lessThan: 1000).fetchMany()
+//  ^^ SELECT * FROM Book WHERE price < ?
 ```
 
 ### Design goals

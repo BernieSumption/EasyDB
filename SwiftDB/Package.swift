@@ -39,10 +39,5 @@ let package = Package(
             capability: .buildTool(),
             dependencies: ["SwiftLintBinary"]
         )
-//        // 3. Use the plugin in your project.
-//        .executableTarget(
-//            name: "MyApp",
-//            plugins: ["SwiftLintXcode"]
-//        )
     ]
 )

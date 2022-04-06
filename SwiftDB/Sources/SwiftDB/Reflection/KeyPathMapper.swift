@@ -31,13 +31,12 @@ class KeyPathMapper<T: Codable> {
         instances = try MultifariousDecoder.instances(for: type)
         let jsonInstances = try instances.map({ try Encoded($0) })
         guard let first = jsonInstances.first else {
-            throw SwiftDBError.unexpected(message: "Multifarious.instances was empty")
+            throw SwiftDBError.unexpected(message: "KeyPathMapper.instances was empty")
         }
         let propertyPaths = first.propertyPaths
-        let differing = jsonInstances.first(where: { Set($0.propertyPaths) != Set(propertyPaths) })
-        if let differing = differing {
+        if let differing = jsonInstances.first(where: { Set($0.propertyPaths) != Set(propertyPaths) }) {
             throw SwiftDBError.unexpected(message:
-                "Multifarious.instances have different structures, \(propertyPaths) and \(differing.propertyPaths)"
+                "KeyPathMapper.instances have different structures, \(propertyPaths) and \(differing.propertyPaths)"
             )
         }
         var valuesToPropertyPath = [[Encoded]: [String]]()
