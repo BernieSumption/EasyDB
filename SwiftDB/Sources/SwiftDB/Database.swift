@@ -7,7 +7,7 @@ public class Database {
 
     private let autoMigrate: Bool
     private let autoDropColumns: Bool
-    private let collectionConfigs: [CollectionConfig]
+    private let collectionConfigs: [OldCollectionConfig]
 
     private var collections = [ObjectIdentifier: Any]()
 
@@ -33,7 +33,7 @@ public class Database {
         path: String,
         autoMigrate: Bool = true,
         autoDropColumns: Bool = false,
-        _ collections: CollectionConfig...
+        _ collections: OldCollectionConfig...
     ) {
         self.path = path
         self.autoMigrate = autoMigrate
@@ -136,5 +136,26 @@ extension Database {
             .urls(for: .documentDirectory, in: .userDomainMask)[0]
             .appendingPathComponent("swiftdb.sqlite")
             .path
+    }
+}
+
+public enum SQLLogger {
+    case none
+    case print
+    case custom((String) -> Void)
+
+    func log(_ message: String) {
+        switch self {
+        case .print: Swift.print(message)
+        case .custom(let callback): callback(message)
+        case .none: break
+        }
+    }
+
+    var enabled: Bool {
+        if case .none = self {
+            return false
+        }
+        return true
     }
 }

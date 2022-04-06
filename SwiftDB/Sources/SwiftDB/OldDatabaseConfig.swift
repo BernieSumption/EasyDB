@@ -1,7 +1,9 @@
 import Foundation
 
+// TODO remove this file
+
 /// Used to configure a collection on a `Database`
-public struct CollectionConfig {
+public struct OldCollectionConfig {
     let type: Any.Type
     let typeId: ObjectIdentifier
     let tableName: String?
@@ -11,25 +13,25 @@ public struct CollectionConfig {
     public static func collection<T: Codable>(
         _ type: T.Type,
         tableName: String? = nil,
-        _ properties: PropertyConfig<T>...
-    ) -> CollectionConfig {
-        return CollectionConfig(
+        _ properties: OldPropertyConfig<T>...
+    ) -> OldCollectionConfig {
+        return OldCollectionConfig(
             type: type,
             typeId: ObjectIdentifier(type),
             tableName: tableName,
             untypedProperties: properties)
     }
 
-    func typedPropertyConfigs<T>(_ type: T.Type) throws -> [PropertyConfig<T>] {
-        guard let properties = untypedProperties as? [PropertyConfig<T>] else {
-            throw SwiftDBError.unexpected(message: "type mismatch in CollectionConfig: expected \(self.type) got \(type)")
+    func typedPropertyConfigs<T>(_ type: T.Type) throws -> [OldPropertyConfig<T>] {
+        guard let properties = untypedProperties as? [OldPropertyConfig<T>] else {
+            throw SwiftDBError.unexpected(message: "type mismatch in \(Self.self): expected \(self.type) got \(type)")
         }
         return properties
     }
 }
 
 /// Used to configure an index on a collection
-public struct PropertyConfig<Row: Codable>: Equatable {
+public struct OldPropertyConfig<Row: Codable>: Equatable {
     let keyPath: PartialCodableKeyPath<Row>
     let collation: Collation?
     let indices: [Index]
@@ -44,8 +46,8 @@ public struct PropertyConfig<Row: Codable>: Equatable {
         _ property: KeyPath<Row, T>,
         collation: Collation? = nil,
         _ indices: Index...
-    ) -> PropertyConfig {
-        return PropertyConfig(keyPath: PartialCodableKeyPath(property), collation: collation, indices: indices)
+    ) -> OldPropertyConfig {
+        return OldPropertyConfig(keyPath: PartialCodableKeyPath(property), collation: collation, indices: indices)
     }
 
     /// A convenience method used to create a single unique index or disable the default behaviour of
@@ -60,7 +62,7 @@ public struct PropertyConfig<Row: Codable>: Equatable {
         _ property: KeyPath<Row, T>,
         collation: Collation? = nil,
         unique: Bool
-    ) -> PropertyConfig {
+    ) -> OldPropertyConfig {
         return column(
             property,
             collation: collation,
@@ -85,30 +87,5 @@ public struct PropertyConfig<Row: Codable>: Equatable {
     enum IndexKind: Equatable {
         case index(unique: Bool, collation: Collation?)
         case noDefaultUniqueId
-    }
-}
-
-public protocol CustomTableName {
-    static var tableName: String { get }
-}
-
-public enum SQLLogger {
-    case none
-    case print
-    case custom((String) -> Void)
-
-    func log(_ message: String) {
-        switch self {
-        case .print: Swift.print(message)
-        case .custom(let callback): callback(message)
-        case .none: break
-        }
-    }
-
-    var enabled: Bool {
-        if case .none = self {
-            return false
-        }
-        return true
     }
 }

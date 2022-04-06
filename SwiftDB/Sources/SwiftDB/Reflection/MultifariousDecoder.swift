@@ -6,7 +6,7 @@ enum MultifariousDecoder {
     static func instances<T: Decodable>(for type: T.Type) throws -> [T] {
         do {
             let values = MultifariousValues()
-            let decoder = MultifariousDecoderImpl(values, codingPath: [])
+            let decoder = MultifariousDecoderImpl(values, codingPath: [], metadata: nil)
             var instances = [T]()
             while true {
                 instances.append(try decodeHelper(T.self, from: decoder))
@@ -15,6 +15,18 @@ enum MultifariousDecoder {
                     return instances
                 }
             }
+        } catch InternalError.invalidRecordType(let message) {
+            throw ReflectionError.invalidRecordType(type, message)
+        }
+    }
+
+    static func metadata<T: Decodable>(for type: T.Type) throws -> TypeMetadata {
+        do {
+            let values = MultifariousValues()
+            let typeMetadata = TypeMetadata()
+            let decoder = MultifariousDecoderImpl(values, codingPath: [], metadata: typeMetadata)
+            _ = try decodeHelper(T.self, from: decoder)
+            return typeMetadata
         } catch InternalError.invalidRecordType(let message) {
             throw ReflectionError.invalidRecordType(type, message)
         }
@@ -28,36 +40,49 @@ private enum InternalError: Error {
 /// A `Decoder` that produces instances with values from a `MultifariousValues` instance
 private struct MultifariousDecoderImpl: Decoder {
     private let values: MultifariousValues
+    private let metadata: TypeMetadata?
     let codingPath: [CodingKey]
-    let userInfo = [CodingUserInfoKey: Any]()
+    let userInfo: [CodingUserInfoKey: Any]
 
-    init(_ values: MultifariousValues, codingPath: [CodingKey]) {
+    init(_ values: MultifariousValues, codingPath: [CodingKey], metadata: TypeMetadata?) {
         self.values = values
+        self.metadata = metadata
         self.codingPath = codingPath
+        if let metadata = metadata {
+            userInfo = [TypeMetadata.userInfoKey: metadata]
+        } else {
+            userInfo = [:]
+        }
     }
 
     func container<Key: CodingKey>(keyedBy type: Key.Type) throws -> KeyedDecodingContainer<Key> {
-        return KeyedDecodingContainer(KeyedContainer(values, codingPath: codingPath))
+        if codingPath.count > 0 {
+            metadata?.finishTopLevelProperty()
+        }
+        return KeyedDecodingContainer(KeyedContainer(values, codingPath: codingPath, metadata: metadata))
     }
 
     func unkeyedContainer() throws -> UnkeyedDecodingContainer {
-        return UnkeyedContainer(values, codingPath: codingPath)
+        metadata?.finishTopLevelProperty()
+        return UnkeyedContainer(values, codingPath: codingPath, metadata: metadata)
     }
 
     func singleValueContainer() throws -> SingleValueDecodingContainer {
-        return SingleValueContainer(values, codingPath: codingPath)
+        return SingleValueContainer(values, codingPath: codingPath, metadata: metadata)
     }
 }
 
 /// Keyed containers produce values for objects (structs and classes) and dictionaries.
 private struct KeyedContainer<Key: CodingKey>: KeyedDecodingContainerProtocol {
     private let values: MultifariousValues
+    private let metadata: TypeMetadata?
     let codingPath: [CodingKey]
 
-    init(_ values: MultifariousValues, codingPath: [CodingKey])
+    init(_ values: MultifariousValues, codingPath: [CodingKey], metadata: TypeMetadata?)
     {
         self.values = values
         self.codingPath = codingPath
+        self.metadata = metadata
     }
 
     var allKeys: [Key] {
@@ -82,12 +107,16 @@ private struct KeyedContainer<Key: CodingKey>: KeyedDecodingContainerProtocol {
         if let value = values.next(type) {
             return value
         }
+        if codingPath.count == 0 {
+            try metadata?.startTopLevelProperty(propertyName: key.stringValue)
+        }
         return try decodeHelper(T.self, from: decoderForKey(key))
     }
 
     func nestedContainer<NestedKey: CodingKey>(keyedBy type: NestedKey.Type, forKey key: Key) throws
         -> KeyedDecodingContainer<NestedKey>
     {
+        metadata?.finishTopLevelProperty()
         return try decoderForKey(key).container(keyedBy: type)
     }
 
@@ -96,15 +125,15 @@ private struct KeyedContainer<Key: CodingKey>: KeyedDecodingContainerProtocol {
     }
 
     func superDecoder() throws -> Decoder {
-        return decoderForKey(MultifariousKey("super"))
+        throw SwiftDBError.notImplemented(feature: "Class types or value types that use KeyedContainer.superDecoder()")
     }
 
     func superDecoder(forKey key: Key) throws -> Decoder {
-        return decoderForKey(key)
+        throw SwiftDBError.notImplemented(feature: "Class types or value types that use KeyedContainer.superDecoder()")
     }
 
     private func decoderForKey<K: CodingKey>(_ key: K) -> MultifariousDecoderImpl {
-        return MultifariousDecoderImpl(values, codingPath: self.codingPath + [key])
+        return MultifariousDecoderImpl(values, codingPath: self.codingPath + [key], metadata: metadata)
     }
 }
 
@@ -112,11 +141,13 @@ private struct KeyedContainer<Key: CodingKey>: KeyedDecodingContainerProtocol {
 private struct UnkeyedContainer: UnkeyedDecodingContainer {
     private let values: MultifariousValues
     let codingPath: [CodingKey]
+    private let metadata: TypeMetadata?
 
-    init(_ values: MultifariousValues, codingPath: [CodingKey])
+    init(_ values: MultifariousValues, codingPath: [CodingKey], metadata: TypeMetadata?)
     {
         self.values = values
         self.codingPath = codingPath
+        self.metadata = metadata
     }
 
     /// Unkeyed containers have 2 elements. This is because some types, e.g `[Date: String]`, expect a series
@@ -157,7 +188,7 @@ private struct UnkeyedContainer: UnkeyedDecodingContainer {
     mutating private func nextDecoder() -> MultifariousDecoderImpl {
         let key = MultifariousKey(currentIndex)
         currentIndex += 1
-        return MultifariousDecoderImpl(values, codingPath: self.codingPath + [key])
+        return MultifariousDecoderImpl(values, codingPath: self.codingPath + [key], metadata: metadata)
     }
 }
 
@@ -175,10 +206,12 @@ private func decodeHelper<T: Decodable, D: Decoder>(_ type: T.Type, from decoder
 struct SingleValueContainer: SingleValueDecodingContainer {
     private let values: MultifariousValues
     let codingPath: [CodingKey]
+    private let metadata: TypeMetadata?
 
-    init(_ values: MultifariousValues, codingPath: [CodingKey]) {
+    init(_ values: MultifariousValues, codingPath: [CodingKey], metadata: TypeMetadata?) {
         self.values = values
         self.codingPath = codingPath
+        self.metadata = metadata
     }
 
     func decodeNil() -> Bool {
@@ -186,6 +219,10 @@ struct SingleValueContainer: SingleValueDecodingContainer {
     }
 
     func decode<T: Decodable>(_ type: T.Type) throws -> T {
+        if type is MetadataAnnotation.Type {
+            let nextDecoder = MultifariousDecoderImpl(values, codingPath: codingPath, metadata: metadata)
+            return try decodeHelper(type, from: nextDecoder)
+        }
         guard let value = values.next(type) else {
             throw ReflectionError.noValues(type)
         }

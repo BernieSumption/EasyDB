@@ -15,7 +15,7 @@ public class Collection<Row: Codable>: Filterable, DefaultCollations {
     internal init(
         _ type: Row.Type,
         _ database: Database,
-        _ config: CollectionConfig?,
+        _ config: OldCollectionConfig?,
         idProperty: PartialCodableKeyPath<Row>?
     ) throws {
         self.database = database
@@ -175,6 +175,10 @@ public enum OnConflict {
 
 protocol DefaultCollations {
     func defaultCollation(for columnKeyPath: AnyKeyPath) -> Collation
+}
+
+public protocol CustomTableName {
+    static var tableName: String { get }
 }
 
 func defaultTableName<T>(for type: T.Type) -> String {
