@@ -10,7 +10,7 @@ public class Collection<Row: Codable>: Filterable, DefaultCollations {
     let mapper: KeyPathMapper<Row>
     let defaultCollations: [AnyKeyPath: Collation]
 
-    private let indices: [Index]
+    private let indices: [IndexSpec]
 
     internal init(
         _ type: Row.Type,
@@ -34,7 +34,7 @@ public class Collection<Row: Codable>: Filterable, DefaultCollations {
         self.defaultCollations = defaultCollations
 
         var disableDefaultIdIndex = false
-        var indices = [Index]()
+        var indices = [IndexSpec]()
         var configuredColumns = Set<[String]>()
         for property in propertyConfigs {
             let propertyPath = try mapper.propertyPath(for: property.keyPath)
@@ -48,8 +48,8 @@ public class Collection<Row: Codable>: Filterable, DefaultCollations {
                     disableDefaultIdIndex = true
                 case .index(unique: let unique, collation: let collation):
                     let collation = collation ?? defaultCollations[property.keyPath.cacheKey] ?? .string
-                    let index = Index(
-                        [Index.Part(propertyPath, collation: collation)],
+                    let index = IndexSpec(
+                        [IndexSpec.Part(propertyPath, collation: collation)],
                         unique: unique)
                     indices.append(index)
                     if index.parts.map(\.path) == [["id"]] {
@@ -60,7 +60,7 @@ public class Collection<Row: Codable>: Filterable, DefaultCollations {
         }
         if !disableDefaultIdIndex, let idProperty = idProperty {
             let idPath = try mapper.propertyPath(for: idProperty)
-            let index = Index([Index.Part(idPath, collation: .string)], unique: true)
+            let index = IndexSpec([IndexSpec.Part(idPath, collation: .string)], unique: true)
             indices.append(index)
         }
         self.indices = indices
@@ -68,7 +68,7 @@ public class Collection<Row: Codable>: Filterable, DefaultCollations {
 
     struct Config: Equatable {
         var tableName: String?
-        var indices = [Index]()
+        var indices = [IndexSpec]()
     }
 
     /// Create the table if required, and add missing columns

@@ -33,29 +33,114 @@ class TypeMetadata {
     static let userInfoKey = CodingUserInfoKey(rawValue: String(describing: TypeMetadata.self))!
 }
 
-enum PropertyConfig: Equatable {
+public enum PropertyConfig: Equatable {
     case collation(Collation)
     case index(unique: Bool)
-    case additionalIndex(unique: Bool, Collation)
     case noDefaultUniqueId
 }
 
-@propertyWrapper
-public struct Collate<Value: Codable>: Codable, MetadataAnnotation {
-    public var wrappedValue: Value
+public protocol IsConfigurationAnnotation {}
 
-    public func encode(to encoder: Encoder) throws {
+public protocol ConfigurationAnnotation: Codable, IsConfigurationAnnotation {
+    associatedtype Value: Codable
+
+    var wrappedValue: Value { get set }
+
+    init(wrappedValue: Value)
+
+    static var propertyConfig: PropertyConfig { get }
+}
+
+public extension ConfigurationAnnotation {
+    func encode(to encoder: Encoder) throws {
         var container = encoder.singleValueContainer()
         try container.encode(wrappedValue)
     }
 
-    public init(from decoder: Decoder) throws {
+    init(from decoder: Decoder) throws {
         if let typeMetadata = decoder.userInfo[TypeMetadata.userInfoKey] as? TypeMetadata {
-            try typeMetadata.addPropertyConfig(.collation(.caseInsensitive))
+            try typeMetadata.addPropertyConfig(Self.propertyConfig)
         }
         let container = try decoder.singleValueContainer()
-        wrappedValue = try container.decode(Value.self)
+        self.init(wrappedValue: try container.decode(Value.self))
     }
 }
 
-protocol MetadataAnnotation {}
+@propertyWrapper
+public struct CollateCaseInsensitive<Value: Codable>: ConfigurationAnnotation {
+    public var wrappedValue: Value
+
+    public init(wrappedValue: Value) {
+        self.wrappedValue = wrappedValue
+    }
+
+    public static var propertyConfig: PropertyConfig {
+        return .collation(.caseInsensitive)
+    }
+}
+
+@propertyWrapper
+public struct CollateLocalized<Value: Codable>: ConfigurationAnnotation {
+    public var wrappedValue: Value
+
+    public init(wrappedValue: Value) {
+        self.wrappedValue = wrappedValue
+    }
+
+    public static var propertyConfig: PropertyConfig {
+        return .collation(.localized)
+    }
+}
+
+@propertyWrapper
+public struct CollateLocalizedCaseInsensitive<Value: Codable>: ConfigurationAnnotation {
+    public var wrappedValue: Value
+
+    public init(wrappedValue: Value) {
+        self.wrappedValue = wrappedValue
+    }
+
+    public static var propertyConfig: PropertyConfig {
+        return .collation(.localizedCaseInsensitive)
+    }
+}
+
+@propertyWrapper
+public struct Unique<Value: Codable>: ConfigurationAnnotation {
+    public var wrappedValue: Value
+
+    public init(wrappedValue: Value) {
+        self.wrappedValue = wrappedValue
+    }
+
+    public static var propertyConfig: PropertyConfig {
+        return .index(unique: true)
+    }
+}
+
+@propertyWrapper
+public struct Index<Value: Codable>: ConfigurationAnnotation {
+    public var wrappedValue: Value
+
+    public init(wrappedValue: Value) {
+        self.wrappedValue = wrappedValue
+    }
+
+    public static var propertyConfig: PropertyConfig {
+        return .index(unique: true)
+    }
+}
+
+/// Disable the default behaviour of applying a unique index to the `id` column of an `Identifiable` collection
+@propertyWrapper
+public struct NotUnique<Value: Codable>: ConfigurationAnnotation {
+    public var wrappedValue: Value
+
+    public init(wrappedValue: Value) {
+        self.wrappedValue = wrappedValue
+    }
+
+    public static var propertyConfig: PropertyConfig {
+        return .noDefaultUniqueId
+    }
+}

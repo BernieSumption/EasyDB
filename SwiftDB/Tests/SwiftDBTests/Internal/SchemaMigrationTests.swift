@@ -52,8 +52,8 @@ class SchemaMigrationTests: SwiftDBTestCase {
         // Add an index
         try sm.addIndex(
             table: "foo",
-            Index([
-                Index.Part(["d"], collation: nil, .ascending)
+            IndexSpec([
+                IndexSpec.Part(["d"], collation: nil, .ascending)
             ])
         )
         XCTAssertEqual(
@@ -64,8 +64,8 @@ class SchemaMigrationTests: SwiftDBTestCase {
         // add another
         try sm.addIndex(
             table: "foo",
-            Index([
-                Index.Part(["c"], collation: .caseInsensitive)
+            IndexSpec([
+                IndexSpec.Part(["c"], collation: .caseInsensitive)
             ])
         )
         XCTAssertEqual(
@@ -77,9 +77,9 @@ class SchemaMigrationTests: SwiftDBTestCase {
         try sm.ensureTableExists(table: "bar", columns: ["x", "y"])
         try sm.addIndex(
             table: "bar",
-            Index([
-                Index.Part(["x"], collation: nil),
-                Index.Part(["y"], collation: nil, .descending)
+            IndexSpec([
+                IndexSpec.Part(["x"], collation: nil),
+                IndexSpec.Part(["y"], collation: nil, .descending)
             ])
         )
         XCTAssertEqual(
@@ -112,8 +112,8 @@ class SchemaMigrationTests: SwiftDBTestCase {
         try sm.migrateIndices(
             table: "bar",
             indices: [
-                Index([
-                    Index.Part(["x"], collation: nil)
+                IndexSpec([
+                    IndexSpec.Part(["x"], collation: nil)
                 ])
             ])
         XCTAssertEqual(
@@ -124,12 +124,12 @@ class SchemaMigrationTests: SwiftDBTestCase {
         try sm.migrateIndices(
             table: "foo",
             indices: [
-                Index([
-                    Index.Part(["b"], collation: nil, .ascending)
+                IndexSpec([
+                    IndexSpec.Part(["b"], collation: nil, .ascending)
                 ]),
-                Index([
-                    Index.Part(["b"], collation: nil),
-                    Index.Part(["a"], collation: nil, .descending)
+                IndexSpec([
+                    IndexSpec.Part(["b"], collation: nil),
+                    IndexSpec.Part(["a"], collation: nil, .descending)
                 ])
             ])
         XCTAssertEqual(
@@ -140,12 +140,12 @@ class SchemaMigrationTests: SwiftDBTestCase {
         try sm.migrateIndices(
             table: "foo",
             indices: [
-                Index([
-                    Index.Part(["b"], collation: nil)
+                IndexSpec([
+                    IndexSpec.Part(["b"], collation: nil)
                 ]),
-                Index([
-                    Index.Part(["b"], collation: nil),
-                    Index.Part(["a"], collation: nil, .descending)
+                IndexSpec([
+                    IndexSpec.Part(["b"], collation: nil),
+                    IndexSpec.Part(["a"], collation: nil, .descending)
                 ])
         ])
         XCTAssertEqual(
@@ -156,8 +156,8 @@ class SchemaMigrationTests: SwiftDBTestCase {
         try sm.migrateIndices(
             table: "foo",
             indices: [
-                Index([
-                    Index.Part(["c"], collation: nil)
+                IndexSpec([
+                    IndexSpec.Part(["c"], collation: nil)
                 ])
             ])
         XCTAssertEqual(try sm.getIndexNames(table: "foo"), ["foo-c"])
@@ -166,8 +166,8 @@ class SchemaMigrationTests: SwiftDBTestCase {
         try sm.migrateIndices(
             table: "foo",
             indices: [
-                Index([
-                    Index.Part(["c"], collation: nil)
+                IndexSpec([
+                    IndexSpec.Part(["c"], collation: nil)
                 ])
             ])
         XCTAssertEqual(
@@ -191,8 +191,8 @@ class SchemaMigrationTests: SwiftDBTestCase {
         try sm.migrateIndices(
             table: tableName,
             indices: [
-                Index([
-                    Index.Part([columnName], collation: nil)
+                IndexSpec([
+                    IndexSpec.Part([columnName], collation: nil)
                 ])
             ])
         XCTAssertEqual(

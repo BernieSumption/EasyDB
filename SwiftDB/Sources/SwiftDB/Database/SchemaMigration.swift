@@ -53,7 +53,7 @@ struct SchemaMigration {
     }
 
     /// Add an index to `table`
-    func addIndex(table: String, _ index: Index) throws {
+    func addIndex(table: String, _ index: IndexSpec) throws {
         try connection.execute(sql: index.createSQL(forTable: table))
     }
 
@@ -70,7 +70,7 @@ struct SchemaMigration {
     }
 
     /// Ensure that `table` has the defined set of indices
-    func migrateIndices(table: String, indices: [Index]) throws {
+    func migrateIndices(table: String, indices: [IndexSpec]) throws {
         let existingNames = Set(try getIndexNames(table: table))
         let expectedNames = Set(indices.map({ $0.name(forTable: table) }))
         let namesToDrop = existingNames.subtracting(expectedNames)
@@ -87,7 +87,7 @@ struct SchemaMigration {
     }
 }
 
-struct Index: Equatable {
+struct IndexSpec: Equatable {
     let parts: [Part]
     let unique: Bool
 

@@ -219,7 +219,7 @@ struct SingleValueContainer: SingleValueDecodingContainer {
     }
 
     func decode<T: Decodable>(_ type: T.Type) throws -> T {
-        if type is MetadataAnnotation.Type {
+        if type is IsConfigurationAnnotation.Type {
             let nextDecoder = MultifariousDecoderImpl(values, codingPath: codingPath, metadata: metadata)
             return try decodeHelper(type, from: nextDecoder)
         }
