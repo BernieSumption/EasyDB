@@ -71,12 +71,16 @@ class CollectionTests: SwiftDBTestCase {
     }
 
     func testDefaultColumnCollationIndex() throws {
-        db = Database(path: ":memory:", .collection(RowWithString.self, .column(\.string, unique: true)))
-        _ = try db.collection(RowWithString.self)
+        db = Database(path: ":memory:", .collection(DefaultColumnCollationIndex.self))
+        _ = try db.collection(DefaultColumnCollationIndex.self)
 
         // check that the index has been created with the correct collation
-        let sql = try db.execute(String.self, #"SELECT sql FROM sqlite_schema WHERE type = 'index' AND tbl_name = 'RowWithString'"#)
-        XCTAssertTrue(sql.contains("`string` COLLATE `string`"))
+        let sql = try db.execute(String.self, #"SELECT sql FROM sqlite_schema WHERE type = 'index' AND tbl_name = 'DefaultColumnCollationIndex'"#)
+        XCTAssertTrue(sql.contains("`myProp` COLLATE `string`"))
+    }
+
+    struct DefaultColumnCollationIndex: Codable, Equatable {
+        @Index var myProp: String
     }
 
     func testDefaultCollation() throws {

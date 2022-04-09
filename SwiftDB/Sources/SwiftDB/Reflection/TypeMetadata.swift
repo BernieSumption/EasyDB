@@ -41,8 +41,8 @@ public enum PropertyConfig: Equatable {
 
 public protocol IsConfigurationAnnotation {}
 
-public protocol ConfigurationAnnotation: Codable, IsConfigurationAnnotation {
-    associatedtype Value: Codable
+public protocol ConfigurationAnnotation: Codable, Equatable, IsConfigurationAnnotation {
+    associatedtype Value: Codable, Equatable
 
     var wrappedValue: Value { get set }
 
@@ -64,10 +64,14 @@ public extension ConfigurationAnnotation {
         let container = try decoder.singleValueContainer()
         self.init(wrappedValue: try container.decode(Value.self))
     }
+
+    static func == (lhs: Self, rhs: Self) -> Bool {
+        return lhs.wrappedValue == rhs.wrappedValue
+    }
 }
 
 @propertyWrapper
-public struct CollateCaseInsensitive<Value: Codable>: ConfigurationAnnotation {
+public struct CollateCaseInsensitive<Value: Codable & Equatable>: ConfigurationAnnotation {
     public var wrappedValue: Value
 
     public init(wrappedValue: Value) {
@@ -80,7 +84,7 @@ public struct CollateCaseInsensitive<Value: Codable>: ConfigurationAnnotation {
 }
 
 @propertyWrapper
-public struct CollateLocalized<Value: Codable>: ConfigurationAnnotation {
+public struct CollateLocalized<Value: Codable & Equatable>: ConfigurationAnnotation {
     public var wrappedValue: Value
 
     public init(wrappedValue: Value) {
@@ -93,7 +97,7 @@ public struct CollateLocalized<Value: Codable>: ConfigurationAnnotation {
 }
 
 @propertyWrapper
-public struct CollateLocalizedCaseInsensitive<Value: Codable>: ConfigurationAnnotation {
+public struct CollateLocalizedCaseInsensitive<Value: Codable & Equatable>: ConfigurationAnnotation {
     public var wrappedValue: Value
 
     public init(wrappedValue: Value) {
@@ -106,7 +110,7 @@ public struct CollateLocalizedCaseInsensitive<Value: Codable>: ConfigurationAnno
 }
 
 @propertyWrapper
-public struct Unique<Value: Codable>: ConfigurationAnnotation {
+public struct Unique<Value: Codable & Equatable>: ConfigurationAnnotation {
     public var wrappedValue: Value
 
     public init(wrappedValue: Value) {
@@ -119,7 +123,7 @@ public struct Unique<Value: Codable>: ConfigurationAnnotation {
 }
 
 @propertyWrapper
-public struct Index<Value: Codable>: ConfigurationAnnotation {
+public struct Index<Value: Codable & Equatable>: ConfigurationAnnotation {
     public var wrappedValue: Value
 
     public init(wrappedValue: Value) {
@@ -133,7 +137,7 @@ public struct Index<Value: Codable>: ConfigurationAnnotation {
 
 /// Disable the default behaviour of applying a unique index to the `id` column of an `Identifiable` collection
 @propertyWrapper
-public struct NotUnique<Value: Codable>: ConfigurationAnnotation {
+public struct NotUnique<Value: Codable & Equatable>: ConfigurationAnnotation {
     public var wrappedValue: Value
 
     public init(wrappedValue: Value) {

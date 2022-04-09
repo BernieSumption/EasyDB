@@ -8,7 +8,7 @@ public class Collection<Row: Codable>: Filterable, DefaultCollations {
     let database: Database
     let columns: [String]
     let mapper: KeyPathMapper<Row>
-    let defaultCollations: [AnyKeyPath: Collation]
+    let defaultCollations: [String: Collation]
 
     private let indices: [IndexSpec]
 
@@ -21,47 +21,39 @@ public class Collection<Row: Codable>: Filterable, DefaultCollations {
         self.database = database
         self.mapper = try KeyPathMapper.forType(type)
         self.columns = mapper.rootProperties
+        self.tableName = defaultTableName(for: Row.self)
 
-        let config = config ?? .collection(type)
-        let propertyConfigs = try config.typedPropertyConfigs(type)
+        let metadata = try MultifariousDecoder.metadata(for: type)
 
-        self.tableName = config.tableName ?? defaultTableName(for: Row.self)
-
-        var defaultCollations = [AnyKeyPath: Collation]()
-        for property in propertyConfigs {
-            defaultCollations[property.keyPath.cacheKey] = property.collation
-        }
-        self.defaultCollations = defaultCollations
-
-        var disableDefaultIdIndex = false
-        var indices = [IndexSpec]()
-        var configuredColumns = Set<[String]>()
-        for property in propertyConfigs {
-            let propertyPath = try mapper.propertyPath(for: property.keyPath)
-            if configuredColumns.contains(propertyPath) {
-                throw SwiftDBError.misuse(message: "Column \(self.tableName).\(propertyPath.joined(separator: ".")) has been configured more than once")
-            }
-            configuredColumns.insert(propertyPath)
-            for indexSpec in property.indices {
-                switch indexSpec.kind {
-                case .noDefaultUniqueId:
-                    disableDefaultIdIndex = true
-                case .index(unique: let unique, collation: let collation):
-                    let collation = collation ?? defaultCollations[property.keyPath.cacheKey] ?? .string
-                    let index = IndexSpec(
-                        [IndexSpec.Part(propertyPath, collation: collation)],
-                        unique: unique)
-                    indices.append(index)
-                    if index.parts.map(\.path) == [["id"]] {
-                        disableDefaultIdIndex = true
-                    }
+        var defaultCollations = [String: Collation]()
+        for property in mapper.rootProperties {
+            for config in metadata.getPropertyConfigs(property) {
+                if case .collation(let collation) = config {
+                    defaultCollations[property] = collation
                 }
             }
         }
-        if !disableDefaultIdIndex, let idProperty = idProperty {
+        self.defaultCollations = defaultCollations
+
+        var indices = [IndexSpec]()
+        for property in mapper.rootProperties {
+            for config in metadata.getPropertyConfigs(property) {
+                if case .index(let unique) = config {
+                    let collation = defaultCollations[property] ?? .string
+                    let index = IndexSpec(
+                        [IndexSpec.Part([property], collation: collation)],
+                        unique: unique)
+                    indices.append(index)
+                }
+            }
+        }
+        if let idProperty = idProperty {
             let idPath = try mapper.propertyPath(for: idProperty)
-            let index = IndexSpec([IndexSpec.Part(idPath, collation: .string)], unique: true)
-            indices.append(index)
+            let noDefaultUnique = metadata.getPropertyConfigs(idPath[0]).contains(.noDefaultUniqueId)
+            if !noDefaultUnique {
+                let index = IndexSpec([IndexSpec.Part(idPath, collation: .string)], unique: true)
+                indices.append(index)
+            }
         }
         self.indices = indices
     }
@@ -158,8 +150,9 @@ public class Collection<Row: Codable>: Filterable, DefaultCollations {
         return filter(sqlFragment, collation: nil)
     }
 
-    func defaultCollation(for columnKeyPath: AnyKeyPath) -> Collation {
-        return defaultCollations[columnKeyPath] ?? .string
+    func defaultCollation<T: Codable>(for property: PartialCodableKeyPath<T>) throws -> Collation {
+        let name = try property.nameExpression()
+        return defaultCollations[name] ?? .string
     }
 }
 
@@ -174,7 +167,7 @@ public enum OnConflict {
 }
 
 protocol DefaultCollations {
-    func defaultCollation(for columnKeyPath: AnyKeyPath) -> Collation
+    func defaultCollation<T: Codable>(for property: PartialCodableKeyPath<T>) throws -> Collation
 }
 
 public protocol CustomTableName {

@@ -65,7 +65,7 @@ public struct SQLFragment<Row: Codable>: ExpressibleByStringInterpolation {
                 return string
             case .property(let keyPath):
                 var result = try keyPath.nameExpression()
-                if let collation = overrideCollation ?? collations?.defaultCollation(for: keyPath.cacheKey) {
+                if let collation = try overrideCollation ?? collations?.defaultCollation(for: keyPath) {
                     result += " COLLATE "
                     result += SQL.quoteName(collation.name)
                 }
