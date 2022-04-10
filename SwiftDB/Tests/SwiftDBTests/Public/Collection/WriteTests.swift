@@ -72,7 +72,7 @@ class WriteTests: SwiftDBTestCase {
     }
 
     func testUpsertOfUnique() throws {
-        db = Database(path: ":memory:", .collection(HandleAndName.self, .column(\.handle, unique: true)))
+        db = Database(path: ":memory:")
         let r1 = HandleAndName(handle: "a", name: "r1")
         let r2 = HandleAndName(handle: "b", name: "r2")
         let c = try db.collection(HandleAndName.self)
@@ -94,7 +94,7 @@ class WriteTests: SwiftDBTestCase {
     }
 
     struct HandleAndName: Codable, Equatable {
-        var handle: String
+        @Unique var handle: String
         var name: String
     }
 

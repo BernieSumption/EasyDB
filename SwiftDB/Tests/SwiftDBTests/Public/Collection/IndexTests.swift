@@ -86,4 +86,40 @@ class IndexTests: SwiftDBTestCase {
     struct DisableAutoIndexForIdentifiable: Codable, Equatable, Identifiable {
         @NotUnique var id: UUID = UUID()
     }
+
+    func testNotUniqueIndexForIdentifiable() throws {
+        db = Database(path: ":memory:")
+        let c = try db.collection(NotUniqueIndexForIdentifiable.self)
+
+        let row = NotUniqueIndexForIdentifiable()
+
+        XCTAssertNoThrow(try c.insert([row, row]))
+
+        let indices = try dbIndexSQL()
+        XCTAssertEqual(indices.count, 1)
+    }
+
+    struct NotUniqueIndexForIdentifiable: Codable, Equatable, Identifiable {
+        @NotUnique @Index var id: UUID = UUID()
+    }
+
+    func testRegularIndexForIdentifiableIsUnique() throws {
+        db = Database(path: ":memory:")
+        let c = try db.collection(RegularIndexForIdentifiableIsUnique.self)
+
+        let row = RegularIndexForIdentifiableIsUnique()
+
+        try c.insert(row)
+
+        assertErrorMessage(
+            try c.insert(row),
+            contains: "UNIQUE constraint failed: RowWithIdUsingCodingKeys.altIdField")
+
+        let indices = try dbIndexSQL()
+        XCTAssertEqual(indices.count, 1)
+    }
+
+    struct RegularIndexForIdentifiableIsUnique: Codable, Equatable, Identifiable {
+        @Index var id: UUID = UUID()
+    }
 }

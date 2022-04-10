@@ -7,20 +7,8 @@ class CollectionTests: SwiftDBTestCase {
         XCTAssertTrue(try db.collection(Row.self) === db.collection(Row.self))
     }
 
-    func testCollectionConfiguration() throws {
-        db = Database(path: ":memory:",
-                      .collection(Row.self, tableName: "row"),
-                      .collection(Row.self, tableName: "row"))
-        assertErrorMessage(
-            try db.collection(Row.self),
-            contains: "Collection Row is configured twice"
-        )
-    }
-
     func testMigrateData() throws {
-        db = Database(path: ":memory:",
-                      .collection(V1.self, tableName: "x"),
-                      .collection(V2.self, tableName: "x"))
+        db = Database(path: ":memory:")
         let v1c = try db.collection(V1.self)
         try v1c.insert(V1(a: 4))
         try v1c.insert(V1(a: 5))
@@ -66,7 +54,7 @@ class CollectionTests: SwiftDBTestCase {
     let eWithAcute = "\u{00E9}" // "Latin Small Letter E with Acute"
 
     func testDefaultColumnCollation() throws {
-        db = Database(path: ":memory:", .collection(RowWithString.self))
+        db = Database(path: ":memory:")
         let c = try db.collection(RowWithString.self)
         try c.insert([RowWithString(eWithAcute), RowWithString(eWithAcuteCombining)])
 
@@ -75,7 +63,7 @@ class CollectionTests: SwiftDBTestCase {
     }
 
     func testDefaultCollationOnIndex() throws {
-        db = Database(path: ":memory:", .collection(DefaultCollationOnIndex.self))
+        db = Database(path: ":memory:")
         _ = try db.collection(DefaultCollationOnIndex.self)
 
         let sql = try dbIndexSQL().first ?? ""
@@ -113,5 +101,4 @@ class CollectionTests: SwiftDBTestCase {
     struct ColumnCollationOnIndex: Codable, Equatable {
         @CollateCaseInsensitive @Unique var value: String
     }
-
 }

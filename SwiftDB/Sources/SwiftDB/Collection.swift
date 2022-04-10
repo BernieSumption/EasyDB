@@ -15,7 +15,6 @@ public class Collection<Row: Codable>: Filterable, DefaultCollations {
     internal init(
         _ type: Row.Type,
         _ database: Database,
-        _ config: OldCollectionConfig?,
         idProperty: PartialCodableKeyPath<Row>?
     ) throws {
         self.database = database
