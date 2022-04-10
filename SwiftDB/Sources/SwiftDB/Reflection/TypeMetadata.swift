@@ -21,13 +21,43 @@ class TypeMetadata {
         guard let propertyName = currentPropertyName else {
             throw SwiftDBError.unexpected(message: "call to addPropertyConfig but no property is currently being encoded")
         }
-        var configs = getPropertyConfigs(propertyName)
+        var configs = propertyConfigs[propertyName] ?? []
         configs.append(config)
         propertyConfigs[propertyName] = configs
     }
 
-    func getPropertyConfigs(_ propertyName: String) -> [PropertyConfig] {
-        return propertyConfigs[propertyName] ?? []
+    func getPropertyConfigs(_ propertyName: String, isId: Bool) throws -> CombinedPropertyConfig {
+        var resultCollation: Collation?
+        var resultIndex = CombinedPropertyConfig.IndexKind.none
+
+        var noDefaultUniqueId: Bool = false
+        if let configs = propertyConfigs[propertyName] {
+            for config in configs {
+                switch config {
+                case .collation(let collation):
+                    if let resultCollation = resultCollation {
+                        throw SwiftDBError.misuse(message: "Multiple collations specified for \(propertyName) - \(resultCollation.name) then \(collation)")
+                    }
+                    resultCollation = collation
+                case .index(unique: let unique):
+                    if unique {
+                        resultIndex = .unique
+                    } else if resultIndex != .unique {
+                        resultIndex = .regular
+                    }
+                case .noDefaultUniqueId:
+                    noDefaultUniqueId = true
+                }
+            }
+        }
+
+        if resultIndex == .none && isId && !noDefaultUniqueId {
+            resultIndex = .unique
+        }
+
+        return CombinedPropertyConfig(
+            collation: resultCollation ?? .string,
+            index: resultIndex)
     }
 
     static let userInfoKey = CodingUserInfoKey(rawValue: String(describing: TypeMetadata.self))!
@@ -37,6 +67,15 @@ public enum PropertyConfig: Equatable {
     case collation(Collation)
     case index(unique: Bool)
     case noDefaultUniqueId
+}
+
+struct CombinedPropertyConfig {
+    let collation: Collation
+    let index: IndexKind
+
+    enum IndexKind {
+        case unique, regular, none
+    }
 }
 
 public protocol IsConfigurationAnnotation {}
