@@ -4,22 +4,33 @@ import SwiftDB
 class IndexTests: SwiftDBTestCase {
 
     func testUniqueIndex() throws {
-        db = Database(path: ":memory:", .collection(Row.self, .column(\.value, unique: true)))
+        db = Database(path: ":memory:")
         let c = try db.collection(Row.self)
-        try c.insert(Row(5))
+        try c.insert(Row(value: 5))
 
         assertErrorMessage(
-            try c.insert(Row(5)),
+            try c.insert(Row(value: 5)),
             contains: "UNIQUE constraint failed: Row.value")
 
-        XCTAssertNoThrow(try c.insert(Row(6)))
+        XCTAssertNoThrow(try c.insert(Row(value: 6)))
+
+        struct Row: Codable, Equatable {
+            @Unique var value: Int
+        }
     }
 
     func testRegularIndex() throws {
-        db = Database(path: ":memory:", .collection(Row.self, .column(\.value, .index())))
+        db = Database(path: ":memory:")
         let c = try db.collection(Row.self)
-        try c.insert(Row(5))
-        XCTAssertNoThrow(try c.insert(Row(5)))
+        try c.insert(Row(value: 5))
+        XCTAssertNoThrow(try c.insert(Row(value: 5)))
+
+        let sql = try dbIndexSQL().first ?? ""
+        XCTAssertTrue(sql.contains("CREATE INDEX `Row-value-string`"))
+
+        struct Row: Codable, Equatable {
+            @Index var value: Int
+        }
     }
 
     func testAutoIndexForIdentifiable() throws {
@@ -74,38 +85,5 @@ class IndexTests: SwiftDBTestCase {
 
     struct DisableAutoIndexForIdentifiable: Codable, Equatable, Identifiable {
         @NotUnique var id: UUID = UUID()
-    }
-
-    func testErrorIfColumnConfiguredTwice() throws {
-        db = Database(path: ":memory:",
-                      .collection(RowT<UUID>.self,
-                                  .column(\.value),
-                                  .column(\.value)))
-        assertErrorMessage(
-            try db.collection(RowT<UUID>.self),
-            "Column RowT.value has been configured more than once")
-    }
-
-    func testErrorIfIndexSpecifiedTwice() throws {
-        db = Database(path: ":memory:",
-                      .collection(RowT<UUID>.self,
-                                  .column(\.value, .index(unique: true), .index(unique: true))))
-        assertErrorMessage(
-            try db.collection(RowT<UUID>.self),
-            contains: "index RowT-unique-value-string already exists")
-    }
-
-    func testNoErrorOnNonDuplicateIndex() throws {
-        db = Database(path: ":memory:",
-                      .collection(RowT<UUID>.self,
-                                  .column(\.value,
-                                           .index(unique: true),
-                                           .index(unique: false),
-                                           .index(unique: true, collation: .caseInsensitive),
-                                           .index(unique: false, collation: .caseInsensitive),
-                                           .index(unique: true, collation: .localized),
-                                           .index(unique: false, collation: .localized))))
-        // should not throw
-        XCTAssertNoThrow(try db.collection(RowT<UUID>.self))
     }
 }

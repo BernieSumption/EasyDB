@@ -71,6 +71,19 @@ public extension ConfigurationAnnotation {
 }
 
 @propertyWrapper
+public struct CollateBinary<Value: Codable & Equatable>: ConfigurationAnnotation {
+    public var wrappedValue: Value
+
+    public init(wrappedValue: Value) {
+        self.wrappedValue = wrappedValue
+    }
+
+    public static var propertyConfig: PropertyConfig {
+        return .collation(.binary)
+    }
+}
+
+@propertyWrapper
 public struct CollateCaseInsensitive<Value: Codable & Equatable>: ConfigurationAnnotation {
     public var wrappedValue: Value
 
@@ -131,7 +144,7 @@ public struct Index<Value: Codable & Equatable>: ConfigurationAnnotation {
     }
 
     public static var propertyConfig: PropertyConfig {
-        return .index(unique: true)
+        return .index(unique: false)
     }
 }
 
