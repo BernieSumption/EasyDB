@@ -61,34 +61,19 @@ class IndexTests: SwiftDBTestCase {
     }
 
     func testDisableAutoIndexForIdentifiable() throws {
-        db = Database(path: ":memory:", .collection(RowWithId.self, .column(\.id, unique: false)))
-        let c = try db.collection(RowWithId.self)
+        db = Database(path: ":memory:")
+        let c = try db.collection(DisableAutoIndexForIdentifiable.self)
 
-        let row = RowWithId()
+        let row = DisableAutoIndexForIdentifiable()
 
         XCTAssertNoThrow(try c.insert([row, row]))
 
-        let indices = try db.execute([String].self, #"SELECT sql FROM sqlite_schema WHERE type = 'index'"#)
+        let indices = try dbIndexSQL()
         XCTAssertEqual(indices, [])
     }
 
-    func testNoUniqueId() throws {
-        db = Database(path: ":memory:", .collection(RowWithId.self, .column(\.id, .index(unique: false))))
-        let c = try db.collection(RowWithId.self)
-        let rowA = RowWithId()
-        try c.insert(rowA)
-        XCTAssertNoThrow(try c.insert(rowA))
-    }
-
-    func testIndexWithCollation() throws {
-        db = Database(path: ":memory:",
-                      .collection(RowT<UUID>.self, .column(\.value, collation: .caseInsensitive, unique: true)))
-        _ = try db.collection(RowT<UUID>.self)
-
-        let sql = try db.execute([String].self, #"SELECT sql FROM sqlite_schema WHERE type = 'index' AND tbl_name = 'RowT'"#)
-
-        XCTAssertEqual(sql.count, 1)
-        XCTAssertTrue(sql[0].contains("`value` COLLATE `caseInsensitive`"))
+    struct DisableAutoIndexForIdentifiable: Codable, Equatable, Identifiable {
+        @NotUnique var id: UUID = UUID()
     }
 
     func testErrorIfColumnConfiguredTwice() throws {

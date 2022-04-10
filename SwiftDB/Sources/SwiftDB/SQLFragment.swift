@@ -46,6 +46,10 @@ public struct SQLFragment<Row: Codable>: ExpressibleByStringInterpolation {
             parts.append(.property(PartialCodableKeyPath(property)))
         }
 
+        public mutating func appendInterpolation(literal sql: String) {
+            parts.append(.literal(sql))
+        }
+
         /// Insert a name such as a table name column name, quoted and escaped to avoid syntax errors if the name
         /// contains special characters
         public mutating func appendInterpolation(name: String) {
@@ -64,7 +68,7 @@ public struct SQLFragment<Row: Codable>: ExpressibleByStringInterpolation {
             case .literal(let string):
                 return string
             case .property(let keyPath):
-                var result = try keyPath.nameExpression()
+                var result = SQL.quoteName(try keyPath.requireSingleName())
                 if let collation = try overrideCollation ?? collations?.defaultCollation(for: keyPath) {
                     result += " COLLATE "
                     result += SQL.quoteName(collation.name)

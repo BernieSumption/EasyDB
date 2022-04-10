@@ -147,4 +147,12 @@ class SwiftDBTestCase: XCTestCase {
     func assertString(_ string: String, contains: String) {
         XCTAssertTrue(string.contains(contains), "\"\(string)\" does not contain \"\(contains)\"")
     }
+
+    func dbIndexSQL(table: String? = nil) throws -> [String] {
+        var sql = "SELECT sql FROM sqlite_schema WHERE type = 'index'"
+        if let table = table {
+            sql += " AND tbl_name = '\(table)'"
+        }
+        return try db.execute([String].self, "\(literal: sql)")
+    }
 }

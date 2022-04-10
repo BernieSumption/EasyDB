@@ -151,7 +151,7 @@ public class Collection<Row: Codable>: Filterable, DefaultCollations {
     }
 
     func defaultCollation<T: Codable>(for property: PartialCodableKeyPath<T>) throws -> Collation {
-        let name = try property.nameExpression()
+        let name = try property.requireSingleName()
         return defaultCollations[name] ?? .string
     }
 }

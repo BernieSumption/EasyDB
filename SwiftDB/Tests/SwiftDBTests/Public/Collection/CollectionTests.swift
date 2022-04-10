@@ -31,12 +31,16 @@ class CollectionTests: SwiftDBTestCase {
         let rows = try v2c.all().fetchMany()
         XCTAssertEqual(rows, [V2(a: 4, b: nil), V2(a: 5, b: nil), V2(a: 6, b: "yo")])
 
-        struct V1: Codable, Equatable {
+        struct V1: Codable, Equatable, CustomTableName {
             var a: Int
+
+            static let tableName = "x"
         }
-        struct V2: Codable, Equatable {
+        struct V2: Codable, Equatable, CustomTableName {
             var a: Int
             var b: String?
+
+            static let tableName = "x"
         }
     }
 
@@ -70,65 +74,44 @@ class CollectionTests: SwiftDBTestCase {
         XCTAssertEqual(all.count, 2)
     }
 
-    func testDefaultColumnCollationIndex() throws {
-        db = Database(path: ":memory:", .collection(DefaultColumnCollationIndex.self))
-        _ = try db.collection(DefaultColumnCollationIndex.self)
+    func testDefaultCollationOnIndex() throws {
+        db = Database(path: ":memory:", .collection(DefaultCollationOnIndex.self))
+        _ = try db.collection(DefaultCollationOnIndex.self)
 
-        // check that the index has been created with the correct collation
-        let sql = try db.execute(String.self, #"SELECT sql FROM sqlite_schema WHERE type = 'index' AND tbl_name = 'DefaultColumnCollationIndex'"#)
+        let sql = try dbIndexSQL().first ?? ""
         XCTAssertTrue(sql.contains("`myProp` COLLATE `string`"))
     }
-
-    struct DefaultColumnCollationIndex: Codable, Equatable {
+    struct DefaultCollationOnIndex: Codable, Equatable {
         @Index var myProp: String
     }
 
-    func testDefaultCollation() throws {
-        db = Database(path: ":memory:",
-                      .collection(RowWithString.self,
-                                  .column(\.string, collation: .caseInsensitive, unique: true)))
+    func testColumnCollationOnIndex() throws {
+        db = Database(path: ":memory:")
 
-        let c = try db.collection(RowWithString.self)
+        let c = try db.collection(ColumnCollationOnIndex.self)
 
-        try c.insert(RowWithString("a"))
-        try c.insert(RowWithString("B"))
-        try c.insert(RowWithString("c"))
+        try c.insert(ColumnCollationOnIndex(value: "B"))
+        try c.insert(ColumnCollationOnIndex(value: "a"))
+        try c.insert(ColumnCollationOnIndex(value: "c"))
 
+        // uniqueness-checking on insert should use column collation
         assertErrorMessage(
-            try c.insert(RowWithString("A")),
-            contains: "UNIQUE constraint failed: RowWithString.string")
+            try c.insert(ColumnCollationOnIndex(value: "A")),
+            contains: "UNIQUE constraint failed: ColumnCollationOnIndex.value")
 
+        // queries should use column collation
         XCTAssertEqual(
-            try c.filter(\.string, equalTo: "A").fetchOne(),
-            RowWithString("a"))
+            try c.filter(\.value, equalTo: "A").fetchOne()?.value,
+            "a")
 
+        // sorting should use column collation
         XCTAssertEqual(
-            try c.all().fetchMany().map(\.string),
+            try c.all().orderBy(\.value).fetchMany().map(\.value),
             ["a", "B", "c"])
     }
 
-    func testDefaultCollationX() throws {
-        db = Database(path: ":memory:",
-                      .collection(RowWithString.self,
-                                  .column(\.string, collation: .caseInsensitive, unique: true)))
-
-        let c = try db.collection(RowWithString.self)
-
-        try c.insert(RowWithString("a"))
-        try c.insert(RowWithString("B"))
-        try c.insert(RowWithString("c"))
-
-        assertErrorMessage(
-            try c.insert(RowWithString("A")),
-            contains: "UNIQUE constraint failed: RowWithString.string")
-
-        XCTAssertEqual(
-            try c.filter(\.string, equalTo: "A").fetchOne(),
-            RowWithString("a"))
-
-        XCTAssertEqual(
-            try c.all().fetchMany().map(\.string),
-            ["a", "B", "c"])
+    struct ColumnCollationOnIndex: Codable, Equatable {
+        @CollateCaseInsensitive @Unique var value: String
     }
 
 }

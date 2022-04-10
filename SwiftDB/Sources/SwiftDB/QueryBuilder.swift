@@ -164,7 +164,7 @@ public struct QueryBuilder<Row: Codable>: Filterable {
         case .selectProperty(let keyPath):
             sql = sql
                 .raw("SELECT")
-                .raw(try keyPath.nameExpression())
+                .quotedName(try keyPath.requireSingleName())
                 .raw("FROM")
                 .quotedName(collection.tableName)
         case .selectProperties(let properties):
