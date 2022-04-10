@@ -30,7 +30,7 @@ class InternalCollectionTests: SwiftDBTestCase {
         let c = try db.collection(ExplicitDefaultCollectionCollationUsedInSQL.self)
 
         // index created with "binary" collation
-        assertString(sql, contains: "CREATE INDEX `Row-value-binary` ON `Row` ( `value` COLLATE `binary` )")
+        assertString(sql, contains: "`value` COLLATE `binary`")
 
         // "binary" collation used in filter and order by
         _ = try c.filter(\.value, equalTo: 4).orderBy(\.value).fetchMany()

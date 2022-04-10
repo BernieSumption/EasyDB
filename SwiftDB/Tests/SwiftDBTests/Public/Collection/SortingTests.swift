@@ -55,23 +55,31 @@ class SortingTests: SwiftDBTestCase {
     }
 
     func testOrderByDefaultCollation() throws {
-        db = Database(path: ":memory:", .collection(RowT<String>.self, .column(\.value, collation: .caseInsensitive)))
+        db = Database(path: ":memory:")
 
-        try assertFilter(
-            ["a", "b", "C", "D"],
-            { $0.all().orderBy(\.value) },
+        let c = try db.collection(OrderByDefaultCollation.self)
+
+        try c.insert(OrderByDefaultCollation(value: "a"))
+        try c.insert(OrderByDefaultCollation(value: "b"))
+        try c.insert(OrderByDefaultCollation(value: "C"))
+        try c.insert(OrderByDefaultCollation(value: "D"))
+
+        XCTAssertEqual(
+            try c.all().orderBy(\.value).fetchMany().map(\.value),
             ["a", "b", "C", "D"])
 
-        try assertFilter(
-            ["a", "b", "C", "D"],
-            { $0.all().orderBy("\(\.value)") },
+        XCTAssertEqual(
+            try c.all().orderBy("\(\.value)").fetchMany().map(\.value),
             ["a", "b", "C", "D"])
 
         // default collation can be overridden
-        try assertFilter(
-            ["a", "b", "C", "D"],
-            { $0.all().orderBy(\.value, collation: .binary) },
+        XCTAssertEqual(
+            try c.all().orderBy(\.value, collation: .binary).fetchMany().map(\.value),
             ["C", "D", "a", "b"])
+    }
+
+    struct OrderByDefaultCollation: Codable, Equatable {
+        @CollateCaseInsensitive @Unique var value: String
     }
 
     func testOrderByUnicodeCompare() throws {
