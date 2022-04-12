@@ -48,13 +48,34 @@ class TypeMetadataTests: XCTestCase {
             try MultifariousDecoder.metadata(for: ErrorOnSubStructAnnotation.self),
             contains: "Error decoding property sub.foo: configuration annotation @Unique encountered below the top level type")
     }
-
     struct ErrorOnSubStructAnnotation: Codable {
+        var sub: Sub
+
+        struct Sub: Codable, Equatable {
+            @Unique var foo: String
+        }
+    }
+
+    func testErrorOnSubStructNestedAnnotation() throws {
+        assertErrorMessage(
+            try MultifariousDecoder.metadata(for: ErrorOnSubStructNestedAnnotation.self),
+            contains: "Error decoding property sub.foo: configuration annotation @Unique encountered below the top level type")
+    }
+    struct ErrorOnSubStructNestedAnnotation: Codable {
         @Index var sub: Sub
 
         struct Sub: Codable, Equatable {
             @Unique var foo: String
         }
+    }
+
+    func testErrorOnDuplicateAnnotations() throws {
+        assertErrorMessage(
+            try MultifariousDecoder.metadata(for: ErrorOnDuplicateAnnotations.self),
+            contains: "Error decoding property foo: duplicate configuration annotation @NotUnique encountered")
+    }
+    struct ErrorOnDuplicateAnnotations: Codable {
+        @NotUnique @NotUnique var foo: Int
     }
 
     func testDefaultMetadata() throws {
@@ -108,6 +129,76 @@ class TypeMetadataTests: XCTestCase {
                 .collation(.binary)
             ]),
             contains: "Multiple collations specified for myProperty - caseInsensitive then binary")
+    }
+
+    func testUniqueBeatsIndex() {
+        XCTAssertEqual(
+            try combineConfigs([
+                .index(unique: false),
+                .index(unique: true)
+            ]).index,
+            .unique)
+
+        XCTAssertEqual(
+            try combineConfigs([
+                .index(unique: true),
+                .index(unique: false)
+            ]).index,
+            .unique)
+    }
+
+    func testUniqueId() {
+        // var id with no annotation
+        XCTAssertEqual(
+            try combineConfigs([], isId: true).index,
+            .unique)
+
+        // @Index var id
+        XCTAssertEqual(
+            try combineConfigs([
+                .index(unique: false)
+            ], isId: true).index,
+            .unique)
+
+        // @Unique var id
+        XCTAssertEqual(
+            try combineConfigs([
+                .index(unique: true)
+            ], isId: true).index,
+            .unique)
+
+        // @NotUnique var id
+        XCTAssertEqual(
+            try combineConfigs([
+                .noDefaultUniqueId
+            ]).index,
+            nil)
+
+        // @NotUnique @Index var id
+        XCTAssertEqual(
+            try combineConfigs([
+                .noDefaultUniqueId,
+                .index(unique: false)
+            ]).index,
+            .regular)
+    }
+
+    func testErrorOnConflictingAnnotations() {
+        assertErrorMessage(
+            // @NotUnique @Unique
+            try combineConfigs([
+                .noDefaultUniqueId,
+                .index(unique: true)
+            ]),
+            contains: "both @Unique and @NotUnique specified")
+
+        assertErrorMessage(
+            // @Unique @NotUnique
+            try combineConfigs([
+                .index(unique: true),
+                .noDefaultUniqueId
+            ]),
+            contains: "both @Unique and @NotUnique specified")
     }
 }
 

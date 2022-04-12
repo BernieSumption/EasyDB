@@ -28,6 +28,11 @@ class TypeMetadata {
             throw TypeMetadataError.notAtRootLevel
         }
         var configs = propertyConfigs[propertyName] ?? []
+
+        if configs.contains(config) {
+            throw TypeMetadataError.duplicate
+        }
+
         configs.append(config)
         propertyConfigs[propertyName] = configs
     }
@@ -75,6 +80,7 @@ class TypeMetadata {
 
 enum TypeMetadataError: Error {
     case notAtRootLevel
+    case duplicate
 }
 
 public enum PropertyConfig: Equatable {
@@ -114,12 +120,21 @@ public extension ConfigurationAnnotation {
         if let typeMetadata = decoder.userInfo[TypeMetadata.userInfoKey] as? TypeMetadata {
             do {
                 try typeMetadata.addPropertyConfig(Self.propertyConfig)
-            } catch TypeMetadataError.notAtRootLevel {
+            } catch let error as TypeMetadataError {
                 var annotationName = String(describing: Self.self)
                 if let index = annotationName.firstIndex(of: "<") {
                     annotationName = String(annotationName[annotationName.startIndex..<index])
                 }
-                throw SwiftDBError.codingError(message: "configuration annotation @\(annotationName) encountered below the top level type", codingPath: decoder.codingPath)
+                switch error {
+                case .notAtRootLevel:
+                    throw SwiftDBError.codingError(
+                        message: "configuration annotation @\(annotationName) encountered below the top level type",
+                        codingPath: decoder.codingPath)
+                case .duplicate:
+                    throw SwiftDBError.codingError(
+                        message: "duplicate configuration annotation @\(annotationName) encountered",
+                        codingPath: decoder.codingPath)
+                }
             }
         }
         let container = try decoder.singleValueContainer()
