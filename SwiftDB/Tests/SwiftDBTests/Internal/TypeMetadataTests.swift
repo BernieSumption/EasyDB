@@ -4,6 +4,59 @@ import XCTest
 
 class TypeMetadataTests: XCTestCase {
 
+    func testSingleAnnotation() throws {
+        XCTAssertEqual(
+            try MultifariousDecoder.metadata(for: SingleAnnotation.self).getConfigs("x"),
+            [
+                .index(unique: true)
+            ])
+    }
+    struct SingleAnnotation: Codable {
+        @Unique var x: Int
+    }
+
+    func testTwoAnnotations() throws {
+        XCTAssertEqual(
+            try MultifariousDecoder.metadata(for: TwoAnnotations.self).getConfigs("x"),
+            [
+                .index(unique: false),
+                .noDefaultUniqueId
+            ])
+    }
+    struct TwoAnnotations: Codable {
+        @Index @NotUnique var x: Int
+    }
+
+    func testTwoAnnotationsOnSub() throws {
+        XCTAssertEqual(
+            try MultifariousDecoder.metadata(for: TwoAnnotationsOnSub.self).getConfigs("sub"),
+            [
+                .index(unique: false),
+                .noDefaultUniqueId
+            ])
+    }
+    struct TwoAnnotationsOnSub: Codable {
+        @Index @NotUnique var sub: Sub
+
+        struct Sub: Codable, Equatable {
+            var foo: String
+        }
+    }
+
+    func testErrorOnSubStructAnnotation() throws {
+        assertErrorMessage(
+            try MultifariousDecoder.metadata(for: ErrorOnSubStructAnnotation.self),
+            contains: "Error decoding property sub.foo: configuration annotation @Unique encountered below the top level type")
+    }
+
+    struct ErrorOnSubStructAnnotation: Codable {
+        @Index var sub: Sub
+
+        struct Sub: Codable, Equatable {
+            @Unique var foo: String
+        }
+    }
+
     func testDefaultMetadata() throws {
         XCTAssertEqual(
             try combineConfigs([]),

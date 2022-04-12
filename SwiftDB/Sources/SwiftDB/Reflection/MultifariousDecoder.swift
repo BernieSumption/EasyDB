@@ -107,10 +107,15 @@ private struct KeyedContainer<Key: CodingKey>: KeyedDecodingContainerProtocol {
         if let value = values.next(type) {
             return value
         }
-        if codingPath.count == 0 {
+        let isTopLevelProperty = codingPath.count == 0
+        if isTopLevelProperty {
             try metadata?.startTopLevelProperty(propertyName: key.stringValue)
         }
-        return try decodeHelper(T.self, from: decoderForKey(key))
+        let result = try decodeHelper(T.self, from: decoderForKey(key))
+        if isTopLevelProperty {
+            metadata?.finishTopLevelProperty()
+        }
+        return result
     }
 
     func nestedContainer<NestedKey: CodingKey>(keyedBy type: NestedKey.Type, forKey key: Key) throws
@@ -121,6 +126,7 @@ private struct KeyedContainer<Key: CodingKey>: KeyedDecodingContainerProtocol {
     }
 
     func nestedUnkeyedContainer(forKey key: Key) throws -> UnkeyedDecodingContainer {
+        metadata?.finishTopLevelProperty()
         return try decoderForKey(key).unkeyedContainer()
     }
 
@@ -219,14 +225,14 @@ struct SingleValueContainer: SingleValueDecodingContainer {
     }
 
     func decode<T: Decodable>(_ type: T.Type) throws -> T {
-        if type is IsConfigurationAnnotation.Type {
-            let nextDecoder = MultifariousDecoderImpl(values, codingPath: codingPath, metadata: metadata)
-            return try decodeHelper(type, from: nextDecoder)
+        if let value = values.next(type) {
+            return value
         }
-        guard let value = values.next(type) else {
-            throw ReflectionError.noValues(type)
+        if !(type is IsConfigurationAnnotation.Type) {
+            metadata?.finishTopLevelProperty()
         }
-        return value
+        let nextDecoder = MultifariousDecoderImpl(values, codingPath: codingPath, metadata: metadata)
+        return try decodeHelper(type, from: nextDecoder)
     }
 }
 

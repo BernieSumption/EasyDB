@@ -1,5 +1,6 @@
 class TypeMetadata {
     private var propertyConfigs = [String: [PropertyConfig]]()
+    private var lastPropertyName: String?
     private var currentPropertyName: String?
 
     /// Called we start encoding a top-level property on a type
@@ -13,17 +14,26 @@ class TypeMetadata {
     /// Called we finish encoding a top-level property on a type - i.e. when we have finished the chain of single value
     /// encoding containers that correspond to metadata annotations property wrappers like @Index or @Unique
     func finishTopLevelProperty() {
+        if let currentPropertyName = currentPropertyName {
+            lastPropertyName = currentPropertyName
+        }
         currentPropertyName = nil
     }
 
     /// Add a config to the current property
+    ///
+    /// - Throws: `TypeMetadataError.notAtRootLevel` if we're not encoding a root property
     public func addPropertyConfig(_ config: PropertyConfig) throws {
         guard let propertyName = currentPropertyName else {
-            throw SwiftDBError.unexpected(message: "call to addPropertyConfig but no property is currently being encoded")
+            throw TypeMetadataError.notAtRootLevel
         }
         var configs = propertyConfigs[propertyName] ?? []
         configs.append(config)
         propertyConfigs[propertyName] = configs
+    }
+
+    func getConfigs(_ propertyName: String) -> [PropertyConfig] {
+        return propertyConfigs[propertyName] ?? []
     }
 
     func getCombinedConfig(_ propertyName: String, isId: Bool) throws -> CombinedPropertyConfig {
@@ -63,6 +73,10 @@ class TypeMetadata {
     static let userInfoKey = CodingUserInfoKey(rawValue: String(describing: TypeMetadata.self))!
 }
 
+enum TypeMetadataError: Error {
+    case notAtRootLevel
+}
+
 public enum PropertyConfig: Equatable {
     case collation(Collation)
     case index(unique: Bool)
@@ -98,7 +112,15 @@ public extension ConfigurationAnnotation {
 
     init(from decoder: Decoder) throws {
         if let typeMetadata = decoder.userInfo[TypeMetadata.userInfoKey] as? TypeMetadata {
-            try typeMetadata.addPropertyConfig(Self.propertyConfig)
+            do {
+                try typeMetadata.addPropertyConfig(Self.propertyConfig)
+            } catch TypeMetadataError.notAtRootLevel {
+                var annotationName = String(describing: Self.self)
+                if let index = annotationName.firstIndex(of: "<") {
+                    annotationName = String(annotationName[annotationName.startIndex..<index])
+                }
+                throw SwiftDBError.codingError(message: "configuration annotation @\(annotationName) encountered below the top level type", codingPath: decoder.codingPath)
+            }
         }
         let container = try decoder.singleValueContainer()
         self.init(wrappedValue: try container.decode(Value.self))

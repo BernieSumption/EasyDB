@@ -33,7 +33,7 @@ public enum SwiftDBError: Error, CustomStringConvertible {
             return "No row data is available to read"
         case .codingError(let message, let codingPath):
             let path = codingPath.map(\.stringValue).joined(separator: ".")
-            return "Decoding error: \(message) at \(path)"
+            return "Error decoding property \(path): \(message)"
         case .unexpected(let message):
             return "Internal error: \(message) - this is a bug in SwiftDB that should be reported"
         case .notImplemented(let feature):
