@@ -56,11 +56,21 @@ class TypeMetadata {
                     resultCollation = collation
                 case .index(unique: let unique):
                     if unique {
+                        if noDefaultUniqueId {
+                            throw SwiftDBError.misuse(message: "both @NotUnique and @Unique specified")
+                        }
                         resultIndex = .unique
                     } else if resultIndex != .unique {
                         resultIndex = .regular
                     }
                 case .noDefaultUniqueId:
+                    if !isId {
+                        let annotationName = typeNameWithoutGenerics(NotUnique<Int>.self)
+                        throw SwiftDBError.misuse(message: "@\(annotationName) can only be applied to the id property of an Identifiable type")
+                    }
+                    if resultIndex == .unique {
+                        throw SwiftDBError.misuse(message: "both @Unique and @NotUnique specified")
+                    }
                     noDefaultUniqueId = true
                 }
             }
@@ -81,6 +91,15 @@ class TypeMetadata {
 enum TypeMetadataError: Error {
     case notAtRootLevel
     case duplicate
+
+    func message(annotationName: String) -> String {
+        switch self {
+        case .notAtRootLevel:
+            return "configuration annotation @\(annotationName) encountered below the top level type"
+        case .duplicate:
+            return "duplicate configuration annotation @\(annotationName) encountered"
+        }
+    }
 }
 
 public enum PropertyConfig: Equatable {
@@ -121,20 +140,10 @@ public extension ConfigurationAnnotation {
             do {
                 try typeMetadata.addPropertyConfig(Self.propertyConfig)
             } catch let error as TypeMetadataError {
-                var annotationName = String(describing: Self.self)
-                if let index = annotationName.firstIndex(of: "<") {
-                    annotationName = String(annotationName[annotationName.startIndex..<index])
-                }
-                switch error {
-                case .notAtRootLevel:
-                    throw SwiftDBError.codingError(
-                        message: "configuration annotation @\(annotationName) encountered below the top level type",
-                        codingPath: decoder.codingPath)
-                case .duplicate:
-                    throw SwiftDBError.codingError(
-                        message: "duplicate configuration annotation @\(annotationName) encountered",
-                        codingPath: decoder.codingPath)
-                }
+                var annotationName = typeNameWithoutGenerics(Self.self)
+                throw SwiftDBError.codingError(
+                    message: error.message(annotationName: annotationName),
+                    codingPath: decoder.codingPath)
             }
         }
         let container = try decoder.singleValueContainer()
@@ -144,6 +153,14 @@ public extension ConfigurationAnnotation {
     static func == (lhs: Self, rhs: Self) -> Bool {
         return lhs.wrappedValue == rhs.wrappedValue
     }
+}
+
+func typeNameWithoutGenerics<T>(_ type: T.Type) -> String {
+    let name = String(describing: type)
+    if let index = name.firstIndex(of: "<") {
+        return String(name[name.startIndex..<index])
+    }
+    return name
 }
 
 @propertyWrapper

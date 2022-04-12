@@ -171,7 +171,7 @@ class TypeMetadataTests: XCTestCase {
         XCTAssertEqual(
             try combineConfigs([
                 .noDefaultUniqueId
-            ]).index,
+            ], isId: true).index,
             nil)
 
         // @NotUnique @Index var id
@@ -179,8 +179,17 @@ class TypeMetadataTests: XCTestCase {
             try combineConfigs([
                 .noDefaultUniqueId,
                 .index(unique: false)
-            ]).index,
+            ], isId: true).index,
             .regular)
+    }
+
+    func testErrorWhenNotUniqueAppliedToNonId() throws {
+        assertErrorMessage(
+            try MultifariousDecoder.metadata(for: ErrorWhenNotUniqueAppliedToNonId.self).getCombinedConfig("foo", isId: false),
+            contains: "@NotUnique can only be applied to the id property of an Identifiable type")
+    }
+    struct ErrorWhenNotUniqueAppliedToNonId: Codable {
+        @NotUnique var foo: Int
     }
 
     func testErrorOnConflictingAnnotations() {
@@ -189,16 +198,60 @@ class TypeMetadataTests: XCTestCase {
             try combineConfigs([
                 .noDefaultUniqueId,
                 .index(unique: true)
-            ]),
-            contains: "both @Unique and @NotUnique specified")
+            ], isId: true),
+            contains: "both @NotUnique and @Unique specified")
 
         assertErrorMessage(
             // @Unique @NotUnique
             try combineConfigs([
                 .index(unique: true),
                 .noDefaultUniqueId
-            ]),
+            ], isId: true),
             contains: "both @Unique and @NotUnique specified")
+    }
+
+    func testJSONCodingWithAnnotations() throws {
+        let instance = JSONCodingWithAnnotations(
+            id: UUID(uuid: (0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 1)),
+            x: 3,
+            f16: 4.5,
+            foo: "bar",
+            sub: .init(s: "s!"))
+        let encoder = JSONEncoder()
+        encoder.outputFormatting = .prettyPrinted
+
+        let jsonData = try encoder.encode(instance)
+        let json = String(decoding: jsonData, as: UTF8.self)
+
+        XCTAssertEqual(
+            json,
+            """
+            {
+              "foo" : "bar",
+              "id" : "00000000-0000-0000-0000-000000000001",
+              "f16" : 4.5,
+              "x" : 3,
+              "sub" : {
+                "s" : "s!"
+              }
+            }
+            """
+        )
+
+        let decoded = try JSONDecoder().decode(JSONCodingWithAnnotations.self, from: jsonData)
+
+        XCTAssertEqual(decoded, instance)
+    }
+    struct JSONCodingWithAnnotations: Codable, Identifiable, Equatable {
+        @NotUnique @Index var id: UUID
+        @Unique var x: Int
+        var f16: Float16
+        @CollateCaseInsensitive var foo: String
+        @CollateBinary var sub: Sub
+
+        struct Sub: Codable, Equatable {
+            let s: String
+        }
     }
 }
 
