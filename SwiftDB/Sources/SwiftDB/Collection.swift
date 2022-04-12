@@ -22,6 +22,10 @@ public class Collection<Row: Codable>: Filterable, DefaultCollations {
         self.columns = mapper.rootProperties
         self.tableName = defaultTableName(for: Row.self)
 
+        if columns.count == 0 {
+            throw SwiftDBError.misuse(message: "Can't create a collection of \"\(Row.self)\" - collection types must be structs with at least one property")
+        }
+
         let metadata = try MultifariousDecoder.metadata(for: type)
 
         let idPropertyName = try idProperty.map({ try $0.requireSingleName() })

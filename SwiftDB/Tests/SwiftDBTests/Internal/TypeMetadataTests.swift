@@ -46,7 +46,7 @@ class TypeMetadataTests: XCTestCase {
     func testErrorOnSubStructAnnotation() throws {
         assertErrorMessage(
             try MultifariousDecoder.metadata(for: ErrorOnSubStructAnnotation.self),
-            contains: "Error decoding property sub.foo: configuration annotation @Unique encountered below the top level type")
+            contains: "Error decoding property sub.foo: configuration property wrapper @Unique encountered below the top level type")
     }
     struct ErrorOnSubStructAnnotation: Codable {
         var sub: Sub
@@ -59,7 +59,7 @@ class TypeMetadataTests: XCTestCase {
     func testErrorOnSubStructNestedAnnotation() throws {
         assertErrorMessage(
             try MultifariousDecoder.metadata(for: ErrorOnSubStructNestedAnnotation.self),
-            contains: "Error decoding property sub.foo: configuration annotation @Unique encountered below the top level type")
+            contains: "Error decoding property sub.foo: configuration property wrapper @Unique encountered below the top level type")
     }
     struct ErrorOnSubStructNestedAnnotation: Codable {
         @Index var sub: Sub
@@ -72,7 +72,7 @@ class TypeMetadataTests: XCTestCase {
     func testErrorOnDuplicateAnnotations() throws {
         assertErrorMessage(
             try MultifariousDecoder.metadata(for: ErrorOnDuplicateAnnotations.self),
-            contains: "Error decoding property foo: duplicate configuration annotation @NotUnique encountered")
+            contains: "Error decoding property foo: duplicate configuration property wrapper @NotUnique encountered")
     }
     struct ErrorOnDuplicateAnnotations: Codable {
         @NotUnique @NotUnique var foo: Int
@@ -148,7 +148,7 @@ class TypeMetadataTests: XCTestCase {
     }
 
     func testUniqueId() {
-        // var id with no annotation
+        // var id with no property wrapper
         XCTAssertEqual(
             try combineConfigs([], isId: true).index,
             .unique)

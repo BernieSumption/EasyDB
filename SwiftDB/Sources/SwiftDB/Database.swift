@@ -42,7 +42,7 @@ public class Database {
     /// created or any missing columns added.
     ///
     /// By default, collections of identifiable types will be given a unique index for the `id` property. This behaviour
-    /// can be disabled in collection configuration
+    /// can be disabled with the `@NotUnique` configuration property wrapper
     public func collection<T: Codable & Identifiable>(
         _ type: T.Type
     ) throws -> Collection<T> where T.ID: Codable {

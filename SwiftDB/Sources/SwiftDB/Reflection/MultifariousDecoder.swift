@@ -86,7 +86,15 @@ private struct KeyedContainer<Key: CodingKey>: KeyedDecodingContainerProtocol {
     }
 
     var allKeys: [Key] {
-        /// This is used when decoding dictionaries - pretend that we have one string key with a unique value
+        // This is used when decoding dictionaries
+
+        // If we're at the root level, someone has tried to create a collection of a dictionary
+        // type, so make an empty dictionary so we can detect that it is invalid
+        if codingPath.count == 0 {
+            return []
+        }
+
+        // otherwise pretend that we have one string key with a unique value
         guard let value = values.next(String.self),
             let key = Key(stringValue: value)
         else {

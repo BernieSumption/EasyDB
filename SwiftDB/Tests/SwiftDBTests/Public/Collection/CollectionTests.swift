@@ -97,8 +97,21 @@ class CollectionTests: SwiftDBTestCase {
             try c.all().orderBy(\.value).fetchMany().map(\.value),
             ["a", "B", "c"])
     }
-
     struct ColumnCollationOnIndex: Codable, Equatable {
         @CollateCaseInsensitive @Unique var value: String
+    }
+
+    func testInvalidCollectionTypes() {
+        assertErrorMessage(
+            try db.collection(Int.self),
+            contains: #"Can't create a collection of "Int" - collection types must be structs with at least one property"#)
+
+        assertErrorMessage(
+            try db.collection([Int].self),
+            contains: #"Can't create a collection of "Array<Int>" - collection types must be structs with at least one property"#)
+
+        assertErrorMessage(
+            try db.collection([String: Int].self),
+            contains: #"Can't create a collection of "Dictionary<String, Int>" - collection types must be structs with at least one property"#)
     }
 }

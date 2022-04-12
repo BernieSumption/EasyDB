@@ -95,9 +95,9 @@ enum TypeMetadataError: Error {
     func message(annotationName: String) -> String {
         switch self {
         case .notAtRootLevel:
-            return "configuration annotation @\(annotationName) encountered below the top level type"
+            return "configuration property wrapper @\(annotationName) encountered below the top level type"
         case .duplicate:
-            return "duplicate configuration annotation @\(annotationName) encountered"
+            return "duplicate configuration property wrapper @\(annotationName) encountered"
         }
     }
 }
