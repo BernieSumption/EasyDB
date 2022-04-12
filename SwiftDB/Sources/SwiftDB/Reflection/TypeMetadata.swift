@@ -26,9 +26,9 @@ class TypeMetadata {
         propertyConfigs[propertyName] = configs
     }
 
-    func getPropertyConfigs(_ propertyName: String, isId: Bool) throws -> CombinedPropertyConfig {
+    func getCombinedConfig(_ propertyName: String, isId: Bool) throws -> CombinedPropertyConfig {
         var resultCollation: Collation?
-        var resultIndex = CombinedPropertyConfig.IndexKind.none
+        var resultIndex: CombinedPropertyConfig.IndexKind?
 
         var noDefaultUniqueId: Bool = false
         if let configs = propertyConfigs[propertyName] {
@@ -36,7 +36,7 @@ class TypeMetadata {
                 switch config {
                 case .collation(let collation):
                     if let resultCollation = resultCollation {
-                        throw SwiftDBError.misuse(message: "Multiple collations specified for \(propertyName) - \(resultCollation.name) then \(collation)")
+                        throw SwiftDBError.misuse(message: "Multiple collations specified for \(propertyName) - \(resultCollation.name) then \(collation.name)")
                     }
                     resultCollation = collation
                 case .index(unique: let unique):
@@ -51,7 +51,7 @@ class TypeMetadata {
             }
         }
 
-        if resultIndex == .none && isId && !noDefaultUniqueId {
+        if isId && !noDefaultUniqueId {
             resultIndex = .unique
         }
 
@@ -69,12 +69,12 @@ public enum PropertyConfig: Equatable {
     case noDefaultUniqueId
 }
 
-struct CombinedPropertyConfig {
+struct CombinedPropertyConfig: Equatable {
     let collation: Collation
-    let index: IndexKind
+    let index: IndexKind?
 
     enum IndexKind {
-        case unique, regular, none
+        case unique, regular
     }
 }
 

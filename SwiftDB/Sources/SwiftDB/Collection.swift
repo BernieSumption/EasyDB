@@ -24,33 +24,24 @@ public class Collection<Row: Codable>: Filterable, DefaultCollations {
 
         let metadata = try MultifariousDecoder.metadata(for: type)
 
+        let idPropertyName = try idProperty.map({ try $0.requireSingleName() })
+
         var defaultCollations = [String: Collation]()
         for property in mapper.rootProperties {
-            for config in metadata.getPropertyConfigs(property) {
-                if case .collation(let collation) = config {
-                    defaultCollations[property] = collation
-                }
-            }
+            let isId = property == idPropertyName
+            defaultCollations[property] = try metadata.getCombinedConfig(property, isId: isId).collation
         }
         self.defaultCollations = defaultCollations
 
         var indices = [IndexSpec]()
         for property in mapper.rootProperties {
-            for config in metadata.getPropertyConfigs(property) {
-                if case .index(let unique) = config {
-                    let collation = defaultCollations[property] ?? .string
-                    let index = IndexSpec(
-                        [IndexSpec.Part([property], collation: collation)],
-                        unique: unique)
-                    indices.append(index)
-                }
-            }
-        }
-        if let idProperty = idProperty {
-            let idPath = try mapper.propertyPath(for: idProperty)
-            let noDefaultUnique = metadata.getPropertyConfigs(idPath[0]).contains(.noDefaultUniqueId)
-            if !noDefaultUnique {
-                let index = IndexSpec([IndexSpec.Part(idPath, collation: .string)], unique: true)
+            let config = try metadata.getCombinedConfig(property, isId: property == idPropertyName)
+            if let index = config.index {
+                let unique = index == .unique
+                let collation = defaultCollations[property] ?? .string
+                let index = IndexSpec(
+                    [IndexSpec.Part([property], collation: collation)],
+                    unique: unique)
                 indices.append(index)
             }
         }

@@ -113,7 +113,7 @@ class IndexTests: SwiftDBTestCase {
 
         assertErrorMessage(
             try c.insert(row),
-            contains: "UNIQUE constraint failed: RowWithIdUsingCodingKeys.altIdField")
+            contains: "UNIQUE constraint failed: RegularIndexForIdentifiableIsUnique.id")
 
         let indices = try dbIndexSQL()
         XCTAssertEqual(indices.count, 1)

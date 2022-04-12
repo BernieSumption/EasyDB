@@ -131,23 +131,6 @@ class SwiftDBTestCase: XCTestCase {
             expectedDataAfterCallback)
     }
 
-    func assertErrorMessage(_ expression: @autoclosure () throws -> Any, _ message: String) {
-        XCTAssertThrowsError(try expression()) { error in
-            XCTAssertEqual("\(error)", message)
-        }
-    }
-
-    func assertErrorMessage(_ expression: @autoclosure () throws -> Any, contains: String) {
-        XCTAssertThrowsError(try expression()) { error in
-            let message = "\(error)"
-            assertString(message, contains: contains)
-        }
-    }
-
-    func assertString(_ string: String, contains: String) {
-        XCTAssertTrue(string.contains(contains), "\"\(string)\" does not contain \"\(contains)\"")
-    }
-
     func dbIndexSQL(table: String? = nil) throws -> [String] {
         var sql = "SELECT sql FROM sqlite_schema WHERE type = 'index'"
         if let table = table {
@@ -155,4 +138,21 @@ class SwiftDBTestCase: XCTestCase {
         }
         return try db.execute([String].self, "\(literal: sql)")
     }
+}
+
+func assertErrorMessage(_ expression: @autoclosure () throws -> Any, _ message: String) {
+    XCTAssertThrowsError(try expression()) { error in
+        XCTAssertEqual("\(error)", message)
+    }
+}
+
+func assertErrorMessage(_ expression: @autoclosure () throws -> Any, contains: String) {
+    XCTAssertThrowsError(try expression()) { error in
+        let message = "\(error)"
+        assertString(message, contains: contains)
+    }
+}
+
+func assertString(_ string: String, contains: String) {
+    XCTAssertTrue(string.contains(contains), "\"\(string)\" does not contain \"\(contains)\"")
 }
