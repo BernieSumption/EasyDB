@@ -1,6 +1,6 @@
 import path from "path"
 
-export const sourceFile = (file: string) => path.join(__dirname, "..", file)
+export const sourcePath = (file: string) => path.join(__dirname, "..", file)
 
 export const markerName = (line: string) => {
     line = line.trim()
