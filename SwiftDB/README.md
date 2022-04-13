@@ -7,7 +7,7 @@ Simple: SwiftDB does not compete with GRDB. SwiftDB competes with `UserDefaults.
 SwiftDB is designed to provide the best developer experience possible when storing large amounts of non-relational or document-oriented data. Just like storing `Codable` objects in `UserDefaults`, it requires zero configuration - including not requiring you to define a database schema. Unlike `UserDefaults` it has excellent performance with large data sets and a type-safe querying API based on key paths:
 
 <!---intro--->
-```
+```swift
 struct Book: Codable, Identifiable {
     var id = UUID()
     var name: String
