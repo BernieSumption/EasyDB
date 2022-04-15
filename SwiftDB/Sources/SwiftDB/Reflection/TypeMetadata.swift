@@ -140,7 +140,7 @@ public extension ConfigurationAnnotation {
             do {
                 try typeMetadata.addPropertyConfig(Self.propertyConfig)
             } catch let error as TypeMetadataError {
-                var annotationName = typeNameWithoutGenerics(Self.self)
+                let annotationName = typeNameWithoutGenerics(Self.self)
                 throw SwiftDBError.codingError(
                     message: error.message(annotationName: annotationName),
                     codingPath: decoder.codingPath)
@@ -155,7 +155,7 @@ public extension ConfigurationAnnotation {
     }
 }
 
-func typeNameWithoutGenerics<T>(_ type: T.Type) -> String {
+private func typeNameWithoutGenerics<T>(_ type: T.Type) -> String {
     let name = String(describing: type)
     if let index = name.firstIndex(of: "<") {
         return String(name[name.startIndex..<index])

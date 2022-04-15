@@ -253,6 +253,41 @@ class TypeMetadataTests: XCTestCase {
             let s: String
         }
     }
+
+    func testFoo() {
+        print(MemoryLayout<Foo>.size)
+    }
+}
+
+struct Foo {
+    @Wrapper
+    var sub: P
+}
+
+protocol P {
+}
+
+@propertyWrapper
+public class Wrapper<Value>: P {
+    public var wrappedValue: Value
+
+    public init(wrappedValue: Value) {
+        print("Init!", wrappedValue)
+        self.wrappedValue = wrappedValue
+    }
+}
+
+struct Sub {
+    let i1: Int
+    let i2: Int
+    let i3: Int
+    let i4: Int
+    let i5: Int
+    let i6: Int
+    let i7: Int
+    let i8: Int
+    let i9: Int
+    let i10: Int
 }
 
 func combineConfigs(_ configs: [PropertyConfig], isId: Bool = false) throws -> CombinedPropertyConfig {

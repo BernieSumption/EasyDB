@@ -1,7 +1,6 @@
-import fs from "fs"
-import cp from "child_process"
-import { fatalError, sourcePath } from "./utils"
-
+import fs from "fs";
+import cp from "child_process";
+import { fatalError, sourcePath } from "./utils";
 
 // TODO:
 //   1. parse all test code and extract marked sections: //start:name to //end:name
@@ -10,36 +9,84 @@ import { fatalError, sourcePath } from "./utils"
 //   4. fatal error if unused snippet
 
 const getCodeSnippets = () => {
-    const result: Record<string, string> = {}
-    let testGlob = sourcePath("Tests/**/*.swift")
-    let source = cp.execSync(`cat ${testGlob}`, { encoding: "utf8" }).replace(/\r\n/g, "\n")
-    let matches = [...source.matchAll(/\/\/\/\s?start:([\w-]+)\n((?:[\s\S](?!\/\/\/))+)\n[ \t]*\/\/\/\s?end/g)]
-    for (const [_, name, code] of matches) {
-        result[name] = code
+  const result: Record<string, string> = {};
+  let testGlob = sourcePath("Tests/**/*.swift");
+  let source = cp
+    .execSync(`cat ${testGlob}`, { encoding: "utf8" })
+    .replace(/\r\n/g, "\n");
+  let matches = [
+    ...source.matchAll(
+      /\/\/\s?docs:start:([\w-]+)\n([\s\S]+?)\n[ \t]*\/\/\s?docs:end/g
+    ),
+  ];
+  for (const [_, name, code] of matches) {
+    if (result[name]) {
+      fatalError(`Duplicate block names "${name}"`);
     }
-    return result
-}
+    const matches = [...code.matchAll(/(\/\/\s?doc|docs?:).*/g)].map(
+      (item) => item[0]
+    );
+    if (matches.length > 0) {
+      fatalError(
+        `"${name}" block includes doc markers: ${matches
+          .map((s) => JSON.stringify(s))
+          .join(", ")}`
+      );
+    }
+    result[name] = removeIndentation(code);
+  }
+  return result;
+};
 
-console.log(getCodeSnippets())
+const removeIndentation = (block: string) => {
+  const lines = block.split("\n");
+  const prefix = lines[0].replace(/\S.*/, "");
+  return lines
+    .map((line, i) => {
+      if (line && !line.startsWith(prefix)) {
+        fatalError(
+          `Line ${i + 1} does not start with common prefix ${JSON.stringify({
+            prefix,
+            line,
+          })}:\n${block}`
+        );
+      }
+      return line.substring(prefix.length);
+    })
+    .join("\n");
+};
 
 const compile = () => {
-    const readmePath = sourcePath("README.md")
-    const content = fs.readFileSync(readmePath, "utf8")
-    let replaced = 0
-    const compiledContent = content.replace(/(<!---([\w-]+)--->\s*\n```swift\n)((?:[\s\S](?!```))+)(\n```)/mg, (match, prefix, name, code, suffix) => {
-        ++replaced
-        if (code.includes("<!") || code.includes("->")) fatalError(`Code block includes comment marker:\n${match}`)
-        if (code.includes("```")) fatalError(`Code block includes block marker:\n${match}`)
-        return prefix + "replaced" + suffix
-    })
-    
-    let specialMarkerCount = content.match(/(<!|->|```)/g)?.length || 0
-    if (replaced != specialMarkerCount / 4) fatalError(`Sanity check failed: replaced (${replaced}) != specialMarkerCount (${specialMarkerCount}) / 4`)
-    
-    console.log(compiledContent)
-}
+  let codeSnippets = getCodeSnippets();
+  const readmePath = sourcePath("README.md");
+  const content = fs.readFileSync(readmePath, "utf8");
+  let replaced = 0;
+  const compiledContent = content.replace(
+    /(<!---([\w-]+)--->\s*\n```swift\n)((?:[\s\S](?!```))+)(\n```)/gm,
+    (match, prefix, name, code, suffix) => {
+      ++replaced;
+      if (code.includes("<!") || code.includes("->")) {
+        fatalError(`Code block includes comment marker:\n${match}`);
+      }
+      if (code.includes("```")) {
+        fatalError(`Code block includes block marker:\n${match}`);
+      }
+      if (!codeSnippets[name]) fatalError(`No code snippet "${name}"`);
+      return prefix + codeSnippets[name] + suffix;
+    }
+  );
 
+  let specialMarkerCount = content.match(/(<!|->|```)/g)?.length || 0;
+  if (replaced != specialMarkerCount / 4)
+    fatalError(
+      `Sanity check failed: replaced (${replaced}) != specialMarkerCount (${specialMarkerCount}) / 4`
+    );
 
+  fs.writeFileSync(readmePath, compiledContent, "utf8");
+  console.log(`Updated ${replaced} blocks in ${readmePath}`);
+};
+
+compile();
 
 // fs.writeFileSync(readmePath, compiledContent, "utf8")
 
@@ -63,4 +110,3 @@ const compile = () => {
 //         }
 //     }
 // }
-

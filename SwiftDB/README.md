@@ -6,45 +6,30 @@ Simple: SwiftDB does not compete with GRDB. SwiftDB competes with `UserDefaults.
 
 SwiftDB is designed to provide the best developer experience possible when storing large amounts of non-relational or document-oriented data. Just like storing `Codable` objects in `UserDefaults`, it requires zero configuration - including not requiring you to define a database schema. Unlike `UserDefaults` it has excellent performance with large data sets and a type-safe querying API based on key paths:
 
-<!---empty--->
+<!---headline-demo--->
 ```swift
-code
-```
-
-d
-
-<!---second--->
-```swift
-yo
-```
-
-d
-
-<!---intro--->
-```swift
+// Record types are defined as standard Swift structs
 struct Book: Codable, Identifiable {
     var id = UUID()
-    var name: String
+    @Unique var name: String
     var author: String
-    var price: Int // in pence
+    var priceCents: Int
 }
-let db = SwiftDB()
-let collection = db.collection(Book.self)
+let db = Database(path: ":memory:")
+let collection = try db.collection(Book.self)
 //  ^^ CREATE TABLE Book (id, name, author, price)
-//     CREATE UNIQUE INDEX `book-unique-id` ON Book (`id`)
+//     CREATE UNIQUE INDEX `book-unique-id` ON Book (`id`) # ids are automatically unique
+//     CREATE UNIQUE INDEX `book-unique-name` ON Book (`name`)
 
-collection.insert([
-    Book(name: "Catch-22", author: "Joseph Heller", price: 1050),
-    Book(name: "Snow Crash", author: "Neal Stephenson", price: 1250),
-    Book(name: "Nineteen Eighty-Four", author: "George Orwell", price: 799),
-    Book(name: "A Pattern Language", author: "Christopher Alexander et al.", price: 2250)
-])
-//  ^^ BEGIN TRANSACTION
-//     (for each row) INSERT INTO Book (name, author, price) VALUES (?, ?, ?)
-//     COMMIT TRANSACTION
+try collection.insert(Book(name: "Catch-22", author: "Joseph Heller", priceCents: 1050))
+//  ^^ INSERT INTO Book (name, author, price) VALUES (?, ?, ?)
 
-let cheapBooks = collection.all().where(\.price, lessThan: 1000).fetchMany()
-//  ^^ SELECT * FROM Book WHERE price < ?
+// fluent type-safe API for querying based on key paths
+let cheapBooks = try collection.all()
+    .filter(\.priceCents, lessThan: 1000)
+    .orderBy(\.author, .descending)
+    .fetchMany()
+//  ^^ SELECT * FROM Book WHERE `price` < ? ORDER BY `author` DESC
 ```
 
 ### Design goals
