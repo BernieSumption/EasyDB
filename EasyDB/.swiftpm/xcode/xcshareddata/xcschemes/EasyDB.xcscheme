@@ -1,6 +1,6 @@
 <?xml version="1.0" encoding="UTF-8"?>
 <Scheme
-   LastUpgradeVersion = "1320"
+   LastUpgradeVersion = "1330"
    version = "1.3">
    <BuildAction
       parallelizeBuildables = "YES"
@@ -14,9 +14,9 @@
             buildForAnalyzing = "YES">
             <BuildableReference
                BuildableIdentifier = "primary"
-               BlueprintIdentifier = "SwiftDB"
-               BuildableName = "SwiftDB"
-               BlueprintName = "SwiftDB"
+               BlueprintIdentifier = "EasyDB"
+               BuildableName = "EasyDB"
+               BlueprintName = "EasyDB"
                ReferencedContainer = "container:">
             </BuildableReference>
          </BuildActionEntry>
@@ -28,23 +28,9 @@
             buildForAnalyzing = "YES">
             <BuildableReference
                BuildableIdentifier = "primary"
-               BlueprintIdentifier = "SwiftDBTests"
-               BuildableName = "SwiftDBTests"
-               BlueprintName = "SwiftDBTests"
-               ReferencedContainer = "container:">
-            </BuildableReference>
-         </BuildActionEntry>
-         <BuildActionEntry
-            buildForTesting = "YES"
-            buildForRunning = "YES"
-            buildForProfiling = "YES"
-            buildForArchiving = "YES"
-            buildForAnalyzing = "YES">
-            <BuildableReference
-               BuildableIdentifier = "primary"
-               BlueprintIdentifier = "CSQLite"
-               BuildableName = "CSQLite"
-               BlueprintName = "CSQLite"
+               BlueprintIdentifier = "EasyDBTests"
+               BuildableName = "EasyDBTests"
+               BlueprintName = "EasyDBTests"
                ReferencedContainer = "container:">
             </BuildableReference>
          </BuildActionEntry>
@@ -74,39 +60,9 @@
             skipped = "NO">
             <BuildableReference
                BuildableIdentifier = "primary"
-               BlueprintIdentifier = "SwiftDBTests"
-               BuildableName = "SwiftDBTests"
-               BlueprintName = "SwiftDBTests"
-               ReferencedContainer = "container:">
-            </BuildableReference>
-         </TestableReference>
-         <TestableReference
-            skipped = "NO">
-            <BuildableReference
-               BuildableIdentifier = "primary"
-               BlueprintIdentifier = "SwiftDBInternalTests"
-               BuildableName = "SwiftDBInternalTests"
-               BlueprintName = "SwiftDBInternalTests"
-               ReferencedContainer = "container:">
-            </BuildableReference>
-         </TestableReference>
-         <TestableReference
-            skipped = "NO">
-            <BuildableReference
-               BuildableIdentifier = "primary"
-               BlueprintIdentifier = "InternalTests"
-               BuildableName = "InternalTests"
-               BlueprintName = "InternalTests"
-               ReferencedContainer = "container:">
-            </BuildableReference>
-         </TestableReference>
-         <TestableReference
-            skipped = "NO">
-            <BuildableReference
-               BuildableIdentifier = "primary"
-               BlueprintIdentifier = "PublicAPITests"
-               BuildableName = "PublicAPITests"
-               BlueprintName = "PublicAPITests"
+               BlueprintIdentifier = "EasyDBTests"
+               BuildableName = "EasyDBTests"
+               BlueprintName = "EasyDBTests"
                ReferencedContainer = "container:">
             </BuildableReference>
          </TestableReference>
@@ -132,9 +88,9 @@
       <MacroExpansion>
          <BuildableReference
             BuildableIdentifier = "primary"
-            BlueprintIdentifier = "SwiftDB"
-            BuildableName = "SwiftDB"
-            BlueprintName = "SwiftDB"
+            BlueprintIdentifier = "EasyDB"
+            BuildableName = "EasyDB"
+            BlueprintName = "EasyDB"
             ReferencedContainer = "container:">
          </BuildableReference>
       </MacroExpansion>
