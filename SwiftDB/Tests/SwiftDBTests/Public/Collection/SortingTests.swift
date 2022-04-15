@@ -55,7 +55,7 @@ class SortingTests: SwiftDBTestCase {
     }
 
     func testOrderByDefaultCollation() throws {
-        db = Database(path: ":memory:")
+        db = Database(.memory)
 
         let c = try db.collection(OrderByDefaultCollation.self)
 

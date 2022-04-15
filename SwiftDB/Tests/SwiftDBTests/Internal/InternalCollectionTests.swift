@@ -5,7 +5,7 @@ class InternalCollectionTests: SwiftDBTestCase {
 
     func testDefaultCollectionCollationUsedInSQL() throws {
         var sql = ""
-        db = Database(path: ":memory:")
+        db = Database(.memory)
         db.logSQL = .custom({ sql = $0 + "\n" })
 
         let c = try db.collection(DefaultCollectionCollationUsedInSQL.self)
@@ -24,7 +24,7 @@ class InternalCollectionTests: SwiftDBTestCase {
 
     func testExplicitDefaultCollectionCollationUsedInSQL() throws {
         var sql = ""
-        db = Database(path: ":memory:")
+        db = Database(.memory)
         db.logSQL = .custom({ sql = $0 + "\n" })
 
         let c = try db.collection(ExplicitDefaultCollectionCollationUsedInSQL.self)
@@ -44,7 +44,7 @@ class InternalCollectionTests: SwiftDBTestCase {
 
     func testOverrideCollationUsedInSQL() throws {
         var sql = ""
-        db = Database(path: ":memory:")
+        db = Database(.memory)
         db.logSQL = .custom({ sql = $0 + "\n" })
         let c = try db.collection(OverrideCollationUsedInSQL.self)
 

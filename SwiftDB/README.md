@@ -15,7 +15,7 @@ struct Book: Codable, Identifiable {
     var author: String
     var priceCents: Int
 }
-let db = Database(path: ":memory:")
+let db = Database(.memory)
 let collection = try db.collection(Book.self)
 //  ^^ CREATE TABLE Book (id, name, author, price)
 //     CREATE UNIQUE INDEX `book-unique-id` ON Book (`id`) # ids are automatically unique

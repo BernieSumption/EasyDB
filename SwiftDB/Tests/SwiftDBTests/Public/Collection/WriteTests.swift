@@ -72,7 +72,7 @@ class WriteTests: SwiftDBTestCase {
     }
 
     func testUpsertOfUnique() throws {
-        db = Database(path: ":memory:")
+        db = Database(.memory)
         let r1 = HandleAndName(handle: "a", name: "r1")
         let r2 = HandleAndName(handle: "b", name: "r2")
         let c = try db.collection(HandleAndName.self)

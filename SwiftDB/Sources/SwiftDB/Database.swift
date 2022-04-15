@@ -16,20 +16,35 @@ public class Database {
     /// An `SQLLogger` instance to
     public var logSQL: SQLLogger = .none
 
-    /// Initialise and  configure a `Database`
+    /// Initialise and  configure an in-memory `Database`
     ///
     /// - Parameters:
-    ///   - path: A file path to the database file on disk, or `":memory:"` to create an in-memory database
-    ///   - autoMigrate: Whether to drop columns while running automatic migrations. This defaults to `false` and can be set to `true`
+    ///   - location: A string path or `.memory` to create an in-memory database
+    ///   - autoMigrate: Whether to automatically create tables and columns for collections.
+    ///   - autoDropColumns: Whether to drop columns while running automatic migrations. This defaults to `false` and can be set to `true`
     ///       for the whole database using this option, and overridden for individual collections. Has no effect without `autoMigrate`
     public init(
-        path: String,
+        _ location: Location,
         autoMigrate: Bool = true,
         autoDropColumns: Bool = false
     ) {
-        self.path = path
+        switch location {
+        case .memory:
+            self.path = ":memory:"
+        case .path(let path):
+            self.path = path
+        }
         self.autoMigrate = autoMigrate
         self.autoDropColumns = autoDropColumns
+    }
+
+    public enum Location: ExpressibleByStringLiteral {
+        case memory
+        case path(String)
+
+        public init(stringLiteral path: String) {
+            self = .path(path)
+        }
     }
 
     /// Return a collection. Unless automatic migration is disabled for this database, the table will be automatically
@@ -110,21 +125,6 @@ public class Database {
 }
 
 public struct NoProperties: Codable {}
-
-extension Database {
-    /// The standard database - most applications can use this unless they need multiple
-    /// databases or want to save the data file somewhere other than `Database.standardPath`
-    public static let standard = Database(path: Database.standardPath)
-
-    /// The path of the standard
-    public static var standardPath: String {
-        return FileManager
-            .default
-            .urls(for: .documentDirectory, in: .userDomainMask)[0]
-            .appendingPathComponent("swiftdb.sqlite")
-            .path
-    }
-}
 
 public enum SQLLogger {
     case none

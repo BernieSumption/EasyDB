@@ -5,7 +5,7 @@ import XCTest
 class ConnectionTests: XCTestCase {
 
     func testRead() throws {
-        let c = try Database(path: ":memory:").getConnection()
+        let c = try Database(.memory).getConnection()
         let s = try c.notThreadSafe_prepare(sql: """
             SELECT
                 1 as int,
@@ -28,7 +28,7 @@ class ConnectionTests: XCTestCase {
     }
 
     func testWrite() throws {
-        let c = try Database(path: ":memory:").getConnection()
+        let c = try Database(.memory).getConnection()
         let create = try c.notThreadSafe_prepare(sql: "CREATE TABLE tmp (a)")
         XCTAssertEqual(try create.step(), .done)
 

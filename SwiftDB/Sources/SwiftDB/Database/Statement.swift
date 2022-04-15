@@ -81,7 +81,6 @@ class Statement {
         }
         let index = Int(sqlite3_bind_parameter_index(statement, name))
         guard index > 0 else {
-            // TODO: this should throw a ConnectionError with context and SQL
             throw SwiftDBError.noSuchParameter(name: name)
         }
         parameterNameToIndex[name] = index

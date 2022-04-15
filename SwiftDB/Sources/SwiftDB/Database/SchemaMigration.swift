@@ -109,7 +109,6 @@ struct IndexSpec: Equatable {
 
     func createSQL(forTable table: String) -> String {
         let columnsSql: [String] = parts.map({ column in
-            // TODO: JSON expression when path.count > 1
             var sql = SQL.quoteName(column.path.joined(separator: "."))
             if let collation = column.collation {
                 sql += " COLLATE " + SQL.quoteName(collation.name)

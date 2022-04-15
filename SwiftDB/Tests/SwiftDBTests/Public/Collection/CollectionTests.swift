@@ -8,7 +8,7 @@ class CollectionTests: SwiftDBTestCase {
     }
 
     func testMigrateData() throws {
-        db = Database(path: ":memory:")
+        db = Database(.memory)
         let v1c = try db.collection(V1.self)
         try v1c.insert(V1(a: 4))
         try v1c.insert(V1(a: 5))
@@ -54,7 +54,7 @@ class CollectionTests: SwiftDBTestCase {
     let eWithAcute = "\u{00E9}" // "Latin Small Letter E with Acute"
 
     func testDefaultColumnCollation() throws {
-        db = Database(path: ":memory:")
+        db = Database(.memory)
         let c = try db.collection(RowWithString.self)
         try c.insert([RowWithString(eWithAcute), RowWithString(eWithAcuteCombining)])
 
@@ -63,7 +63,7 @@ class CollectionTests: SwiftDBTestCase {
     }
 
     func testDefaultCollationOnIndex() throws {
-        db = Database(path: ":memory:")
+        db = Database(.memory)
         _ = try db.collection(DefaultCollationOnIndex.self)
 
         let sql = try dbIndexSQL().first ?? ""
@@ -74,7 +74,7 @@ class CollectionTests: SwiftDBTestCase {
     }
 
     func testColumnCollationOnIndex() throws {
-        db = Database(path: ":memory:")
+        db = Database(.memory)
 
         let c = try db.collection(ColumnCollationOnIndex.self)
 

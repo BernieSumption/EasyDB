@@ -91,7 +91,7 @@ class SwiftDBTestCase: XCTestCase {
     var db: Database!
 
     override func setUpWithError() throws {
-        db = Database(path: ":memory:")
+        db = Database(.memory)
     }
 
     func populateCollection<T: Codable>(_ data: [T]) throws -> Collection<T> {

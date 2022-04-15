@@ -4,7 +4,7 @@ import SwiftDB
 class IndexTests: SwiftDBTestCase {
 
     func testUniqueIndex() throws {
-        db = Database(path: ":memory:")
+        db = Database(.memory)
         let c = try db.collection(Row.self)
         try c.insert(Row(value: 5))
 
@@ -20,7 +20,7 @@ class IndexTests: SwiftDBTestCase {
     }
 
     func testRegularIndex() throws {
-        db = Database(path: ":memory:")
+        db = Database(.memory)
         let c = try db.collection(Row.self)
         try c.insert(Row(value: 5))
         XCTAssertNoThrow(try c.insert(Row(value: 5)))
@@ -72,7 +72,7 @@ class IndexTests: SwiftDBTestCase {
     }
 
     func testDisableAutoIndexForIdentifiable() throws {
-        db = Database(path: ":memory:")
+        db = Database(.memory)
         let c = try db.collection(DisableAutoIndexForIdentifiable.self)
 
         let row = DisableAutoIndexForIdentifiable()
@@ -88,7 +88,7 @@ class IndexTests: SwiftDBTestCase {
     }
 
     func testNotUniqueIndexForIdentifiable() throws {
-        db = Database(path: ":memory:")
+        db = Database(.memory)
         let c = try db.collection(NotUniqueIndexForIdentifiable.self)
 
         let row = NotUniqueIndexForIdentifiable()
@@ -104,7 +104,7 @@ class IndexTests: SwiftDBTestCase {
     }
 
     func testRegularIndexForIdentifiableIsUnique() throws {
-        db = Database(path: ":memory:")
+        db = Database(.memory)
         let c = try db.collection(RegularIndexForIdentifiableIsUnique.self)
 
         let row = RegularIndexForIdentifiableIsUnique()
