@@ -3,27 +3,27 @@
 import PackageDescription
 
 let package = Package(
-    name: "SwiftDB",
+    name: "EasyDB",
     platforms: [
         .iOS(.v15),
         .macOS(.v11)
     ],
     products: [
         .library(
-            name: "SwiftDB",
-            targets: ["SwiftDB"]
+            name: "EasyDB",
+            targets: ["EasyDB"]
         )
     ],
     dependencies: [
     ],
     targets: [
         .target(
-            name: "SwiftDB",
+            name: "EasyDB",
             plugins: ["SwiftLintXcode"]
         ),
         .testTarget(
-            name: "SwiftDBTests",
-            dependencies: ["SwiftDB"],
+            name: "EasyDBTests",
+            dependencies: ["EasyDB"],
             plugins: ["SwiftLintXcode"]
         ),
 
