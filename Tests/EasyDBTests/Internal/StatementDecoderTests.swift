@@ -40,8 +40,6 @@ class StatementDecoderTests: EasyDBTestCase {
         testSelectAs("SELECT -1000.123", Float64.self, -1000.123)
         testSelectAs("SELECT 1.0", Double.self, 1)
         testSelectAs("SELECT -1000.123", Double.self, -1000.123)
-        testSelectAs("SELECT 1.0", Float16.self, 1)
-        testSelectAs("SELECT -1000.123", Float16.self, -1000.123)
     }
 
     func testDecodeConversionsToDouble() throws {

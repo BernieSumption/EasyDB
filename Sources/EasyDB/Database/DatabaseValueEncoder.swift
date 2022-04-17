@@ -15,7 +15,6 @@ struct DatabaseValueEncoder {
         if T.self == String.self  { return DatabaseValue(value as! String) }
         if T.self == Double.self  { return DatabaseValue(value as! Double) }
         if T.self == Float.self   { return DatabaseValue(value as! Float) }
-        if T.self == Float16.self { return DatabaseValue(value as! Float16) }
         if T.self == Int.self     { return DatabaseValue(value as! Int) }
         if T.self == Int8.self    { return DatabaseValue(value as! Int8) }
         if T.self == Int16.self   { return DatabaseValue(value as! Int16) }

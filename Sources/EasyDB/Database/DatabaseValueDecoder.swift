@@ -10,7 +10,6 @@ enum DatabaseValueDecoder {
         if T.self == String.self  { return try value.as(String.self) as! T }
         if T.self == Double.self  { return try value.as(Double.self) as! T }
         if T.self == Float.self   { return try value.as(Float.self) as! T }
-        if T.self == Float16.self { return try value.as(Float16.self) as! T }
         if T.self == Int.self     { return try value.as(Int.self) as! T }
         if T.self == Int8.self    { return try value.as(Int8.self) as! T }
         if T.self == Int16.self   { return try value.as(Int16.self) as! T }

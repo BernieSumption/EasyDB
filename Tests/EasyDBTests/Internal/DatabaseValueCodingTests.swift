@@ -7,7 +7,6 @@ class DatabaseValueCodingTests: XCTestCase {
         try testTypeAndOptionals(Int8(-5), .int(-5))
         try testTypeAndOptionals(Int32(10), .int(10))
         try testTypeAndOptionals(UInt64(UInt64.max), .int(-1)) // unsigned 64 bit integer stored with overflow
-        try testTypeAndOptionals(Float16(10.5), .double(10.5))
         try testTypeAndOptionals(Double(10.5), .double(10.5))
         try testTypeAndOptionals("foo", .text("foo"))
         try testTypeAndOptionals(["a", "b"], .text(#"["a","b"]"#))
@@ -20,7 +19,6 @@ class DatabaseValueCodingTests: XCTestCase {
         try testStructure(Int8(-5), "-5")
         try testStructure(Int32(10), "10")
         try testStructure(UInt64(UInt64.max), "18446744073709551615") // unsigned 64 bit integer should not overflow in JSON
-        try testStructure(Float16(10.5), "10.5")
         try testStructure(Double(10.5), "10.5")
         try testStructure("foo", #""foo""#)
         try testStructure(["a", "b"], #"["a","b"]"#)

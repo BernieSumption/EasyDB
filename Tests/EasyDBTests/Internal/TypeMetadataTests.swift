@@ -214,11 +214,11 @@ class TypeMetadataTests: XCTestCase {
         let instance = JSONCodingWithAnnotations(
             id: UUID(uuid: (0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 1)),
             x: 3,
-            f16: 4.5,
+            f: 4.5,
             foo: "bar",
             sub: .init(s: "s!"))
         let encoder = JSONEncoder()
-        encoder.outputFormatting = .prettyPrinted
+        encoder.outputFormatting = [.prettyPrinted, .sortedKeys]
 
         let jsonData = try encoder.encode(instance)
         let json = String(decoding: jsonData, as: UTF8.self)
@@ -227,13 +227,13 @@ class TypeMetadataTests: XCTestCase {
             json,
             """
             {
+              "f" : 4.5,
               "foo" : "bar",
               "id" : "00000000-0000-0000-0000-000000000001",
-              "f16" : 4.5,
-              "x" : 3,
               "sub" : {
                 "s" : "s!"
-              }
+              },
+              "x" : 3
             }
             """
         )
@@ -245,7 +245,7 @@ class TypeMetadataTests: XCTestCase {
     struct JSONCodingWithAnnotations: Codable, Identifiable, Equatable {
         @NotUnique @Index var id: UUID
         @Unique var x: Int
-        var f16: Float16
+        var f: Float
         @CollateCaseInsensitive var foo: String
         @CollateBinary var sub: Sub
 

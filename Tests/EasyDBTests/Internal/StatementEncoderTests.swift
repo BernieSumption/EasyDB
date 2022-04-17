@@ -20,7 +20,6 @@ class StatementEncoderTests: EasyDBTestCase {
             :ui32 AS ui32,
             :ui64 AS ui64,
             :f AS f,
-            :f16 AS f16,
             :f32 AS f32,
             :f64 AS f64,
             :d AS d,
@@ -48,7 +47,6 @@ class StatementEncoderTests: EasyDBTestCase {
         XCTAssertEqual(try s.read(column: "ui32"), .int(9))
         XCTAssertEqual(try s.read(column: "ui64"), .int(10))
         XCTAssertEqual(try s.read(column: "f"), .double(11.5))
-        XCTAssertEqual(try s.read(column: "f16"), .double(12.5))
         XCTAssertEqual(try s.read(column: "f32"), .double(13.5))
         XCTAssertEqual(try s.read(column: "f64"), .double(14.5))
         XCTAssertEqual(try s.read(column: "d"), .double(15.5))

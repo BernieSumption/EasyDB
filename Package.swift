@@ -1,12 +1,14 @@
-// swift-tools-version:5.6
+// swift-tools-version:5.5
 
 import PackageDescription
 
 let package = Package(
     name: "EasyDB",
     platforms: [
-        .iOS(.v15),
-        .macOS(.v11)
+        .iOS(.v13),
+        .macOS(.v10_15),
+        .watchOS(.v6),
+        .tvOS(.v13)
     ],
     products: [
         .library(

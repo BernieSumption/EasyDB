@@ -1,36 +1,39 @@
 # EasyDB
 
-Swift developers already have some well established and reliable options for storing data in SQLite databases, such as [GRDB](https://github.com/groue/GRDB.swift) and [SQLite.swift](https://github.com/stephencelis/SQLite.swift). Why create another?
+EasyDB is an application database for iOS and other Apple platforms. It wraps SQLite to provide an easy to use, high-performance, document-oriented database.
 
-Simple: EasyDB does not compete with GRDB. EasyDB competes with `UserDefaults.set(_:forKey)`.
-
-EasyDB is designed to provide the best developer experience possible when storing large amounts of non-relational or document-oriented data. Just like storing `Codable` objects in `UserDefaults`, it requires zero configuration - including not requiring you to define a database schema. Unlike `UserDefaults` it has excellent performance with large data sets and a type-safe querying API based on key paths:
+The goal of EasyDB is to provide the best developer experience with zero configuration. Compared to the (many) other SQLite wrappers, EasyDB the only one that provides a type-safe query API with no boilerplate code or configuration beyond defining.
 
 <!---headline-demo--->
 ```swift
-// Record types are defined as standard Swift structs
+// Record types are defined as Codable Swift structs
 struct Book: Codable, Identifiable {
     var id = UUID()
     @Unique var name: String
     var author: String
     var priceCents: Int
 }
-let db = Database(.memory)
-let collection = try db.collection(Book.self)
+let books = try database.collection(Book.self)
 //  ^^ CREATE TABLE Book (id, name, author, price)
 //     CREATE UNIQUE INDEX `book-unique-id` ON Book (`id`) # ids are automatically unique
 //     CREATE UNIQUE INDEX `book-unique-name` ON Book (`name`)
 
-try collection.insert(Book(name: "Catch-22", author: "Joseph Heller", priceCents: 1050))
+try books.insert(Book(name: "Catch-22", author: "Joseph Heller", priceCents: 1050))
 //  ^^ INSERT INTO Book (name, author, price) VALUES (?, ?, ?)
 
 // fluent type-safe API for querying based on key paths
-let cheapBooks = try collection.all()
+let cheapBooks = try books.all()
     .filter(\.priceCents, lessThan: 1000)
     .orderBy(\.author, .descending)
     .fetchMany()
 //  ^^ SELECT * FROM Book WHERE `price` < ? ORDER BY `author` DESC
 ```
+
+### System requirements
+    
+EasyDB requires Swift 5.5+ and runs on: iOS 13+, macOS 10.15+, watchOS 6+, tvOS 13+.
+
+It would be relatively easy to extend support back a few versions, PRs welcome, see [this issue](https://github.com/BernieSumption/EasyDB/issues/1).
 
 ### Design goals
 
