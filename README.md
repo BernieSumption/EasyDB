@@ -30,7 +30,7 @@ let cheapBooks = try books.all()
 //  ^^ SELECT * FROM Book WHERE `priceCents` < ? ORDER BY `author` DESC
 ```
 
-Before adopting EasyDB, consider some [reasons not to use EasyDB]. 
+Before adopting EasyDB, consider some [reasons not to use EasyDB](#reasons-not-to-use-easydb). 
 
 ### System requirements
     
