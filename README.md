@@ -66,8 +66,6 @@ Bulk insert and save operations automatically run in a transaction - if one reco
 
 If your application is multi-threaded and wants to read data then make conditional updates based on that data, this level of automatic transaction is not enough. For example, if you want to check an account balance and only transfer money between accounts if there is sufficient balance, you have to consider that another thread may have updated the balance between your reading and writing it, potentially leading to an incorrect balance. In this situation, use `database.transaction(block:)`. This executes a block of code inside a transaction, rolling back the transaction if the block throws an exception. The block is executed in the same serial queue as all other statements, ensuring that other threads can not modify the account concurrently.
 
-Genuine multiple reader single writer concurrency using SQLite's WAL mode is [on the roadmap](https://github.com/BernieSumption/EasyDB/issues/2) and PRs are welcome.
-
 <!---database-transaction--->
 ```swift
 let accounts = try database.collection(Account.self)
@@ -84,6 +82,10 @@ try database.transaction {
     try accounts.save(account2)
 }
 ```
+
+Bear in mind that no other reads or writes can take place while the block is executing, so avoid time-consuming processing in the block.
+
+Genuine multiple reader single writer concurrency using SQLite's WAL mode is [on the roadmap](https://github.com/BernieSumption/EasyDB/issues/2) and PRs are welcome.
 
 ## Reasons not to use EasyDB
 

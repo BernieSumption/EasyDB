@@ -1,6 +1,6 @@
 import Foundation
 
-private let sampleValues = SampleValues()
+private let sampleValues = SampleValueIterator()
 
 /// Produces a grid of binary values where there are enough rows to ensure that each column is unique.
 /// For example if asked to produce five columns, there will be 3 rows:
@@ -48,7 +48,7 @@ private func debugValuesEncodeDifferently<T1: Encodable, T2: Encodable>(_ first:
     }
 }
 
-private class SampleValues: SampleValueReceiver {
+private class SampleValueIterator {
     private var typeToSamples = [ObjectIdentifier: (Any, Any)]()
 
     init() {
@@ -107,7 +107,7 @@ private class SampleValues: SampleValueReceiver {
             return nil
         }
 
-        source.provideSampleValues(self)
+        source.sampleValues.provide(self)
 
         let samples = getFromCache(type)
 
@@ -131,10 +131,18 @@ private class SampleValues: SampleValueReceiver {
 /// Note: EasyDB will attempt to automatically generate sample values for most codable types. Conform to this
 /// protocol only if the automatic process doesn't work. See [codable structure discovery](TODO: url)
 public protocol SampleValueSource {
-    static func provideSampleValues(_ receiver: SampleValueReceiver)
+    static var sampleValues: SampleValues { get }
 }
 
 /// Used by `SampleValueSource` during [codable structure discovery](TODO: url)
-public protocol SampleValueReceiver {
-    func setSampleValues<T: Encodable>(_ zero: T, _ one: T)
+public struct SampleValues {
+    fileprivate let provide: (SampleValueIterator) -> Void
+
+    init<T: Codable>(_ zero: T, _ one: T) {
+        self.provide = { $0.setSampleValues(zero, one) }
+    }
+
+    fileprivate func provideSampleValues(_ iterator: SampleValueIterator) {
+        provide(iterator)
+    }
 }

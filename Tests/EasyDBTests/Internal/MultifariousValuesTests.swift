@@ -154,8 +154,6 @@ class MultifariousValuesTests: XCTestCase {
     struct CustomType: SampleValueSource, Codable, Equatable {
         let v: Int
 
-        static func provideSampleValues(_ receiver: SampleValueReceiver) {
-            receiver.setSampleValues(CustomType(v: 10), CustomType(v: -10))
-        }
+        static let sampleValues: SampleValues = SampleValues(CustomType(v: 10), CustomType(v: -10))
     }
 }

@@ -98,6 +98,7 @@ public class EasyDB {
         return try getConnection().execute(resultType, sql: sql, parameters: parameters)
     }
 
+    /// Execute a block of code in a transaction, rolling back the transaction if the block throws an error
     public func transaction<T>(block: () throws -> T) throws -> T {
         return try inAccessQueue {
             do {
