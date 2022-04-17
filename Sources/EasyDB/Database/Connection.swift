@@ -2,12 +2,12 @@ import Foundation
 import SQLite3
 
 class Connection {
-    private let database: Database
+    private let database: EasyDB
     private let connectionPointer: OpaquePointer
     private var registeredCollationNames = Set<String>()
     private var collationFunctions = [CollationFunction]()
 
-    init(_ database: Database) throws {
+    init(_ database: EasyDB) throws {
         self.database = database
         var connectionPointer: OpaquePointer?
         try checkOK(sqlite3_open(database.path, &connectionPointer), sql: nil, db: nil)

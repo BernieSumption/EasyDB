@@ -4,7 +4,7 @@ import EasyDB
 class IndexTests: EasyDBTestCase {
 
     func testUniqueIndex() throws {
-        db = Database(.memory)
+        db = EasyDB(.memory)
         let c = try db.collection(Row.self)
         try c.insert(Row(value: 5))
 
@@ -20,7 +20,7 @@ class IndexTests: EasyDBTestCase {
     }
 
     func testRegularIndex() throws {
-        db = Database(.memory)
+        db = EasyDB(.memory)
         let c = try db.collection(Row.self)
         try c.insert(Row(value: 5))
         XCTAssertNoThrow(try c.insert(Row(value: 5)))
@@ -72,7 +72,7 @@ class IndexTests: EasyDBTestCase {
     }
 
     func testDisableAutoIndexForIdentifiable() throws {
-        db = Database(.memory)
+        db = EasyDB(.memory)
         let c = try db.collection(DisableAutoIndexForIdentifiable.self)
 
         let row = DisableAutoIndexForIdentifiable()
@@ -88,7 +88,7 @@ class IndexTests: EasyDBTestCase {
     }
 
     func testNotUniqueIndexForIdentifiable() throws {
-        db = Database(.memory)
+        db = EasyDB(.memory)
         let c = try db.collection(NotUniqueIndexForIdentifiable.self)
 
         let row = NotUniqueIndexForIdentifiable()
@@ -104,7 +104,7 @@ class IndexTests: EasyDBTestCase {
     }
 
     func testRegularIndexForIdentifiableIsUnique() throws {
-        db = Database(.memory)
+        db = EasyDB(.memory)
         let c = try db.collection(RegularIndexForIdentifiableIsUnique.self)
 
         let row = RegularIndexForIdentifiableIsUnique()

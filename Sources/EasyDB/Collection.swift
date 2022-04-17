@@ -5,7 +5,7 @@
 public class Collection<Row: Codable>: Filterable, DefaultCollations {
     public let tableName: String
 
-    let database: Database
+    let database: EasyDB
     let columns: [String]
     let mapper: KeyPathMapper<Row>
     let defaultCollations: [String: Collation]
@@ -14,7 +14,7 @@ public class Collection<Row: Codable>: Filterable, DefaultCollations {
 
     internal init(
         _ type: Row.Type,
-        _ database: Database,
+        _ database: EasyDB,
         idProperty: PartialCodableKeyPath<Row>?
     ) throws {
         self.database = database

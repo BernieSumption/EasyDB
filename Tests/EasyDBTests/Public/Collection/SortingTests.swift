@@ -55,7 +55,7 @@ class SortingTests: EasyDBTestCase {
     }
 
     func testOrderByDefaultCollation() throws {
-        db = Database(.memory)
+        db = EasyDB(.memory)
 
         let c = try db.collection(OrderByDefaultCollation.self)
 

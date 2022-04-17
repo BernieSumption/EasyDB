@@ -1,8 +1,8 @@
 import Foundation
 
-/// A `Database` exists mainly to configure access to a database file and to create collections. Most reading and writing
-/// of data is done on the `Collection` objects returned by `database.collection(EntityType.self)`
-public class Database {
+/// Configure access to an EasyDB database. Most reading and writing of data is done on the `Collection`
+/// objects returned by `collection(EntityType.self)`
+public class EasyDB {
     let path: String
 
     private let autoMigrate: Bool
@@ -16,7 +16,7 @@ public class Database {
     /// An `SQLLogger` instance to
     public var logSQL: SQLLogger = .none
 
-    /// Initialise and  configure an in-memory `Database`
+    /// Initialise and  configure a database
     ///
     /// - Parameters:
     ///   - location: A string path or `.memory` to create an in-memory database
@@ -111,13 +111,13 @@ public class Database {
     @TaskLocal static var isInAccessQueue = false
 
     func inAccessQueue<T>(_ block: () throws -> T) rethrows -> T {
-        if Database.isInAccessQueue {
+        if EasyDB.isInAccessQueue {
             // Avoid deadlock through reentrance: don't use accessQueue.sync if we're currently being
             // executed by the same dispatch queue
             return try block()
         }
         return try accessQueue.sync {
-            return try Database.$isInAccessQueue.withValue(true) {
+            return try EasyDB.$isInAccessQueue.withValue(true) {
                 return try block()
             }
         }

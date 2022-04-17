@@ -87,10 +87,10 @@ struct RowWithString: Codable, Equatable, CustomStringConvertible {
 }
 
 class EasyDBTestCase: XCTestCase {
-    var db: Database!
+    var db: EasyDB!
 
     override func setUpWithError() throws {
-        db = Database(.memory)
+        db = EasyDB(.memory)
     }
 
     func populateCollection<T: Codable>(_ data: [T]) throws -> Collection<T> {

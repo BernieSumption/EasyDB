@@ -23,13 +23,13 @@ class Statement {
         self.sql = sql
         self.logSQL = logSQL
         var statement: OpaquePointer?
-        try EasyDB.checkOK(sqlite3_prepare_v2(db, sql, -1, &statement, nil), sql: sql, db: db)
+        try checkOK(sqlite3_prepare_v2(db, sql, -1, &statement, nil), sql: sql, db: db)
         self.statement = try checkPointer(statement, from: "sqlite3_prepare_v2")
     }
 
     func clearBoundParameters() throws {
         self.parameters.removeAll()
-        try checkOK(sqlite3_clear_bindings(statement))
+        try checkResult(sqlite3_clear_bindings(statement))
     }
 
     /// Bind `N` parameters to the statement in positions `1..N`, clearing any previously bound parameters.
@@ -51,16 +51,16 @@ class Statement {
         let index = Int32(position)
         switch parameter {
         case .double(let double):
-            try checkOK(sqlite3_bind_double(statement, index, double))
+            try checkResult(sqlite3_bind_double(statement, index, double))
         case .int(let int):
-            try checkOK(sqlite3_bind_int64(statement, index, int))
+            try checkResult(sqlite3_bind_int64(statement, index, int))
         case .null:
-            try checkOK(sqlite3_bind_null(statement, index))
+            try checkResult(sqlite3_bind_null(statement, index))
         case .text(let string):
-            try checkOK(sqlite3_bind_text(statement, index, string, -1, sqliteTransient))
+            try checkResult(sqlite3_bind_text(statement, index, string, -1, sqliteTransient))
         case .blob(let data):
             try data.withUnsafeBytes { bytes in
-                try checkOK(sqlite3_bind_blob(
+                try checkResult(sqlite3_bind_blob(
                     statement, index, bytes.baseAddress, Int32(bytes.count),
                     sqliteTransient))
             }
@@ -120,7 +120,7 @@ class Statement {
             hasRow = false
             return .done
         default:
-            try checkOK(resultCode) // should always throw
+            try checkResult(resultCode) // should always throw
             throw EasyDBError.unexpected(message: "Unexpected result code \(resultCode) returned from sqlite3_step()")
         }
     }
@@ -213,8 +213,8 @@ class Statement {
         sqlite3_finalize(statement)
     }
 
-    private func checkOK(_ code: CInt) throws {
-        try EasyDB.checkOK(code, sql: self.sql, db: db)
+    private func checkResult(_ code: CInt) throws {
+        try checkOK(code, sql: self.sql, db: db)
     }
 }
 

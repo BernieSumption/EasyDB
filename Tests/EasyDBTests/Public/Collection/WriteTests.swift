@@ -72,7 +72,7 @@ class WriteTests: EasyDBTestCase {
     }
 
     func testUpsertOfUnique() throws {
-        db = Database(.memory)
+        db = EasyDB(.memory)
         let r1 = HandleAndName(handle: "a", name: "r1")
         let r2 = HandleAndName(handle: "b", name: "r2")
         let c = try db.collection(HandleAndName.self)
