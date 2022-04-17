@@ -106,7 +106,7 @@ public class Collection<Row: Codable>: Filterable, DefaultCollations {
                 }
                 try connection.execute(sql: "COMMIT TRANSACTION")
             } catch {
-                // don't throw an error if the rollback fails, because we want to see the
+                // don't throw an error if the rollback fails, because we want to throw the
                 // error that actually caused the statement to fail
                 try? connection.execute(sql: "ROLLBACK TRANSACTION")
                 throw error

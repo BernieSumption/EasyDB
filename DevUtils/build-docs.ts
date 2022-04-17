@@ -10,9 +10,11 @@ import { fatalError, sourcePath } from "./utils";
 
 const getCodeSnippets = () => {
   const result: Record<string, string> = {};
-  let testGlob = sourcePath("Tests/**/*.swift");
   let source = cp
-    .execSync(`cat ${testGlob}`, { encoding: "utf8" })
+    .execSync(
+      `cat ${sourcePath("Tests/*/*.swift")} ${sourcePath("Tests/*/*/*.swift")}`,
+      { encoding: "utf8" }
+    )
     .replace(/\r\n/g, "\n");
   let matches = [
     ...source.matchAll(

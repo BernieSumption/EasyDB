@@ -98,6 +98,20 @@ public class EasyDB {
         return try getConnection().execute(resultType, sql: sql, parameters: parameters)
     }
 
+    public func transaction<T>(block: () throws -> T) throws -> T {
+        return try inAccessQueue {
+            do {
+                try execute("BEGIN TRANSACTION")
+                let result = try block()
+                try execute("COMMIT TRANSACTION")
+                return result
+            } catch {
+                try? execute("ROLLBACK TRANSACTION")
+                throw error
+            }
+        }
+    }
+
     private var cachedConnection: Connection?
     func getConnection() throws -> Connection {
         if let cached = cachedConnection {

@@ -3,7 +3,7 @@ import EasyDB
 
 class DocsTests: EasyDBTestCase {
 
-    func testExecute() throws {
+    func testHeadlineDemo() throws {
         // docs:start:headline-demo
         // Record types are defined as Codable structs
         struct Book: Codable, Identifiable {

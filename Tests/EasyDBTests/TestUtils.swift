@@ -155,3 +155,11 @@ func assertErrorMessage(_ expression: @autoclosure () throws -> Any, contains: S
 func assertString(_ string: String, contains: String) {
     XCTAssertTrue(string.contains(contains), "\"\(string)\" does not contain \"\(contains)\"")
 }
+
+struct MyError: Error {
+    let description: String
+
+    init(_ description: String) {
+        self.description = description
+    }
+}
