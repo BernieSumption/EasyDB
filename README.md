@@ -54,8 +54,9 @@ Referential integrity is a special case because the database is often better pla
 
 Record types are `Codable` structs:
 
+<!---defining-collections--->
 ```swift
-struct MyRecord {
+struct MyRecord: Codable, Identifiable {
     var id = UUID()
     var name: String
 }
@@ -63,30 +64,72 @@ struct MyRecord {
 
 Under the hood, EasyDB is using `Codable` to get a list of the properties of this struct and generate a table with `id` and `name` columns. 
 
+Most record types should just work but some - especially any that have enums as properties - require a little extra code. See [Constraints on record types](#constraints-on-record-types).  
+
+### Primary keys
+
+To add a primary key, confirm your record type to `Identifiable`. A unique index will automatically be added.
+
+We recommend `UUID` for IDs. Auto-incrementing integer IDs are not supported as they do not play nicely with Swift's type system.
 
 ## Constraints on record types
 
-EasyDB relies heavily on [`Codable`](https://developer.apple.com/documentation/swift/codable) to move data to and from the database and determine the structure of record types.
-
-`Codable` is an extremely flexible API, and gives types a lot of flexibility about how to represent themselves. It is designed to allow types to convert themselves to and from JSON, or formats like JSON that consist of numbers, strings, booleans, and nested arrays and dictionaries.
+You can probably ignore this section - most Codable types will just work, including all the data types that you'd typically want to store in a database (strings, numbers, booleans, arrays, structs, dictionaries etc). However, if you get an error thrown while creating a querying collection, it may be because of an unsupported type.
 
 There are two constraints on record types:
 
-1. Your record type should use the compiler-synthesised `Codable` implementation: do not implement your own `init(from:)` of `encode(to:)` functions (it is fine however for your record types to contain properties that use types that have their own `Codable` implementations).
-2. The types used by your record types should be supported value types. Most `Codable` types are supported already. If yours are not, you can add support.
+1. Your record type should use the compiler-synthesised `Codable` implementation: do not implement your own `init(from:)` or `encode(to:)` functions (it is fine however for your record types to use other types that have their own `Codable` implementations).
+2. The primitive data types used by your record type must implement `SampleValueSource` or be decodable from the strings `"0"` or `"1"`, or the numbers `0` or `1`, or the booleans `false` or `true`. Most enums will not meet this requirement.
 
-Supported value types include:
-- String, numbers, Boolean, UUID, Date, Data and URL
-- Arrays of supported types
-- Dictionaries whose keys and values are supported types
-- Structs whose properties are supported types
-- Any combination of the above, e.g. `[[UUID: [Int: [MyCodableStruct]]]]` 
+The second requirement may seem a bit odd. First we'll show how to conform to `SampleValueSource`, then we'll explain why this is necessary.
 
-### Adding support for custom value types
+### Adding support for enums and other unsupported value types
 
-First, check if your type already works. Most do. If yours does not, it will throw an error when you try to use it.
+Here's an example of an unsupported `Codable` type. The enum `Direction` encodes as a string, but `"0"` is not a valid direction:
 
-TODO: code samples with type that throws an error, and the fix using SampleValueSource
+<!---invalid-record-type--->
+```swift
+struct Record: Codable {
+    var direction: Direction
+}
+// "0" is not a valid value for this enum
+enum Direction: String, Codable {
+    case up, down, left, right
+}
+XCTAssertThrowsError(
+    // message: Error thrown from Direction.init(from:) ... Cannot initialize
+    //          Direction from invalid String value 0
+    try db.collection(Record.self)
+)
+```
+
+The fix is as follows:
+
+<!---fix-invalid-record-type--->
+```swift
+extension Direction: SampleValueSource {
+    // return a `SampleValues` containing any two different instances
+    static let sampleValues = SampleValues(Direction.up, Direction.down)
+}
+```
+
+### Why is `SampleValueSource` necessary?
+
+Understanding this requires some explanation of how EasyDB works under the hood.
+
+One of the things that make EasyDB easy is that you can query using key paths, e.g. `filter(\.value, lessThan: 10)`. The algorithm that maps key paths to column names to enable this feature requires that EasyDB be able to create instances of your record types and of any other type used by the record type.
+
+It does using `Codable` - it calls `YourRecordType.init(from: Decoder)`, passing a special Decoder instance that records how it is used. Your record type will ask the decoder for some data in the format that it expects. For example, if `YourRecordType` contains a property `var value: Int32` then `init(from: Decoder)` is going to ask the decoder for an `Int32` called `value` - specifically it will call `decoder.decode(Int32.self, forKey: "value")`. This is how EasyDB figures out the structure of Codable types. The decoder will respond by giving it a value of the kind requested: `"0"` or `"1"` for strings, `0` or `1` for numbers, `false` or `true` for booleans.
+
+In the case of `Direction` in the example above, `"0"` was not a valid direction.
+
+EasyDB extends a few common built-in types (`Date`, `Data`, `UUID` and `URL`) with conformance
+
+This is fine for types that can be instantiated with one of these values. But some types that represent themselves as strings have requirements on the format of the string that they are instantiated with. Take `UUID` for example. It requires a UUID-formatted string. Trying to create a UUID with the string `"0"` will throw an error.
+
+Because `UUID` is a commonly used type, EasyDB extends it with `SampleValueSource` conformance.
+
+But if you use another type that encodes itself to a string but for which `"0"` or `"1"` are not valid representations, you will need to add `SampleValueSource` conformance yourself.
 
 ## Concurrency and transactions
 

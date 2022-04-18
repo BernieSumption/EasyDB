@@ -15,7 +15,8 @@ enum ReflectionError: Error, CustomStringConvertible {
         case .keyPathNotFound(let type):
             return "The provided KeyPath can't be mapped to a property of \(type) - note that array and dictionary subscript KeyPaths e.g. \\TypeName.myArray[0] are not supported"
         case .decodingError(let type, let error):
-            return "Error thrown from \(type)(from: Decoder): \(error)"
+            // NOTE: this string is documented, if you change it update the docs
+            return "Error thrown from \(type).init(from:) \"\(error)\""
         }
     }
 }

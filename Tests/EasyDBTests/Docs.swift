@@ -4,6 +4,8 @@ import EasyDB
 class DocsTests: EasyDBTestCase {
 
     func testHeadlineDemo() throws {
+        try? FileManager.default.removeItem(atPath: "my-database.sqlite")
+        defer { try? FileManager.default.removeItem(atPath: "my-database.sqlite") }
         // docs:start:headline-demo
         // Record types are defined as Codable structs
         struct Book: Codable, Identifiable {
@@ -31,4 +33,57 @@ class DocsTests: EasyDBTestCase {
 
         XCTAssertNotNil(cheapBooks)
     }
+
+    func testDefiningCollections() throws {
+        // docs:start:defining-collections
+        struct MyRecord: Codable, Identifiable {
+            var id = UUID()
+            var name: String
+        }
+        // docs:end
+
+        _ = try db.collection(MyRecord.self)
+    }
+
+    func testInvalidRecordType() throws {
+        // docs:start:invalid-record-type
+        struct Record: Codable {
+            var direction: Direction
+        }
+        // "0" is not a valid value for this enum
+        enum Direction: String, Codable {
+            case up, down, left, right
+        }
+        XCTAssertThrowsError(
+            // message: Error thrown from Direction.init(from:) ... Cannot initialize
+            //          Direction from invalid String value 0
+            try db.collection(Record.self)
+        )
+        // docs:end
+        assertErrorMessage(
+            try db.collection(Record.self),
+            contains: "Error thrown from Direction.init(from:)")
+        assertErrorMessage(
+            try db.collection(Record.self),
+            contains: "Cannot initialize Direction from invalid String value 0")
+    }
+
+    func testAddSupportForInvalidRecordType() throws {
+        struct Record: Codable {
+            var direction: Direction
+        }
+        XCTAssertNoThrow(
+            try db.collection(Record.self)
+        )
+    }
 }
+
+enum Direction: Codable {
+    case up, down, left, right
+}
+// docs:start:fix-invalid-record-type
+extension Direction: SampleValueSource {
+    // return a `SampleValues` containing any two different instances
+    static let sampleValues = SampleValues(Direction.up, Direction.down)
+}
+// docs:end

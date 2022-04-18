@@ -156,7 +156,7 @@ func assertString(_ string: String, contains: String) {
     XCTAssertTrue(string.contains(contains), "\"\(string)\" does not contain \"\(contains)\"")
 }
 
-struct MyError: Error {
+struct MyError: Error, CustomStringConvertible {
     let description: String
 
     init(_ description: String) {

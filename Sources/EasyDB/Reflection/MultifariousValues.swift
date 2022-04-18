@@ -67,18 +67,6 @@ private class SampleValueIterator {
         setSampleValues(UInt32(0), UInt32(1))
         setSampleValues(UInt64(0), UInt64(1))
         setSampleValues(Decimal(0), Decimal(1))
-        setSampleValues(
-            URL(string: "data:,0")!,
-            URL(string: "data:,1")!)
-        setSampleValues(
-            UUID(uuid: (0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0)),
-            UUID(uuid: (0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 1)))
-        setSampleValues(
-            Date(timeIntervalSince1970: 0),
-            Date(timeIntervalSince1970: 1))
-        setSampleValues(
-            Data(repeating: 0, count: 1),
-            Data(repeating: 1, count: 1))
     }
 
     func setSampleValues<T: Encodable>(_ zero: T, _ one: T) {
@@ -138,11 +126,35 @@ public protocol SampleValueSource {
 public struct SampleValues {
     fileprivate let provide: (SampleValueIterator) -> Void
 
-    init<T: Codable>(_ zero: T, _ one: T) {
+    public init<T: Codable>(_ zero: T, _ one: T) {
         self.provide = { $0.setSampleValues(zero, one) }
     }
 
     fileprivate func provideSampleValues(_ iterator: SampleValueIterator) {
         provide(iterator)
     }
+}
+
+extension URL: SampleValueSource {
+    static public var sampleValues = SampleValues(
+        URL(string: "data:,0")!,
+        URL(string: "data:,1")!)
+}
+
+extension UUID: SampleValueSource {
+    static public var sampleValues = SampleValues(
+        UUID(uuid: (0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0)),
+        UUID(uuid: (0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 1)))
+}
+
+extension Date: SampleValueSource {
+    static public var sampleValues = SampleValues(
+        Date(timeIntervalSince1970: 0),
+        Date(timeIntervalSince1970: 1))
+}
+
+extension Data: SampleValueSource {
+    static public var sampleValues = SampleValues(
+        Data(repeating: 0, count: 1),
+        Data(repeating: 1, count: 1))
 }
