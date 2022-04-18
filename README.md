@@ -42,9 +42,17 @@ It would be relatively easy to extend support back a few versions, PRs welcome, 
 
 ### A schemaless document store
 
-Being based on SQLite there is a schema under the hood, but EasyDB manages this schema for you. New database columns are automatically added to the underlying table when you add them to your record type.
+Being based on SQLite there is a schema under the hood, but EasyDB manages this schema for you. New database columns are automatically added to the underlying table when you add them to your record type. 
 
-### The application is responsible for 
+### `Codable` record types
+
+EasyDB relies heavily on [`Codable`](https://developer.apple.com/documentation/swift/codable) to move data to and from the database.
+
+### The application is responsible for consistency
+
+EasyDB encourages you to validate data consistency using Swift. For example, instead of defining a `NOT NULL` constraint on a column, define the property on the record type as non-optional. Instead of defining a `CHECK` constraint to ensure that a number is always positive, declare it as a `Uint` or write more complex validation code in Swift.
+
+Referential integrity is a special case because the database is often better placed to validate referential integrity than the application. Referential integrity constraints are [on the roadmap](https://github.com/BernieSumption/EasyDB/issues/3), PRs are welcome.  
 
 ### Design goals
 

@@ -1,6 +1,7 @@
 {
   "private": true,
   "scripts": {
+    "test": "npm run build-docs -- --validate",
     "build-docs": "ts-node --transpile-only build-docs.ts"
   },
   "dependencies": {

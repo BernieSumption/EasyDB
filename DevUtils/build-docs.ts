@@ -58,10 +58,35 @@ const removeIndentation = (block: string) => {
     .join("\n");
 };
 
+const validateInternalLinks = (content: string) => {
+  let links = [...content.matchAll(/]\(#([\w-]+)\)/g)].map((match) => match[1]);
+  let linkMarkerCount = [...content.matchAll(/\(#/g)].length;
+  if (links.length != linkMarkerCount) {
+    fatalError(
+      `${links.length} links found but ${linkMarkerCount} link markers ("(#") in docs`
+    );
+  }
+
+  let headings = [...content.matchAll(/^\s*#+\s*(.+)/gm)].map((match) =>
+    match[1].toLowerCase().replace(/\s+/g, "-")
+  );
+
+  for (const link of links) {
+    let count = headings.filter((heading) => heading === link).length;
+    if (count == 0) {
+      fatalError(`Internal link #${link} has no matching heading`);
+    }
+    if (count > 1) {
+      fatalError(`Internal link #${link} matches two headings`);
+    }
+  }
+};
+
 const compile = () => {
   let codeSnippets = getCodeSnippets();
   const readmePath = sourcePath("README.md");
   const content = fs.readFileSync(readmePath, "utf8");
+  validateInternalLinks(content);
   let replaced = 0;
   const compiledContent = content.replace(
     /(<!---([\w-]+)--->\s*\n```swift\n)((?:[\s\S](?!```))+)(\n```)/gm,
@@ -79,36 +104,20 @@ const compile = () => {
   );
 
   let specialMarkerCount = content.match(/(<!|->|```)/g)?.length || 0;
-  if (replaced != specialMarkerCount / 4)
+  if (replaced != specialMarkerCount / 4) {
     fatalError(
       `Sanity check failed: replaced (${replaced}) != specialMarkerCount (${specialMarkerCount}) / 4`
     );
+  }
 
-  fs.writeFileSync(readmePath, compiledContent, "utf8");
-  console.log(`Updated ${replaced} blocks in ${readmePath}`);
+  let isValidateMode = process.argv.includes("--validate");
+
+  if (isValidateMode) {
+    console.log(`✨ docs are valid`);
+  } else {
+    fs.writeFileSync(readmePath, compiledContent, "utf8");
+    console.log(`💫 updated ${replaced} blocks in ${readmePath}`);
+  }
 };
 
 compile();
-
-// fs.writeFileSync(readmePath, compiledContent, "utf8")
-
-// let marker: string | undefined
-
-// for (let i = 0; i < lines.length; ++i) {
-//     const line = lines[i]
-//     const lineMarker = markerName(line)
-//     if (lineMarker) {
-//         ++i
-//         if (lines[i] !== "```swift") fatalError(`Expected start of code block at line ${i+1} got "${lines[i]}"`)
-//         ++i
-//         let code = ""
-//         const firstCodeLine = i
-//         while (true) {
-//             if (lines[i].trim() !== "```") {
-//                 code += lines[i] + "\n"
-//             } else {
-//                 const lastCodeLine
-//             }
-//         }
-//     }
-// }
