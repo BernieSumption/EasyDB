@@ -2,7 +2,7 @@
 
 EasyDB is an application database for iOS and other Apple platforms. It wraps SQLite to provide an easy to use, high-performance, document-oriented database.
 
-The goal of EasyDB is to provide the best developer experience with zero configuration. Compared to the (many) other SQLite wrappers, EasyDB the only one that provides a type-safe query API with no boilerplate code or configuration beyond defining your record type:
+The goal of EasyDB is to provide the best developer experience with zero configuration, and taking advantage of modern Swift features. Compared to the (many) other SQLite wrappers, EasyDB the only one that provides a type-safe query API with no boilerplate code or configuration beyond defining your record type:
 
 <!---headline-demo--->
 ```swift
@@ -44,27 +44,49 @@ It would be relatively easy to extend support back a few versions, PRs welcome, 
 
 Being based on SQLite there is a schema under the hood, but EasyDB manages this schema for you. New database columns are automatically added to the underlying table when you add them to your record type. 
 
-### `Codable` record types
-
-EasyDB relies heavily on [`Codable`](https://developer.apple.com/documentation/swift/codable) to move data to and from the database.
-
 ### The application is responsible for consistency
 
 EasyDB encourages you to validate data consistency using Swift. For example, instead of defining a `NOT NULL` constraint on a column, define the property on the record type as non-optional. Instead of defining a `CHECK` constraint to ensure that a number is always positive, declare it as a `Uint` or write more complex validation code in Swift.
 
 Referential integrity is a special case because the database is often better placed to validate referential integrity than the application. Referential integrity constraints are [on the roadmap](https://github.com/BernieSumption/EasyDB/issues/3), PRs are welcome.  
 
-### Design goals
+## Defining collections
 
-#### The best developer experience for simple storing and querying data
+Record types are `Codable` structs:
 
-* Use the latest Swift APIs - Codable, KeyPath and string interpolations - to improve the developer experience
-* Configurable (to an extent) but zero configuration required. No need to create a schema or even specify a database file name.
+```swift
+struct MyRecord {
+    var id = UUID()
+    var name: String
+}
+```
 
-#### Embrace the schemaless document store mindset
+Under the hood, EasyDB is using `Codable` to get a list of the properties of this struct and generate a table with `id` and `name` columns. 
 
-TODO fill this one in. Maybe a bit of history about the RDBMS mindset vs document stores
 
+## Constraints on record types
+
+EasyDB relies heavily on [`Codable`](https://developer.apple.com/documentation/swift/codable) to move data to and from the database and determine the structure of record types.
+
+`Codable` is an extremely flexible API, and gives types a lot of flexibility about how to represent themselves. It is designed to allow types to convert themselves to and from JSON, or formats like JSON that consist of numbers, strings, booleans, and nested arrays and dictionaries.
+
+There are two constraints on record types:
+
+1. Your record type should use the compiler-synthesised `Codable` implementation: do not implement your own `init(from:)` of `encode(to:)` functions (it is fine however for your record types to contain properties that use types that have their own `Codable` implementations).
+2. The types used by your record types should be supported value types. Most `Codable` types are supported already. If yours are not, you can add support.
+
+Supported value types include:
+- String, numbers, Boolean, UUID, Date, Data and URL
+- Arrays of supported types
+- Dictionaries whose keys and values are supported types
+- Structs whose properties are supported types
+- Any combination of the above, e.g. `[[UUID: [Int: [MyCodableStruct]]]]` 
+
+### Adding support for custom value types
+
+First, check if your type already works. Most do. If yours does not, it will throw an error when you try to use it.
+
+TODO: code samples with type that throws an error, and the fix using SampleValueSource
 
 ## Concurrency and transactions
 
