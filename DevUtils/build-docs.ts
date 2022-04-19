@@ -92,23 +92,30 @@ const compile = () => {
     /(<!---([\w-]+)--->\s*\n```swift)((?:[\s\S](?!```))*)(\n```)/gm,
     (match, prefix, name, code, suffix) => {
       ++replaced;
-      if (code.includes("<!") || code.includes("->")) {
-        fatalError(`Code block includes comment marker:\n${match}`);
+      if (code.includes("<!-") || code.includes("-->")) {
+        fatalError(`Code block includes comment marker:\n${code}`);
       }
       if (code.includes("```")) {
-        fatalError(`Code block includes block marker:\n${match}`);
+        fatalError(`Code block includes block marker:\n${code}`);
       }
       if (!codeSnippets[name]) fatalError(`No code snippet "${name}"`);
       return prefix + "\n" + codeSnippets[name] + suffix;
     }
   );
 
-  let specialMarkerCount = content.match(/(<!|->|```)/g)?.length || 0;
-  if (replaced != specialMarkerCount / 4) {
-    fatalError(
-      `Sanity check failed: replaced (${replaced}) != specialMarkerCount (${specialMarkerCount}) / 4`
-    );
-  }
+  const sanityCheck = (pattern: string) => {
+    let count = content.match(RegExp(pattern, "g"))?.length || 0;
+    if (replaced != count) {
+      fatalError(
+        `Sanity check failed: replaced ${replaced} blocks but found ${count} "${pattern}"`
+      );
+    }
+  };
+
+  sanityCheck("<!-");
+  sanityCheck("-->");
+  sanityCheck("```swift");
+  sanityCheck("```(?!swift)");
 
   let isValidateMode = process.argv.includes("--validate");
 

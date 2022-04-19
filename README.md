@@ -82,7 +82,7 @@ try collection.insert([
 ])
 ```
 
-If you'd like to allow rows in a bulk insert to succeed or fail independently, use onConflict: .ignore. No errors will be thrown if any rows fail to insert.
+To allow rows in a bulk insert to succeed or fail independently, use `onConflict: .ignore`. No errors will be thrown if any rows fail to insert.
 
 <!---insert-many-ignore--->
 ```swift
@@ -93,6 +93,103 @@ try collection.insert([
 ```
 
 ## Querying records
+
+The API for querying records is `Filterable`. `Collection` implements `Filterable` and most of its methods return new `Filterable` instances allowing them to be chained together. 
+
+<!---query-filter--->
+```swift
+_ = try collection
+    .filter(\.name, lessThanOrEqualTo: "b")
+    .orderBy(\.name)
+    .limit(3)
+    .fetchMany()
+//  ^^ SELECT * FROM MyRecord WHERE `name` <= 'b' ORDER BY `name` LIMIT 3
+```
+
+Use `fetchOne()` to get the first record.
+
+Each fall to `filter(...)` returns a new immutable instance of `Filterable`, so you can create and store filters then use them in different ways:
+
+<!---query-shared--->
+```swift
+let filter = collection
+    .filter(\.name, lessThanOrEqualTo: "b")
+    .orderBy(\.name)
+
+let count = try filter.fetchCount()
+print("There are \(count) records in total")
+
+let first10 = try filter.limit(10).fetchMany()
+print("First 10: \(first10)")
+```
+
+This document describes most of the things you can do with the query API. For a full list, check out the inline documentation in XCode or read the source on GitHub (see the [Filterable protocol](https://github.com/BernieSumption/EasyDB/blob/master/Sources/EasyDB/Filterable.swift) and [QueryBuilder struct](https://github.com/BernieSumption/EasyDB/blob/master/Sources/EasyDB/QueryBuilder.swift).
+
+### Filtering with raw SQL
+
+The filter API using key paths is convenient but it can't do everything. Sometimes you need the power of SQL:
+
+<!---filter-sql--->
+```swift
+// select records where count is even
+_ = try collection.filter("\(\.count) % 2 == 0").fetchMany()
+//  ^^ SELECT * FROM MyRecord WHERE `count` % 2 == 0
+```
+
+Note how the kay path interpolated into the SQL string is converted into a column name. EasyDB uses string interpolation to prevent some errors and SQL injections vulnerabilities, see [working with SQL](#working-with-sql).
+
+You can `orderBy` an SQL expression too:
+
+<!---orderby-sql--->
+```swift
+_ = try collection.all().orderBy("\(\.count) % 2").fetchMany()
+//  ^^ SELECT * FROM MyRecord ORDER BY `count` % 2 == 0
+```
+
+### Adding custom filter extensions
+
+If you use the same SQL filter in many places you can extend `Filterable` to add a Swift API method for it. Here's the above query for even numbers implemented as an extension:
+
+<!---filter-sql-extension--->
+```swift
+extension Filterable {
+    func filter<V: Codable>(_ property: KeyPath<Row, V>, isEven: Bool) -> QueryBuilder<Row> {
+        return filter("\(property) % 2 == \(isEven ? 0 : 1)")
+    }
+}
+```
+
+Use it like this:
+
+<!---filter-sql-extension-use--->
+```swift
+_ = try collection.filter(\.count, isEven: true).fetchMany()
+//  ^^ SELECT * FROM MyRecord WHERE `count` % 2 == ?
+```
+
+### Selecting partial records
+
+The `fetchMany()` and `fetchOne()` methods return instances of the record type. If you don't need the whole instance you can improve CPU and memory performance by selecting individual fields.
+
+<!---subset-query-single--->
+```swift
+let names = try collection.all().fetchMany(\.name)
+//  ^^ SELECT `name` FROM `MyRecord`
+// names is typed [String]
+```
+
+<!---subset-query-multiple--->
+```swift
+let names = try collection.all().fetchMany(\.name)
+//  ^^ SELECT `name` FROM `MyRecord`
+// names is typed [String]
+```
+
+        
+
+## Working with SQL
+
+TODO
 
 ## Constraints on record types
 

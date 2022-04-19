@@ -74,6 +74,91 @@ class DocsTests: EasyDBTestCase {
             ["a", "b", "c", "d", "e"])
     }
 
+    func testQuery() throws {
+        struct MyRecord: Codable, Identifiable {
+            var id = UUID()
+            var name: String
+        }
+        let collection = try db.collection(MyRecord.self)
+
+        // docs:start:query-filter
+        _ = try collection
+            .filter(\.name, lessThanOrEqualTo: "b")
+            .orderBy(\.name)
+            .limit(3)
+            .fetchMany()
+        //  ^^ SELECT * FROM MyRecord WHERE `name` <= 'b' ORDER BY `name` LIMIT 3
+        // docs:end
+
+        // docs:start:query-shared
+        let filter = collection
+            .filter(\.name, lessThanOrEqualTo: "b")
+            .orderBy(\.name)
+
+        let count = try filter.fetchCount()
+        print("There are \(count) records in total")
+
+        let first10 = try filter.limit(10).fetchMany()
+        print("First 10: \(first10)")
+        // docs:end
+
+        func print(_ value: String) {}
+    }
+
+    func testQuerySql() throws {
+        struct MyRecord: Codable, Identifiable {
+            var id = UUID()
+            var count: Int
+        }
+        let collection = try db.collection(MyRecord.self)
+
+        // docs:start:filter-sql
+        // select records where count is even
+        _ = try collection.filter("\(\.count) % 2 == 0").fetchMany()
+        //  ^^ SELECT * FROM MyRecord WHERE `count` % 2 == 0
+        // docs:end
+
+        // docs:start:filter-sql-extension-use
+        _ = try collection.filter(\.count, isEven: true).fetchMany()
+        //  ^^ SELECT * FROM MyRecord WHERE `count` % 2 == ?
+        // docs:end
+
+        // docs:start:orderby-sql
+        _ = try collection.all().orderBy("\(\.count) % 2").fetchMany()
+        //  ^^ SELECT * FROM MyRecord ORDER BY `count` % 2 == 0
+        // docs:end
+    }
+
+    func testSubsetQuery() throws {
+        struct MyRecord: Codable, Identifiable {
+            var id = UUID()
+            var name: String
+        }
+        let collection = try db.collection(MyRecord.self)
+
+        // docs:start:subset-query-single
+        let names = try collection.all().fetchMany(\.name)
+        //  ^^ SELECT `name` FROM `MyRecord`
+        // names is typed [String]
+        // docs:end
+
+        // docs:start:subset-query-multiple
+        struct NameAndId: Codable {
+            var id: UUID
+            var name: String
+        }
+        Next up: implement this and add real tests not doc tests
+        let namesAndIds = try collection.all().fetchMany("""
+            \(\.id) as id,
+            \(\.name) as name
+        """)
+        //  ^^ SELECT `name` FROM `MyRecord`
+        // names is typed [String]
+        // docs:end
+
+        _ = names
+    }
+
     func testInvalidRecordType() throws {
         // docs:start:invalid-record-type
         struct Record: Codable {
@@ -89,6 +174,7 @@ class DocsTests: EasyDBTestCase {
             try db.collection(Record.self)
         )
         // docs:end
+
         assertErrorMessage(
             try db.collection(Record.self),
             contains: "Error thrown from Direction.init(from:)")
@@ -114,5 +200,13 @@ enum Direction: Codable {
 extension Direction: SampleValueSource {
     // return a `SampleValues` containing any two different instances
     static let sampleValues = SampleValues(Direction.up, Direction.down)
+}
+// docs:end
+
+// docs:start:filter-sql-extension
+extension Filterable {
+    func filter<V: Codable>(_ property: KeyPath<Row, V>, isEven: Bool) -> QueryBuilder<Row> {
+        return filter("\(property) % 2 == \(isEven ? 0 : 1)")
+    }
 }
 // docs:end
