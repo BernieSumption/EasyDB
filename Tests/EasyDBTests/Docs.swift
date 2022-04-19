@@ -34,15 +34,44 @@ class DocsTests: EasyDBTestCase {
         XCTAssertNotNil(cheapBooks)
     }
 
-    func testDefiningCollections() throws {
+    func testDefiningCOllections() throws {
         // docs:start:defining-collections
         struct MyRecord: Codable, Identifiable {
             var id = UUID()
             var name: String
         }
         // docs:end
+    }
 
-        _ = try db.collection(MyRecord.self)
+    func testInsert() throws {
+        struct UniqueName: Codable, Identifiable {
+            var id = UUID()
+            @Unique var name: String
+        }
+        let collection = try db.collection(UniqueName.self)
+
+        // docs:start:insert-one
+        try collection.insert(UniqueName(name: "a"))
+        // docs:end
+
+        // docs:start:insert-many
+        try collection.insert([
+            UniqueName(name: "b"),
+            UniqueName(name: "c"),
+            UniqueName(name: "d")
+        ])
+        // docs:end
+
+        // docs:start:insert-many-ignore
+        try collection.insert([
+            UniqueName(name: "d"),
+            UniqueName(name: "e")
+        ], onConflict: .ignore)
+        // docs:end
+
+        XCTAssertEqual(
+            try collection.all().fetchMany().map(\.name),
+            ["a", "b", "c", "d", "e"])
     }
 
     func testInvalidRecordType() throws {

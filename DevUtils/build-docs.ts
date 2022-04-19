@@ -89,7 +89,7 @@ const compile = () => {
   validateInternalLinks(content);
   let replaced = 0;
   const compiledContent = content.replace(
-    /(<!---([\w-]+)--->\s*\n```swift\n)((?:[\s\S](?!```))+)(\n```)/gm,
+    /(<!---([\w-]+)--->\s*\n```swift)((?:[\s\S](?!```))*)(\n```)/gm,
     (match, prefix, name, code, suffix) => {
       ++replaced;
       if (code.includes("<!") || code.includes("->")) {
@@ -99,7 +99,7 @@ const compile = () => {
         fatalError(`Code block includes block marker:\n${match}`);
       }
       if (!codeSnippets[name]) fatalError(`No code snippet "${name}"`);
-      return prefix + codeSnippets[name] + suffix;
+      return prefix + "\n" + codeSnippets[name] + suffix;
     }
   );
 

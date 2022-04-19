@@ -2,7 +2,7 @@
 
 EasyDB is an application database for iOS and other Apple platforms. It wraps SQLite to provide an easy to use, high-performance, document-oriented database.
 
-The goal of EasyDB is to provide the best developer experience with zero configuration, and taking advantage of modern Swift features. Compared to the (many) other SQLite wrappers, EasyDB the only one that provides a type-safe query API with no boilerplate code or configuration beyond defining your record type:
+The goal of EasyDB is to provide the best developer experience with zero configuration, and taking advantage of modern Swift features. Compared to the (many) other SQLite wrappers, EasyDB is the only one that provides a type-safe query API with no boilerplate code or configuration beyond defining your record type:
 
 <!---headline-demo--->
 ```swift
@@ -30,6 +30,8 @@ let cheapBooks = try books.all()
 //  ^^ SELECT * FROM Book WHERE `priceCents` < ? ORDER BY `author` DESC
 ```
 
+EasyDB is inspired by schemaless databases like MongoDB that allow documents to contain arbitrary hierarchical structured data. Being based on SQLite there is a schema under the hood, but EasyDB manages this schema for you. New database columns are automatically added to the underlying table when you add them to your record type.
+
 Before adopting EasyDB, consider some [reasons not to use EasyDB](#reasons-not-to-use-easydb). 
 
 ### System requirements
@@ -37,18 +39,6 @@ Before adopting EasyDB, consider some [reasons not to use EasyDB](#reasons-not-t
 EasyDB requires Swift 5.5+ and runs on: iOS 13+, macOS 10.15+, watchOS 6+, tvOS 13+.
 
 It would be relatively easy to extend support back a few versions, PRs welcome, see [this issue](https://github.com/BernieSumption/EasyDB/issues/1).
-
-## The EasyDB philosophy
-
-### A schemaless document store
-
-Being based on SQLite there is a schema under the hood, but EasyDB manages this schema for you. New database columns are automatically added to the underlying table when you add them to your record type. 
-
-### The application is responsible for consistency
-
-EasyDB encourages you to validate data consistency using Swift. For example, instead of defining a `NOT NULL` constraint on a column, define the property on the record type as non-optional. Instead of defining a `CHECK` constraint to ensure that a number is always positive, declare it as a `Uint` or write more complex validation code in Swift.
-
-Referential integrity is a special case because the database is often better placed to validate referential integrity than the application. Referential integrity constraints are [on the roadmap](https://github.com/BernieSumption/EasyDB/issues/3), PRs are welcome.  
 
 ## Defining collections
 
@@ -68,9 +58,41 @@ Most record types should just work but some - especially any that have enums as 
 
 ### Primary keys
 
-To add a primary key, confirm your record type to `Identifiable`. A unique index will automatically be added.
+To add a primary key, conform your record type to `Identifiable`. A unique index will automatically be added.
 
 We recommend `UUID` for IDs. Auto-incrementing integer IDs are not supported as they do not play nicely with Swift's type system.
+
+## Inserting records
+
+Insert one record:
+
+<!---insert-one--->
+```swift
+try collection.insert(UniqueName(name: "a"))
+```
+
+Insert many records in a transaction - if one insert fails e.g. due to a unique constraint, no records will be inserted
+
+<!---insert-many--->
+```swift
+try collection.insert([
+    UniqueName(name: "b"),
+    UniqueName(name: "c"),
+    UniqueName(name: "d")
+])
+```
+
+If you'd like to allow rows in a bulk insert to succeed or fail independently, use onConflict: .ignore. No errors will be thrown if any rows fail to insert.
+
+<!---insert-many-ignore--->
+```swift
+try collection.insert([
+    UniqueName(name: "d"),
+    UniqueName(name: "e")
+], onConflict: .ignore)
+```
+
+## Querying records
 
 ## Constraints on record types
 
@@ -166,7 +188,7 @@ Even in its first release, EasyDB is the best iOS database for _my_ needs. But y
 
 **You want type-safety across the full SQL API.** EasyDB does not completely hide you from SQL. Its philosophy is to provide a type-safe API for 90% of use cases and provide access to raw SQL so that you still have the full power of SQLite at your disposal. Personally I think that SQL is fine and your tests should catch any SQL syntax errors. If you disagree, use SQLite.swift
 
-**You want an explicit schema, constraints and migrations.** EasyDB follows the [schemaless document database philosophy](#the-easydb-philosophy). The application is responsible for enforcing data consistency, and the database operates as a high-performance but "dumb" data store. You write less code because there is no need to define a schema or write migrations to evolve your schema between application versions. But fans of schema-driven databases regard the schema definition as a kind of double-entry bookkeeping that helps you write reliable applications. If you want to define an explicit schema, use GRDB.
+**You want an explicit schema, constraints and migrations.** EasyDB follows the schemaless document database philosophy. The application is responsible for enforcing data consistency, and the database operates as a high-performance but "dumb" data store. You write less code because there is no need to define a schema or write migrations to evolve your schema between application versions. But fans of schema-driven databases regard the schema definition as a kind of double-entry bookkeeping that helps you write reliable applications. If you want to define an explicit schema, use GRDB.
 
 **You want to use advanced SQLite features.** EasyDB does not currently support the following features. There's no reason why it can't, it just doesn't yet:
   - _WAL mode:_ SQLite supports single-writer-multiple-reader concurrency via [WAL mode](https://www.sqlite.org/wal.html). Adding this to EasyDB is a high priority but for now EasyDB offers [thread safety but no concurrency](#concurrency-and-transactions). In fairness this is already better than Core Data which has neither concurrency nor thread safety.
