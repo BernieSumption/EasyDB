@@ -67,14 +67,19 @@ const validateInternalLinks = (content: string) => {
     );
   }
 
-  let headings = [...content.matchAll(/^\s*#+\s*(.+)/gm)].map((match) =>
-    match[1].toLowerCase().replace(/\s+/g, "-")
-  );
+  let headings = [...content.matchAll(/^\s*#+\s*(.+)/gm)]
+    .map((match) =>
+      match[1].toLowerCase().replace(/\W+/g, " ").trim().replace(/\s+/g, "-")
+    )
+    .sort();
 
   for (const link of links) {
     let count = headings.filter((heading) => heading === link).length;
     if (count == 0) {
-      fatalError(`Internal link #${link} has no matching heading`);
+      console.log("Available headings:", headings);
+      fatalError(
+        `Internal link #${link} does not match any of the above headings`
+      );
     }
     if (count > 1) {
       fatalError(`Internal link #${link} matches two headings`);

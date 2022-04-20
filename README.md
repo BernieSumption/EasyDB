@@ -42,19 +42,28 @@ It would be relatively easy to extend support back a few versions, PRs welcome, 
 
 ## Defining collections
 
-Record types are `Codable` structs:
+Record types are `Codable` structs. All examples on this page use this example record type:
 
 <!---defining-collections--->
 ```swift
-struct MyRecord: Codable, Identifiable {
+struct Employee: Codable, Identifiable {
     var id = UUID()
     var name: String
+    var salary: Int
 }
 ```
 
 Under the hood, EasyDB is using `Codable` to get a list of the properties of this struct and generate a table with `id` and `name` columns. 
 
-Most record types should just work but some - especially any that have enums as properties - require a little extra code. See [Constraints on record types](#constraints-on-record-types).  
+Most record types should just work but some - including any that have `enum`s as properties - require a little extra code. See [Constraints on record types](#constraints-on-record-types).
+
+The table is created and migrated the first time the collection is accessed:
+
+<!---create-collections--->
+```swift
+let database = EasyDB("my-database.sqlite")
+let employees = try database.collection(Employee.self)
+```  
 
 ### Primary keys
 
@@ -133,9 +142,10 @@ The filter API using key paths is convenient but it can't do everything. Sometim
 
 <!---filter-sql--->
 ```swift
-// select records where count is even
-_ = try collection.filter("\(\.count) % 2 == 0").fetchMany()
-//  ^^ SELECT * FROM MyRecord WHERE `count` % 2 == 0
+// select records where salary is even, though lord knows why
+// you'd want to do that
+_ = try collection.filter("\(\.salary) % 2 == 0").fetchMany()
+//  ^^ SELECT * FROM MyRecord WHERE `salary` % 2 == 0
 ```
 
 Note how the kay path interpolated into the SQL string is converted into a column name. EasyDB uses string interpolation to prevent some errors and SQL injections vulnerabilities, see [working with SQL](#working-with-sql).
@@ -144,7 +154,7 @@ You can `orderBy` an SQL expression too:
 
 <!---orderby-sql--->
 ```swift
-_ = try collection.all().orderBy("\(\.count) % 2").fetchMany()
+_ = try collection.all().orderBy("\(\.salary) % 2").fetchMany()
 //  ^^ SELECT * FROM MyRecord ORDER BY `count` % 2 == 0
 ```
 
@@ -165,8 +175,8 @@ Use it like this:
 
 <!---filter-sql-extension-use--->
 ```swift
-_ = try collection.filter(\.count, isEven: true).fetchMany()
-//  ^^ SELECT * FROM MyRecord WHERE `count` % 2 == ?
+_ = try collection.filter(\.salary, isEven: true).fetchMany()
+//  ^^ SELECT * FROM MyRecord WHERE `salary` % 2 == ?
 ```
 
 Extensions can be added to `Filterable` or `QueryBuilder`. Prefer `Filterable` because these extension methods will be available on both `Collection` (e.g. `collection.yourNewMethod()`) `QueryBuilder` (e.g. `collection.all().yourNewMethod()`). Extensions to `QueryBuilder` are not available on collections, but have access to the full `QueryBuilder` API so can, for example, execute queries.
@@ -213,6 +223,8 @@ if var row = try collection.all().fetchOne() {
 
 This is a "upsert" operation - it will update an existing record or create a new one of there is none. The "existing record" is identified by it sharing an `id` or another unique index. In fact, `save(row)` is just an alias for `insert(row, onConflict: .replace)`.
 
+Like `insert(_:)`, `save(_:)` can also take multiple records and they will be updated in a transaction.
+
 ## Bulk update
 
 It is also possible to update records in bulk using the `QueryBuilder` API.
@@ -221,24 +233,40 @@ Update every record:
 
 <!---update--->
 ```swift
+try collection.all().update(\.name, "new-name")
+//  ^^ UPDATE `MyRecord` SET `name` = ?
 ```
 
 Update some records based on a filter:
 
 <!---update-filter--->
 ```swift
+try collection
+    .filter(\.name, equalTo: "old-name")
+    .update(\.name, "new-name")
+//  ^^ UPDATE `MyRecord` SET `name` = ? WHERE `id` = ?
 ```
 
 Apply multiple updates by chaining `updating(_:_:)`
 
 <!---update-multiple--->
 ```swift
+try collection
+    .all()
+    .updating(\.name, "new-name")
+    .updating(\.id, UUID())
+    .update()
+//  ^^ UPDATE `MyRecord` SET `name` = ?, `id` = ?
 ```
 
 If the key path API can not achieve what you need, you can use SQL. In this example, every record is incremented by 1:
 
 <!---update-sql--->
 ```swift
+try collection
+    .all()
+    .update("\(\.name) = \(\.name) + 1")
+//  ^^ UPDATE `MyRecord` SET `name` = `name` + 1
 ```
 
 See the docs for [working with SQL](#working-with-sql) for more information on how the SQL is handled.

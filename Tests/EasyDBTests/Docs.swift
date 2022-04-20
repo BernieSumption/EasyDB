@@ -1,11 +1,39 @@
 import XCTest
 import EasyDB
 
-class DocsTests: EasyDBTestCase {
+class DocsTests: XCTestCase {
+
+    var database: EasyDB!
+    var collection: Collection<Employee>!
+
+    override func setUpWithError() throws {
+        database = EasyDB(.memory)
+        collection = try database.collection(Employee.self)
+        try? FileManager.default.removeItem(atPath: "my-database.sqlite")
+    }
+
+    override func tearDown() {
+        try? FileManager.default.removeItem(atPath: "my-database.sqlite")
+    }
+
+    // docs:start:defining-collections
+    struct Employee: Codable, Identifiable {
+        var id = UUID()
+        var name: String
+        var salary: Int
+    }
+    // docs:end
+
+    func testCreateCollection() throws {
+        // docs:start:create-collections
+        let database = EasyDB("my-database.sqlite")
+        let employees = try database.collection(Employee.self)
+        // docs:end
+
+        _ = employees
+    }
 
     func testHeadlineDemo() throws {
-        try? FileManager.default.removeItem(atPath: "my-database.sqlite")
-        defer { try? FileManager.default.removeItem(atPath: "my-database.sqlite") }
         // docs:start:headline-demo
         // Record types are defined as Codable structs
         struct Book: Codable, Identifiable {
@@ -34,21 +62,12 @@ class DocsTests: EasyDBTestCase {
         XCTAssertNotNil(cheapBooks)
     }
 
-    func testDefiningCOllections() throws {
-        // docs:start:defining-collections
-        struct MyRecord: Codable, Identifiable {
-            var id = UUID()
-            var name: String
-        }
-        // docs:end
-    }
-
     func testInsert() throws {
         struct UniqueName: Codable, Identifiable {
             var id = UUID()
             @Unique var name: String
         }
-        let collection = try db.collection(UniqueName.self)
+        let collection = try database.collection(UniqueName.self)
 
         // docs:start:insert-one
         try collection.insert(UniqueName(name: "a"))
@@ -75,11 +94,6 @@ class DocsTests: EasyDBTestCase {
     }
 
     func testQuery() throws {
-        struct MyRecord: Codable, Identifiable {
-            var id = UUID()
-            var name: String
-        }
-        let collection = try db.collection(MyRecord.self)
 
         // docs:start:query-filter
         _ = try collection
@@ -107,36 +121,25 @@ class DocsTests: EasyDBTestCase {
     }
 
     func testQuerySql() throws {
-        struct MyRecord: Codable, Identifiable {
-            var id = UUID()
-            var count: Int
-        }
-        let collection = try db.collection(MyRecord.self)
-
         // docs:start:filter-sql
-        // select records where count is even
-        _ = try collection.filter("\(\.count) % 2 == 0").fetchMany()
-        //  ^^ SELECT * FROM MyRecord WHERE `count` % 2 == 0
+        // select records where salary is even, though lord knows why
+        // you'd want to do that
+        _ = try collection.filter("\(\.salary) % 2 == 0").fetchMany()
+        //  ^^ SELECT * FROM MyRecord WHERE `salary` % 2 == 0
         // docs:end
 
         // docs:start:filter-sql-extension-use
-        _ = try collection.filter(\.count, isEven: true).fetchMany()
-        //  ^^ SELECT * FROM MyRecord WHERE `count` % 2 == ?
+        _ = try collection.filter(\.salary, isEven: true).fetchMany()
+        //  ^^ SELECT * FROM MyRecord WHERE `salary` % 2 == ?
         // docs:end
 
         // docs:start:orderby-sql
-        _ = try collection.all().orderBy("\(\.count) % 2").fetchMany()
+        _ = try collection.all().orderBy("\(\.salary) % 2").fetchMany()
         //  ^^ SELECT * FROM MyRecord ORDER BY `count` % 2 == 0
         // docs:end
     }
 
     func testSubsetQuery() throws {
-        struct MyRecord: Codable, Identifiable {
-            var id = UUID()
-            var name: String
-        }
-        let collection = try db.collection(MyRecord.self)
-
         // docs:start:subset-query-single
         let names = try collection.all().fetchMany(\.name)
         //  ^^ SELECT `name` FROM `MyRecord`
@@ -158,13 +161,6 @@ class DocsTests: EasyDBTestCase {
     }
 
     func testUpdate() throws {
-        struct MyRecord: Codable, Identifiable {
-            var id = UUID()
-            var name: String
-            var count: Int
-        }
-        let collection = try db.collection(MyRecord.self)
-
         // docs:start:save
         if var row = try collection.all().fetchOne() {
             row.name = "edited"
@@ -200,15 +196,6 @@ class DocsTests: EasyDBTestCase {
         //  ^^ UPDATE `MyRecord` SET `name` = `name` + 1
         // docs:end
 
-//        - [ ] Updating
-//            - [ ] Bulk update
-//                - [ ] .update(_:_)
-//                - [ ] .updating(_:_).updating(_:_).update()
-//            - [ ] Using SQL (link to Executing SQL for advanced)
-//                - [ ] .update("\(\.count) = \(\.count) + 1")
-//        - [ ] Deleting
-//            - [ ] Deleting single object
-//            - [ ] Using SQL (link to Executing SQL for advanced)
     }
 
     func testInvalidRecordType() throws {
@@ -223,15 +210,15 @@ class DocsTests: EasyDBTestCase {
         XCTAssertThrowsError(
             // message: Error thrown from Direction.init(from:) ... Cannot initialize
             //          Direction from invalid String value 0
-            try db.collection(Record.self)
+            try database.collection(Record.self)
         )
         // docs:end
 
         assertErrorMessage(
-            try db.collection(Record.self),
+            try database.collection(Record.self),
             contains: "Error thrown from Direction.init(from:)")
         assertErrorMessage(
-            try db.collection(Record.self),
+            try database.collection(Record.self),
             contains: "Cannot initialize Direction from invalid String value 0")
     }
 
@@ -240,7 +227,7 @@ class DocsTests: EasyDBTestCase {
             var direction: Direction
         }
         XCTAssertNoThrow(
-            try db.collection(Record.self)
+            try database.collection(Record.self)
         )
     }
 }

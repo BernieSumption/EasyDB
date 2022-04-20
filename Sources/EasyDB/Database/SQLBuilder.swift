@@ -77,8 +77,12 @@ struct SQL: CustomStringConvertible {
 
     func bracketed(raw fragments: [String]) -> Self {
         return raw("(")
-            .raw(fragments.joined(separator: ", "))
+            .commaSeparated(raw: fragments)
             .raw(")")
+    }
+
+    func commaSeparated(raw fragments: [String]) -> Self {
+        return raw(fragments.joined(separator: ", "))
     }
 
     func values() -> Self {

@@ -24,33 +24,24 @@ public struct QueryBuilder<Row: Codable>: Filterable {
     }
 
     public func fetchMany() throws -> [Row] {
-        let query = try compile(.select)
-        return try getConnection().execute(
-            [Row].self, sql: query.sql, parameters: query.parameters)
+        return try execute([Row].self, .select)
     }
 
     public func fetchMany<V: Codable>(_ property: KeyPath<Row, V>) throws -> [V] {
-        let query = try compile(.selectProperty(PartialCodableKeyPath(property)))
-        return try getConnection().execute(
-            [V].self, sql: query.sql, parameters: query.parameters)
+        return try execute([V].self, .selectProperty(PartialCodableKeyPath(property)))
     }
 
     public func fetchMany<T: Codable>(_ properties: T.Type) throws -> [T] {
         let mapper = try KeyPathMapper.forType(properties)
-        let query = try compile(.selectProperties(mapper.rootProperties))
-        return try getConnection().execute(
-            [T].self, sql: query.sql, parameters: query.parameters)
+        return try execute([T].self, .selectProperties(mapper.rootProperties))
     }
 
     public func fetchCount() throws -> Int {
-        let query = try compile(.count)
-        return try getConnection().execute(
-            Int.self, sql: query.sql, parameters: query.parameters)
+        return try execute(Int.self, .count)
     }
 
     public func delete() throws {
-        let query = try compile(.delete)
-        try getConnection().execute(sql: query.sql, parameters: query.parameters)
+        return try execute(.delete)
     }
 
     public func filter(_ sqlFragment: SQLFragment<Row>, collation: Collation?) -> Self {
@@ -138,8 +129,7 @@ public struct QueryBuilder<Row: Codable>: Filterable {
         if updates.count == 0 {
             throw EasyDBError.misuse(message: "No updates provided. The no-argument form of update() requires that updating(...) be called first")
         }
-        let query = try compile(.update)
-        return try getConnection().execute(sql: query.sql, parameters: query.parameters)
+        return try execute(.update)
     }
 
     enum CompileMode {
@@ -149,6 +139,16 @@ public struct QueryBuilder<Row: Codable>: Filterable {
         case delete
         case count
         case update
+    }
+
+    private func execute<V: Codable>(_ type: V.Type, _ mode: CompileMode) throws -> V {
+        let query = try compile(mode)
+        return try getConnection().execute(type, sql: query.sql, parameters: query.parameters)
+    }
+
+    private func execute(_ mode: CompileMode) throws {
+        let query = try compile(mode)
+        return try getConnection().execute(sql: query.sql, parameters: query.parameters)
     }
 
     private func compile(_ mode: CompileMode) throws -> CompileResult {
@@ -186,8 +186,10 @@ public struct QueryBuilder<Row: Codable>: Filterable {
                 .raw("UPDATE")
                 .quotedName(collection.tableName)
                 .raw("SET")
+                .commaSeparated(raw: try updates.map { update in
+                    try update.sql(collations: nil, overrideCollation: nil)
+                })
             for update in updates {
-                sql = sql.raw(try update.sql(collations: nil, overrideCollation: nil))
                 parameters.append(contentsOf: try update.parameters())
             }
         }

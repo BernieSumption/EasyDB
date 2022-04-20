@@ -108,6 +108,33 @@ class WriteTests: EasyDBTestCase {
         XCTAssertEqual(try c.all().fetchMany().map(\.value), [1, 0, 3])
     }
 
+    func testMultipleUpdate() throws {
+        let c = try db.collection(MultipleUpdate.self)
+
+        try c.insert([
+            MultipleUpdate(a: "a", b: 0),
+            MultipleUpdate(a: "b", b: 1),
+            MultipleUpdate(a: "c", b: 2)])
+
+        try c
+            .filter(\.a, lessThan: "c")
+            .updating(\.a, "new")
+            .updating(\.b, 10)
+            .update()
+
+        XCTAssertEqual(
+            try c.all().fetchMany(),
+            [
+                MultipleUpdate(a: "new", b: 10),
+                MultipleUpdate(a: "new", b: 10),
+                MultipleUpdate(a: "c", b: 2)
+            ])
+    }
+    struct MultipleUpdate: Codable, Equatable {
+        let a: String
+        let b: Int
+    }
+
     func testUpdateWithOrderAndLimit() throws {
         let c = try db.collection(Row.self)
 
