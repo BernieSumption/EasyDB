@@ -109,7 +109,7 @@ The `QueryBuilder` API is a fluent API for defining and executing SQL queries:
 
 <!---query-filter--->
 ```swift
-_ = try collection
+_ = try employees
     .filter(\.name, lessThanOrEqualTo: "b")
     .orderBy(\.name)
     .limit(3)
@@ -123,7 +123,7 @@ Each call to `filter`, `orderBy` and `limit` returns a new immutable instance of
 
 <!---query-shared--->
 ```swift
-let filter = collection
+let filter = employees
     .filter(\.name, lessThanOrEqualTo: "b")
     .orderBy(\.name)
 
@@ -144,7 +144,7 @@ The filter API using key paths is convenient but it can't do everything. Sometim
 ```swift
 // select records where salary is even, though lord knows why
 // you'd want to do that
-_ = try collection.filter("\(\.salary) % 2 == 0").fetchMany()
+_ = try employees.filter("\(\.salary) % 2 == 0").fetchMany()
 //  ^^ SELECT * FROM MyRecord WHERE `salary` % 2 == 0
 ```
 
@@ -154,7 +154,7 @@ You can `orderBy` an SQL expression too:
 
 <!---orderby-sql--->
 ```swift
-_ = try collection.all().orderBy("\(\.salary) % 2").fetchMany()
+_ = try employees.all().orderBy("\(\.salary) % 2").fetchMany()
 //  ^^ SELECT * FROM MyRecord ORDER BY `count` % 2 == 0
 ```
 
@@ -175,7 +175,7 @@ Use it like this:
 
 <!---filter-sql-extension-use--->
 ```swift
-_ = try collection.filter(\.salary, isEven: true).fetchMany()
+_ = try employees.filter(\.salary, isEven: true).fetchMany()
 //  ^^ SELECT * FROM MyRecord WHERE `salary` % 2 == ?
 ```
 
@@ -189,7 +189,7 @@ You can select a single field using a key path:
 
 <!---subset-query-single--->
 ```swift
-let names = try collection.all().fetchMany(\.name)
+let names = try employees.all().fetchMany(\.name)
 //  ^^ SELECT `name` FROM `MyRecord`
 // names is typed [String]
 ```
@@ -202,7 +202,7 @@ struct NameAndId: Codable {
     var id: UUID
     var name: String
 }
-let namesAndIds = try collection.all().fetchMany(NameAndId.self)
+let namesAndIds = try employees.all().fetchMany(NameAndId.self)
 //  ^^ SELECT `id`, `name` FROM `MyRecord`
 // namesAndIds is typed [NameAndId]
 ```
@@ -215,9 +215,9 @@ The easiest way to update a record is to fetch it from the database, modify it, 
 
 <!---save--->
 ```swift
-if var row = try collection.all().fetchOne() {
+if var row = try employees.all().fetchOne() {
     row.name = "edited"
-    try collection.save(row)
+    try employees.save(row)
 }
 ```
 
@@ -233,7 +233,7 @@ Update every record:
 
 <!---update--->
 ```swift
-try collection.all().update(\.name, "new-name")
+try employees.all().update(\.name, "new-name")
 //  ^^ UPDATE `MyRecord` SET `name` = ?
 ```
 
@@ -241,7 +241,7 @@ Update some records based on a filter:
 
 <!---update-filter--->
 ```swift
-try collection
+try employees
     .filter(\.name, equalTo: "old-name")
     .update(\.name, "new-name")
 //  ^^ UPDATE `MyRecord` SET `name` = ? WHERE `id` = ?
@@ -251,7 +251,7 @@ Apply multiple updates by chaining `updating(_:_:)`
 
 <!---update-multiple--->
 ```swift
-try collection
+try employees
     .all()
     .updating(\.name, "new-name")
     .updating(\.id, UUID())
@@ -263,7 +263,7 @@ If the key path API can not achieve what you need, you can use SQL. In this exam
 
 <!---update-sql--->
 ```swift
-try collection
+try employees
     .all()
     .update("\(\.name) = \(\.name) + 1")
 //  ^^ UPDATE `MyRecord` SET `name` = `name` + 1
@@ -271,9 +271,80 @@ try collection
 
 See the docs for [working with SQL](#working-with-sql) for more information on how the SQL is handled.
 
+## Deleting records
+
+Deleting records works just like fetching, and can use the same set of filter operations to target the records to delete:
+
+<!---deleting--->
+```swift
+try employees
+    .filter(id: thatDudeWeGonnaFire)
+    .delete()
+```
+
 ## Working with SQL
 
-TODO
+Previously you've seen how API methods like `filter` and `update` have overloads that take SQL fragments to be included in the generated SQL statement.
+
+You can also execute whole SQL statements with the `execute` methods:
+
+<!---execute-sql--->
+```swift
+let randomNumber = try database.execute(Int.self, "SELECT random()")
+
+// or for statements that do not return a value
+try database.execute("PRAGMA case_sensitive_like = true")
+```
+
+All methods that accept SQL do so as a string interpolation, not a `String`. You can't just pass any old String:
+
+<!---manually-managed--->
+```swift
+let sql = "DELETE from Employees"
+database.execute(sql)
+// ^^ syntax error "Cannot convert value of type 'String'
+//    to expected argument type"
+```
+
+Instead, use a string literal, optionally interpolating several kinds of value:
+
+**Key paths** will be replaced in the query with a quoted property name. This only works collections.
+
+<!---execute-sql-interpolation-key-path--->
+```swift
+try employees.filter("LENGTH(\(\.name)) < 5").delete()
+//  ^^ DELETE FROM Employees where LENGTH(`name`) < 5
+//     # fire all employees with short names
+```
+
+**Codable values** will be replaced with a parameter placeholder `?` and the value bound as a parameter to the query. This allows you to safely use strings without creating SQL injection vulnerabilities
+
+<!---execute-sql-interpolation-string--->
+```swift
+let bobbyTables = "Robert'); DROP TABLE Employees;--"
+try database.execute("DELETE from Employee WHERE `name` = \(bobbyTables)")
+//  ^^ DELETE FROM Employees where `name` = ?
+//     # "Robert'); DROP TABLE Employees;--" bound to parameter 1
+//     # Fire Bobby. Nice try Bobby.
+```
+
+**SQL literals** require the `literal:` argument name and insert the string directly into the query. You are responsible for ensuring that this doesn't open up an SQL injection attack:
+
+<!---execute-sql-interpolation-literal--->
+```swift
+let operation = lessThan ? "<" : ">"
+try employees.filter("salary \(literal: operation) 50000").delete()
+//  ^^ DELETE FROM Employees where salary < 50000
+```
+
+- **Collections** will be replaces with the quoted table name:
+
+<!---execute-sql-interpolation-collection--->
+```swift
+let employees = try database.collection(Employee.self)
+try database.execute("DROP TABLE \(employees)")
+//  ^^ DROP TABLE `Employees`
+```
 
 ### Executing arbitrary queries
 
@@ -306,7 +377,7 @@ enum Direction: String, Codable {
 XCTAssertThrowsError(
     // message: Error thrown from Direction.init(from:) ... Cannot initialize
     //          Direction from invalid String value 0
-    try db.collection(Record.self)
+    try database.collection(Record.self)
 )
 ```
 

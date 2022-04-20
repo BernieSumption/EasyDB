@@ -97,6 +97,9 @@ const compile = () => {
     /(<!---([\w-]+)--->\s*\n```swift)((?:[\s\S](?!```))*)(\n```)/gm,
     (match, prefix, name, code, suffix) => {
       ++replaced;
+      if (name == "manually-managed") {
+        return match;
+      }
       if (code.includes("<!-") || code.includes("-->")) {
         fatalError(`Code block includes comment marker:\n${code}`);
       }

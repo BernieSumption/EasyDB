@@ -4,11 +4,11 @@ import EasyDB
 class DocsTests: XCTestCase {
 
     var database: EasyDB!
-    var collection: Collection<Employee>!
+    var employees: Collection<Employee>!
 
     override func setUpWithError() throws {
         database = EasyDB(.memory)
-        collection = try database.collection(Employee.self)
+        employees = try database.collection(Employee.self)
         try? FileManager.default.removeItem(atPath: "my-database.sqlite")
     }
 
@@ -96,7 +96,7 @@ class DocsTests: XCTestCase {
     func testQuery() throws {
 
         // docs:start:query-filter
-        _ = try collection
+        _ = try employees
             .filter(\.name, lessThanOrEqualTo: "b")
             .orderBy(\.name)
             .limit(3)
@@ -105,7 +105,7 @@ class DocsTests: XCTestCase {
         // docs:end
 
         // docs:start:query-shared
-        let filter = collection
+        let filter = employees
             .filter(\.name, lessThanOrEqualTo: "b")
             .orderBy(\.name)
 
@@ -124,24 +124,24 @@ class DocsTests: XCTestCase {
         // docs:start:filter-sql
         // select records where salary is even, though lord knows why
         // you'd want to do that
-        _ = try collection.filter("\(\.salary) % 2 == 0").fetchMany()
+        _ = try employees.filter("\(\.salary) % 2 == 0").fetchMany()
         //  ^^ SELECT * FROM MyRecord WHERE `salary` % 2 == 0
         // docs:end
 
         // docs:start:filter-sql-extension-use
-        _ = try collection.filter(\.salary, isEven: true).fetchMany()
+        _ = try employees.filter(\.salary, isEven: true).fetchMany()
         //  ^^ SELECT * FROM MyRecord WHERE `salary` % 2 == ?
         // docs:end
 
         // docs:start:orderby-sql
-        _ = try collection.all().orderBy("\(\.salary) % 2").fetchMany()
+        _ = try employees.all().orderBy("\(\.salary) % 2").fetchMany()
         //  ^^ SELECT * FROM MyRecord ORDER BY `count` % 2 == 0
         // docs:end
     }
 
     func testSubsetQuery() throws {
         // docs:start:subset-query-single
-        let names = try collection.all().fetchMany(\.name)
+        let names = try employees.all().fetchMany(\.name)
         //  ^^ SELECT `name` FROM `MyRecord`
         // names is typed [String]
         // docs:end
@@ -151,7 +151,7 @@ class DocsTests: XCTestCase {
             var id: UUID
             var name: String
         }
-        let namesAndIds = try collection.all().fetchMany(NameAndId.self)
+        let namesAndIds = try employees.all().fetchMany(NameAndId.self)
         //  ^^ SELECT `id`, `name` FROM `MyRecord`
         // namesAndIds is typed [NameAndId]
         // docs:end
@@ -162,26 +162,26 @@ class DocsTests: XCTestCase {
 
     func testUpdate() throws {
         // docs:start:save
-        if var row = try collection.all().fetchOne() {
+        if var row = try employees.all().fetchOne() {
             row.name = "edited"
-            try collection.save(row)
+            try employees.save(row)
         }
         // docs:end
 
         // docs:start:update
-        try collection.all().update(\.name, "new-name")
+        try employees.all().update(\.name, "new-name")
         //  ^^ UPDATE `MyRecord` SET `name` = ?
         // docs:end
 
         // docs:start:update-filter
-        try collection
+        try employees
             .filter(\.name, equalTo: "old-name")
             .update(\.name, "new-name")
         //  ^^ UPDATE `MyRecord` SET `name` = ? WHERE `id` = ?
         // docs:end
 
         // docs:start:update-multiple
-        try collection
+        try employees
             .all()
             .updating(\.name, "new-name")
             .updating(\.id, UUID())
@@ -190,12 +190,60 @@ class DocsTests: XCTestCase {
         // docs:end
 
         // docs:start:update-sql
-        try collection
+        try employees
             .all()
             .update("\(\.name) = \(\.name) + 1")
         //  ^^ UPDATE `MyRecord` SET `name` = `name` + 1
         // docs:end
 
+    }
+
+    func testDelete() throws {
+        let thatDudeWeGonnaFire = UUID()
+
+        // docs:start:deleting
+        try employees
+            .filter(id: thatDudeWeGonnaFire)
+            .delete()
+        // docs:end
+    }
+
+    func testExecuteSQL() throws {
+
+        // docs:start:execute-sql
+        let randomNumber = try database.execute(Int.self, "SELECT random()")
+
+        // or for statements that do not return a value
+        try database.execute("PRAGMA case_sensitive_like = true")
+        // docs:end
+        _ = randomNumber
+
+        // docs:start:execute-sql-interpolation-key-path
+        try employees.filter("LENGTH(\(\.name)) < 5").delete()
+        //  ^^ DELETE FROM Employees where LENGTH(`name`) < 5
+        //     # fire all employees with short names
+        // docs:end
+
+        // docs:start:execute-sql-interpolation-string
+        let bobbyTables = "Robert'); DROP TABLE Employees;--"
+        try database.execute("DELETE from Employee WHERE `name` = \(bobbyTables)")
+        //  ^^ DELETE FROM Employees where `name` = ?
+        //     # "Robert'); DROP TABLE Employees;--" bound to parameter 1
+        //     # Fire Bobby. Nice try Bobby.
+        // docs:end
+
+        let lessThan = randomNumber < 10
+        // docs:start:execute-sql-interpolation-literal
+        let operation = lessThan ? "<" : ">"
+        try employees.filter("salary \(literal: operation) 50000").delete()
+        //  ^^ DELETE FROM Employees where salary < 50000
+        // docs:end
+
+        // docs:start:execute-sql-interpolation-collection
+        let employees = try database.collection(Employee.self)
+        try database.execute("DROP TABLE \(employees)")
+        //  ^^ DROP TABLE `Employees`
+        // docs:end
     }
 
     func testInvalidRecordType() throws {

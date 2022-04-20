@@ -46,6 +46,10 @@ public struct SQLFragment<Row: Codable>: ExpressibleByStringInterpolation {
             parts.append(.property(PartialCodableKeyPath(property)))
         }
 
+        public mutating func appendInterpolation<V: Codable>(_ collection: Collection<V>) {
+            parts.append(.literal(SQL.quoteName(collection.tableName)))
+        }
+
         public mutating func appendInterpolation(literal sql: String) {
             parts.append(.literal(sql))
         }
