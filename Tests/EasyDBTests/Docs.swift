@@ -157,6 +157,60 @@ class DocsTests: EasyDBTestCase {
         _ = namesAndIds
     }
 
+    func testUpdate() throws {
+        struct MyRecord: Codable, Identifiable {
+            var id = UUID()
+            var name: String
+            var count: Int
+        }
+        let collection = try db.collection(MyRecord.self)
+
+        // docs:start:save
+        if var row = try collection.all().fetchOne() {
+            row.name = "edited"
+            try collection.save(row)
+        }
+        // docs:end
+
+        // docs:start:update
+        try collection.all().update(\.name, "new-name")
+        //  ^^ UPDATE `MyRecord` SET `name` = ?
+        // docs:end
+
+        // docs:start:update-filter
+        try collection
+            .filter(\.name, equalTo: "old-name")
+            .update(\.name, "new-name")
+        //  ^^ UPDATE `MyRecord` SET `name` = ? WHERE `id` = ?
+        // docs:end
+
+        // docs:start:update-multiple
+        try collection
+            .all()
+            .updating(\.name, "new-name")
+            .updating(\.id, UUID())
+            .update()
+        //  ^^ UPDATE `MyRecord` SET `name` = ?, `id` = ?
+        // docs:end
+
+        // docs:start:update-sql
+        try collection
+            .all()
+            .update("\(\.name) = \(\.name) + 1")
+        //  ^^ UPDATE `MyRecord` SET `name` = `name` + 1
+        // docs:end
+
+//        - [ ] Updating
+//            - [ ] Bulk update
+//                - [ ] .update(_:_)
+//                - [ ] .updating(_:_).updating(_:_).update()
+//            - [ ] Using SQL (link to Executing SQL for advanced)
+//                - [ ] .update("\(\.count) = \(\.count) + 1")
+//        - [ ] Deleting
+//            - [ ] Deleting single object
+//            - [ ] Using SQL (link to Executing SQL for advanced)
+    }
+
     func testInvalidRecordType() throws {
         // docs:start:invalid-record-type
         struct Record: Codable {

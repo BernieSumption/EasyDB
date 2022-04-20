@@ -92,9 +92,11 @@ try collection.insert([
 ], onConflict: .ignore)
 ```
 
+`insert` also supports `onConflict: .replace` for upserts, but you should use the [`save()` alias instead](#saving-records-upsert) which is easier to read.
+
 ## Querying records
 
-The API for querying records is `Filterable`. `Collection` implements `Filterable` and most of its methods return new `Filterable` instances allowing them to be chained together. 
+The `QueryBuilder` API is a fluent API for defining and executing SQL queries: 
 
 <!---query-filter--->
 ```swift
@@ -108,7 +110,7 @@ _ = try collection
 
 Use `fetchOne()` to get the first record.
 
-Each fall to `filter(...)` returns a new immutable instance of `Filterable`, so you can create and store filters then use them in different ways:
+Each call to `filter`, `orderBy` and `limit` returns a new immutable instance of `QueryBuilder`, so you can create and store filters then use them in different ways:
 
 <!---query-shared--->
 ```swift
@@ -123,7 +125,7 @@ let first10 = try filter.limit(10).fetchMany()
 log("First 10: \(first10)")
 ```
 
-This document describes most of the things you can do with the query API. For a full list, check out the inline documentation in XCode or read the source on GitHub (see the [Filterable protocol](https://github.com/BernieSumption/EasyDB/blob/master/Sources/EasyDB/Filterable.swift) and [QueryBuilder struct](https://github.com/BernieSumption/EasyDB/blob/master/Sources/EasyDB/QueryBuilder.swift).
+This document describes most of the things you can do with the query API. For a full list, check out the inline documentation in XCode or read the source on GitHub: see the [Filterable protocol](https://github.com/BernieSumption/EasyDB/blob/master/Sources/EasyDB/Filterable.swift) for `filter(...)` methods and [QueryBuilder struct](https://github.com/BernieSumption/EasyDB/blob/master/Sources/EasyDB/QueryBuilder.swift) for all other methods
 
 ### Filtering with raw SQL
 
@@ -167,6 +169,8 @@ _ = try collection.filter(\.count, isEven: true).fetchMany()
 //  ^^ SELECT * FROM MyRecord WHERE `count` % 2 == ?
 ```
 
+Extensions can be added to `Filterable` or `QueryBuilder`. Prefer `Filterable` because these extension methods will be available on both `Collection` (e.g. `collection.yourNewMethod()`) `QueryBuilder` (e.g. `collection.all().yourNewMethod()`). Extensions to `QueryBuilder` are not available on collections, but have access to the full `QueryBuilder` API so can, for example, execute queries.
+
 ### Selecting partial records
 
 The `fetchMany()` and `fetchOne()` methods return instances of the record type. If you don't need the whole instance you can improve CPU and memory performance by selecting individual fields.
@@ -191,7 +195,53 @@ struct NameAndId: Codable {
 let namesAndIds = try collection.all().fetchMany(NameAndId.self)
 //  ^^ SELECT `id`, `name` FROM `MyRecord`
 // namesAndIds is typed [NameAndId]
-```  
+```
+
+## Updating records
+
+### Saving records (upsert)
+
+The easiest way to update a record is to fetch it from the database, modify it, and call `save(_:)`:
+
+<!---save--->
+```swift
+if var row = try collection.all().fetchOne() {
+    row.name = "edited"
+    try collection.save(row)
+}
+```
+
+This is a "upsert" operation - it will update an existing record or create a new one of there is none. The "existing record" is identified by it sharing an `id` or another unique index. In fact, `save(row)` is just an alias for `insert(row, onConflict: .replace)`.
+
+## Bulk update
+
+It is also possible to update records in bulk using the `QueryBuilder` API.
+
+Update every record:
+
+<!---update--->
+```swift
+```
+
+Update some records based on a filter:
+
+<!---update-filter--->
+```swift
+```
+
+Apply multiple updates by chaining `updating(_:_:)`
+
+<!---update-multiple--->
+```swift
+```
+
+If the key path API can not achieve what you need, you can use SQL. In this example, every record is incremented by 1:
+
+<!---update-sql--->
+```swift
+```
+
+See the docs for [working with SQL](#working-with-sql) for more information on how the SQL is handled.
 
 ## Working with SQL
 
