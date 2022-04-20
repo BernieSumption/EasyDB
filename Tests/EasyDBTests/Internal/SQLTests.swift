@@ -2,7 +2,7 @@ import XCTest
 @testable import EasyDB
 import SQLite3
 
-class SQLTests: XCTestCase {
+class SQLTests: EasyDBTestCase {
     func testNameNormalzation() throws {
         let base = "Abcdé"
         let equal = "aBcdé"
@@ -18,5 +18,13 @@ class SQLTests: XCTestCase {
         // Not equal according to SQLite rules
         XCTAssertNotEqual(sqlite3_stricmp(base, notEqual), 0)
         XCTAssertNotEqual(SQL.normalizeName(base), SQL.normalizeName(notEqual))
+    }
+
+    func testInterpolateCollection() throws {
+        let c = try db.collection(Row.self)
+        let sql: SQLFragment<NoProperties> = "foo \(c) baz"
+        XCTAssertEqual(
+            try sql.sql(collations: nil, overrideCollation: nil),
+            "foo `Row` baz")
     }
 }

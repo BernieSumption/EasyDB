@@ -346,9 +346,20 @@ try database.execute("DROP TABLE \(employees)")
 //  ^^ DROP TABLE `Employees`
 ```
 
-### Executing arbitrary queries
+### Selecting into custom result types
 
-TODO db.execute
+The method `execute(ResultType.self, "query")` allows you to specify the result type. You can specify any Codable type and EasyDB will try to decode the query into it.
+
+To read a single row, pass one of these kinds of type:
+
+- **A primitive type** e.g. `String.self` or `Int.self` will return the first column of the first row of results and throw an error if there are no rows.
+- **A `Codable` struct** e.g. `SomeStruct.self` will return a single row mapping column names in the query to property names. It is an error if `SomeStruct` contains a property that does not correspond to a column in the query results. It is not an error if the query results contain a column that does not correspond to a property in `SomeStruct` - that property will just be ignored.
+- **A dictionary** e.g. `[String: String].self` will return the first row of results with column names in the query mapped to keys in the dictionary
+
+To 
+
+- **An array of the above** e.g. `[String].self`, `[SomeStruct].self` or `[[String: String]].self` will operate as above, except that all result rows will be returned in an array.
+- **A 2D array of primitive types** e.g. `[[String]].self` or `[[Int]].self`` will return all columns of all rows.
 
 ## Constraints on record types
 

@@ -197,6 +197,8 @@ class StatementDecoderTests: EasyDBTestCase {
                 ["snoz", "plonk"]
             ]
         )
+
+        testSelectAs("SELECT '1.0' as foo, 2 as bar, 8 as baz", [[Int]].self, [[1, 2, 8]])
     }
 }
 
