@@ -117,10 +117,10 @@ let filter = collection
     .orderBy(\.name)
 
 let count = try filter.fetchCount()
-print("There are \(count) records in total")
+log("There are \(count) records in total")
 
 let first10 = try filter.limit(10).fetchMany()
-print("First 10: \(first10)")
+log("First 10: \(first10)")
 ```
 
 This document describes most of the things you can do with the query API. For a full list, check out the inline documentation in XCode or read the source on GitHub (see the [Filterable protocol](https://github.com/BernieSumption/EasyDB/blob/master/Sources/EasyDB/Filterable.swift) and [QueryBuilder struct](https://github.com/BernieSumption/EasyDB/blob/master/Sources/EasyDB/QueryBuilder.swift).
@@ -171,6 +171,8 @@ _ = try collection.filter(\.count, isEven: true).fetchMany()
 
 The `fetchMany()` and `fetchOne()` methods return instances of the record type. If you don't need the whole instance you can improve CPU and memory performance by selecting individual fields.
 
+You can select a single field using a key path:
+
 <!---subset-query-single--->
 ```swift
 let names = try collection.all().fetchMany(\.name)
@@ -178,18 +180,26 @@ let names = try collection.all().fetchMany(\.name)
 // names is typed [String]
 ```
 
+Or a subset of fields using a custom result type. Only the fields present in the result type will be selected. This is not type-safe - the property names and types of the result type must match the record type, otherwise an error will be thrown.
+
 <!---subset-query-multiple--->
 ```swift
-let names = try collection.all().fetchMany(\.name)
-//  ^^ SELECT `name` FROM `MyRecord`
-// names is typed [String]
-```
-
-        
+struct NameAndId: Codable {
+    var id: UUID
+    var name: String
+}
+let namesAndIds = try collection.all().fetchMany(NameAndId.self)
+//  ^^ SELECT `id`, `name` FROM `MyRecord`
+// namesAndIds is typed [NameAndId]
+```  
 
 ## Working with SQL
 
 TODO
+
+### Executing arbitrary queries
+
+TODO db.execute
 
 ## Constraints on record types
 

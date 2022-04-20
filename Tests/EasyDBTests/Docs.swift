@@ -96,13 +96,14 @@ class DocsTests: EasyDBTestCase {
             .orderBy(\.name)
 
         let count = try filter.fetchCount()
-        print("There are \(count) records in total")
+        log("There are \(count) records in total")
 
         let first10 = try filter.limit(10).fetchMany()
-        print("First 10: \(first10)")
+        log("First 10: \(first10)")
         // docs:end
 
-        func print(_ value: String) {}
+        // dummy log function, we don't actually want to print anything
+        func log(_ value: String) {}
     }
 
     func testQuerySql() throws {
@@ -147,16 +148,13 @@ class DocsTests: EasyDBTestCase {
             var id: UUID
             var name: String
         }
-        Next up: implement this and add real tests not doc tests
-        let namesAndIds = try collection.all().fetchMany("""
-            \(\.id) as id,
-            \(\.name) as name
-        """)
-        //  ^^ SELECT `name` FROM `MyRecord`
-        // names is typed [String]
+        let namesAndIds = try collection.all().fetchMany(NameAndId.self)
+        //  ^^ SELECT `id`, `name` FROM `MyRecord`
+        // namesAndIds is typed [NameAndId]
         // docs:end
 
         _ = names
+        _ = namesAndIds
     }
 
     func testInvalidRecordType() throws {
