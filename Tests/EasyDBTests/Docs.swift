@@ -208,8 +208,18 @@ class DocsTests: XCTestCase {
         // docs:end
     }
 
-    func testExecuteSQL() throws {
+    func testIndices() throws {
+        // docs:start:indices
+        struct Book: Codable, Identifiable {
+            var id = UUID() // automatically unique
+            @Unique var title: String
+            @Index var author: String
+            var price: Int
+        }
+        // docs:end
+    }
 
+    func testExecuteSQL() throws {
         // docs:start:execute-sql
         let randomNumber = try database.execute(Int.self, "SELECT random()")
 

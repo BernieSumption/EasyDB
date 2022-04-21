@@ -282,6 +282,28 @@ try employees
     .delete()
 ```
 
+## Adding indices
+
+EasyDB supports regular and unique indices:
+
+<!---indices--->
+```swift
+struct Book: Codable, Identifiable {
+    var id = UUID()
+    @Unique var title: String
+    @Index var author: String
+    var price: Int
+}
+```
+
+Attempting to insert a book with the same `id` or `name` as an existing book will result in an error. 
+
+The `@Unique` attribute is only required on `name`. Because `Book` conforms to `Identifiable`, `id` is unique even without specifying a unique index.
+
+TODO
+    - [ ] Custom index with db.execute() (note: not migrated)
+    - [ ] Roadmap: Migrations for additional and compound indices
+
 ## Working with SQL
 
 Previously you've seen how API methods like `filter` and `update` have overloads that take SQL fragments to be included in the generated SQL statement.
@@ -356,10 +378,10 @@ To read a single row, pass one of these kinds of type:
 - **A `Codable` struct** e.g. `SomeStruct.self` will return a single row mapping column names in the query to property names. It is an error if `SomeStruct` contains a property that does not correspond to a column in the query results. It is not an error if the query results contain a column that does not correspond to a property in `SomeStruct` - that property will just be ignored.
 - **A dictionary** e.g. `[String: String].self` will return the first row of results with column names in the query mapped to keys in the dictionary
 
-To 
+To read multiple rows:
 
-- **An array of the above** e.g. `[String].self`, `[SomeStruct].self` or `[[String: String]].self` will operate as above, except that all result rows will be returned in an array.
-- **A 2D array of primitive types** e.g. `[[String]].self` or `[[Int]].self`` will return all columns of all rows.
+- **An array of the above** e.g. `[String].self`, `[SomeStruct].self` or `[[String: String]].self` will operate as above, except that all rows will be returned in an array.
+- **A 2D array of primitive types** e.g. `[[String]].self` or `[[Int]].self`` will return all columns of all rows. Each row is an array of values in the order that they are returned by the query.
 
 ## Constraints on record types
 
