@@ -563,6 +563,22 @@ let results = try books.all().orderBy(\.name).fetchMany()
 //  ^^ results sorted by your custom collation
 ``` 
 
+### Registering custom collations
+
+It is not normally necessary to register a custom collation, because EasyDB registers it for you the first time it is used through the API.
+
+However if you want to use a collation in SQL without first using it through the API, you will need to register it so that you can refer to it by name:
+
+<!---custom-collation-register--->
+```swift
+try database.registerCollation(.byLength)
+try database.execute("""
+    CREATE TABLE foo (
+        bar COLLATE `byLength`
+    )
+""")
+```
+
 ## Concurrency and transactions
 
 The EasyDB API is thread-safe provided that you **only create a single `EasyDB` instance for each database file**. You can use the database simultaneously from multiple threads. Statements are executed in a serial queue: even if you read and write from multiple threads, only one will execute at a time. This provides acceptable performance for most apps (Apple's own apps use Core Data which has the same restriction).

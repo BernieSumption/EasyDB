@@ -112,6 +112,13 @@ public class EasyDB {
         }
     }
 
+    /// Register a custom collation to use in SQL. This is normally not necessary as EasyDB registers
+    /// custom collations when they are first used. However if you want to refer to a collation by name
+    /// in SQL without first using it in the API, you will need to register it
+    public func registerCollation(_ collation: Collation) throws {
+        try getConnection().registerCollation(collation)
+    }
+
     private var cachedConnection: Connection?
     func getConnection() throws -> Connection {
         if let cached = cachedConnection {

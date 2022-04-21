@@ -353,6 +353,17 @@ class DocsTests: XCTestCase {
 
         _ = results
     }
+
+    func testRegisterCustomCollation() throws {
+        // docs:start:custom-collation-register
+        try database.registerCollation(.byLength)
+        try database.execute("""
+            CREATE TABLE foo (
+                bar COLLATE `byLength`
+            )
+        """)
+        // docs:end
+    }
 }
 
 enum Direction: Codable {
