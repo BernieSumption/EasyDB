@@ -217,6 +217,47 @@ class DocsTests: XCTestCase {
             var price: Int
         }
         // docs:end
+
+        // docs:start:indices-custom
+        let books = try database.collection(Book.self)
+        try database.execute("""
+            CREATE INDEX IF NOT EXISTS `book-title-author`
+            ON \(books) (`title`, `author`)
+        """)
+        // docs:end
+
+        // docs:start:indices-custom-migrate
+        try database.execute("""
+            DROP INDEX IF EXISTS `book-title-author`
+        """)
+        try database.execute("""
+            CREATE INDEX IF NOT EXISTS `book-title-asc-author-desc`
+            ON \(books) (`title` ASC, `author` DESC)
+        """)
+        // docs:end
+    }
+
+    func testCollations() throws {
+        // docs:start:collation-annotation
+        struct Book: Codable {
+            var author: String
+            @CollateCaseInsensitive var name: String
+        }
+
+        let books = try database.collection(Book.self)
+        try books.insert(Book(author: "Joseph Heller", name: "Catch 22"))
+        let count = try books.filter(\.name, equalTo: "CATCH 22").fetchCount()
+        XCTAssertEqual(count, 1)
+        // docs:end
+
+        // docs:start:collation-annotation-override
+        let result = try books
+            .filter(\.author, equalTo: "unknown", collation: .caseInsensitive)
+            .orderBy(\.name, collation: .binary)
+            .fetchMany()
+        // docs:end
+
+        _ = result
     }
 
     func testExecuteSQL() throws {
@@ -288,6 +329,30 @@ class DocsTests: XCTestCase {
             try database.collection(Record.self)
         )
     }
+
+    func testUseCustomCollation() throws {
+        // docs:start:custom-collation-use
+        let results = try employees
+            .all()
+            .orderBy(\.name, collation: .byLength)
+            .fetchMany()
+        // docs:end
+
+        _ = results
+    }
+
+    func testUseCustomCollationAnnotation() throws {
+        // docs:start:custom-collation-annotation-use
+        struct Book: Codable {
+            @CollateByLength var name: String
+        }
+        let books = try database.collection(Book.self)
+        let results = try books.all().orderBy(\.name).fetchMany()
+        //  ^^ results sorted by your custom collation
+        // docs:end
+
+        _ = results
+    }
 }
 
 enum Direction: Codable {
@@ -304,6 +369,32 @@ extension Direction: SampleValueSource {
 extension Filterable {
     func filter<V: Codable>(_ property: KeyPath<Row, V>, isEven: Bool) -> QueryBuilder<Row> {
         return filter("\(property) % 2 == \(isEven ? 0 : 1)")
+    }
+}
+// docs:end
+
+// docs:start:custom-collation
+extension Collation {
+    /// Sort short strings before long strings
+    static let byLength = Collation("byLength") { (lhs, rhs) in
+        if lhs.count != rhs.count {
+            return lhs.count < rhs.count ? .orderedAscending : .orderedDescending
+        }
+        if lhs == rhs {
+            return .orderedSame
+        }
+        return lhs < rhs ? .orderedAscending : .orderedDescending
+    }
+}
+// docs:end
+
+// docs:start:custom-collation-annotation
+@propertyWrapper
+struct CollateByLength<Value: Codable & Equatable>: ConfigurationAnnotation {
+    public var wrappedValue: Value
+
+    public static var propertyConfig: PropertyConfig {
+        return .collation(.byLength)
     }
 }
 // docs:end

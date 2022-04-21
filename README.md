@@ -38,7 +38,7 @@ Before adopting EasyDB, consider some [reasons not to use EasyDB](#reasons-not-t
     
 EasyDB requires Swift 5.5+ and runs on: iOS 13+, macOS 10.15+, watchOS 6+, tvOS 13+.
 
-It would be relatively easy to extend support back a few versions, PRs welcome, see [this issue](https://github.com/BernieSumption/EasyDB/issues/1).
+It would be relatively easy to extend support back a few versions, see [this issue](https://github.com/BernieSumption/EasyDB/issues/1) PRs welcome or comment on the issue if this is important for you.
 
 ## Defining collections
 
@@ -289,7 +289,7 @@ EasyDB supports regular and unique indices:
 <!---indices--->
 ```swift
 struct Book: Codable, Identifiable {
-    var id = UUID()
+    var id = UUID() // automatically unique
     @Unique var title: String
     @Index var author: String
     var price: Int
@@ -300,9 +300,33 @@ Attempting to insert a book with the same `id` or `name` as an existing book wil
 
 The `@Unique` attribute is only required on `name`. Because `Book` conforms to `Identifiable`, `id` is unique even without specifying a unique index.
 
-TODO
-    - [ ] Custom index with db.execute() (note: not migrated)
-    - [ ] Roadmap: Migrations for additional and compound indices
+### Compound and expression indices
+
+Use `database.execute(_:)` to create custom indices:
+
+<!---indices-custom--->
+```swift
+let books = try database.collection(Book.self)
+try database.execute("""
+    CREATE INDEX IF NOT EXISTS `book-title-author`
+    ON \(books) (`title`, `author`)
+""")
+```
+
+**IMPORTANT!** manually created indices are not automatically migrated, so if you need to change the SQL you must create a new index and remove the old: 
+
+<!---indices-custom-migrate--->
+```swift
+try database.execute("""
+    DROP INDEX IF EXISTS `book-title-author`
+""")
+try database.execute("""
+    CREATE INDEX IF NOT EXISTS `book-title-asc-author-desc`
+    ON \(books) (`title` ASC, `author` DESC)
+""")
+```
+
+Automatic migrations for custom indices are [on the roadmap](https://github.com/BernieSumption/EasyDB/issues/5), PRs welcome or comment on the issue if this is important for you.
 
 ## Working with SQL
 
@@ -430,17 +454,114 @@ Understanding this requires some explanation of how EasyDB works under the hood.
 
 One of the things that make EasyDB easy is that you can query using key paths, e.g. `filter(\.value, lessThan: 10)`. The algorithm that maps key paths to column names to enable this feature requires that EasyDB be able to create instances of your record types and of any other type used by the record type.
 
-It does using `Codable` - it calls `YourRecordType.init(from: Decoder)`, passing a special Decoder instance that records how it is used. Your record type will ask the decoder for some data in the format that it expects. For example, if `YourRecordType` contains a property `var value: Int32` then `init(from: Decoder)` is going to ask the decoder for an `Int32` called `value` - specifically it will call `decoder.decode(Int32.self, forKey: "value")`. This is how EasyDB figures out the structure of Codable types. The decoder will respond by giving it a value of the kind requested: `"0"` or `"1"` for strings, `0` or `1` for numbers, `false` or `true` for booleans.
+It does using `Codable` - it calls `YourRecordType.init(from: Decoder)`, passing a special Decoder instance that records how it is used. Your record type will ask the decoder for some data in the format that it expects. For example, if `YourRecordType` contains a property `var value: Int32` then `init(from: Decoder)` is going to ask the decoder for an `Int32` called `value` (specifically it will call `decoder.decode(Int32.self, forKey: "value")`). This is how EasyDB figures out the structure of Codable types. The decoder will respond by giving it a value of the kind requested: `"0"` or `"1"` for strings, `0` or `1` for numbers, `false` or `true` for booleans.
 
 In the case of `Direction` in the example above, `"0"` was not a valid direction.
 
-EasyDB extends a few common built-in types (`Date`, `Data`, `UUID` and `URL`) with conformance
-
 This is fine for types that can be instantiated with one of these values. But some types that represent themselves as strings have requirements on the format of the string that they are instantiated with. Take `UUID` for example. It requires a UUID-formatted string. Trying to create a UUID with the string `"0"` will throw an error.
 
-Because `UUID` is a commonly used type, EasyDB extends it with `SampleValueSource` conformance.
+EasyDB extends a few common built-in types - `Date`, `Data`, `UUID` and `URL` - with conformance to `SampleValueSource`.
 
 But if you use another type that encodes itself to a string but for which `"0"` or `"1"` are not valid representations, you will need to add `SampleValueSource` conformance yourself.
+
+## Collations
+
+A collation defines how EasyDB compares and sorts strings. For example, under the default `string` collation `"EasyDB"` different from and sorted before `"easydb"`. Under the `caseInsensitive` collation those two strings are the same.
+
+Set a collation for a property by adding a `@CollateXXX` annotation:
+
+<!---collation-annotation--->
+```swift
+struct Book: Codable {
+    var author: String
+    @CollateCaseInsensitive var name: String
+}
+
+let books = try database.collection(Book.self)
+try books.insert(Book(author: "Joseph Heller", name: "Catch 22"))
+let count = try books.filter(\.name, equalTo: "CATCH 22").fetchCount()
+XCTAssertEqual(count, 1)
+```
+
+Defining a collation on a column like this makes it the default wherever collations are used: in regular and unique indices, filtering and sorting.
+
+It is possible to override the collation for filters and sorting:
+
+<!---collation-annotation-override--->
+```swift
+let result = try books
+    .filter(\.author, equalTo: "unknown", collation: .caseInsensitive)
+    .orderBy(\.name, collation: .binary)
+    .fetchMany()
+```
+
+### Built in collations
+
+EasyDB ships with 4 collations:
+
+- `.string` - The default collation sequence for EasyDB. Sorts strings case-sensitively using Swift's `==` and `<=` operators. Unicode-safe.
+- `.caseInsensitive` - Sort unicode strings in a case-insensitive way using Swift's `String.caseInsensitiveCompare(_:)` function
+- `.localized` - Sort unicode strings using localized comparison with Swift's `String.localizedCompare(_:)` function. This produces ordering similar to that when you get in the macOS Finder.
+- `.localizedCaseInsensitive` - Sort unicode strings using case-insensitive localized comparison with Swift's `String.localizedCaseInsensitiveCompare(_:)` function
+- `.binary` - The built-in SQLite `binary` collation that compares strings using their in-memory binary representation, regardless of text encoding. It is provided because some applications may _want_ to differentiate between equivalent but differently serialised unicode strings. But for most real applications it is not a good choice.
+
+Use the `@CollateBinary`, `@CollateCaseInsensitive`, `@CollateLocalized`, `@CollateLocalizedCaseInsensitive` annotation to change the default collation on a property.
+
+### Custom collations
+
+If you have need for a custom collation, you can define one:
+
+<!---custom-collation--->
+```swift
+extension Collation {
+    /// Sort short strings before long strings
+    static let byLength = Collation("byLength") { (lhs, rhs) in
+        if lhs.count != rhs.count {
+            return lhs.count < rhs.count ? .orderedAscending : .orderedDescending
+        }
+        if lhs == rhs {
+            return .orderedSame
+        }
+        return lhs < rhs ? .orderedAscending : .orderedDescending
+    }
+}
+```
+
+Use it like this:
+
+<!---custom-collation-use--->
+```swift
+let results = try employees
+    .all()
+    .orderBy(\.name, collation: .byLength)
+    .fetchMany()
+```
+
+To set your custom collation as the default for a property you need to define your own annotation property wrapper:
+
+<!---custom-collation-annotation--->
+```swift
+@propertyWrapper
+struct CollateByLength<Value: Codable & Equatable>: ConfigurationAnnotation {
+    public var wrappedValue: Value
+
+    public static var propertyConfig: PropertyConfig {
+        return .collation(.byLength)
+    }
+}
+```
+
+And use it like this:
+
+<!---custom-collation-annotation-use--->
+```swift
+struct Book: Codable {
+    @CollateByLength var name: String
+}
+let books = try database.collection(Book.self)
+let results = try books.all().orderBy(\.name).fetchMany()
+//  ^^ results sorted by your custom collation
+``` 
 
 ## Concurrency and transactions
 
@@ -469,18 +590,17 @@ try database.transaction {
 
 Bear in mind that no other reads or writes can take place while the block is executing, so avoid time-consuming processing in the block.
 
-Genuine multiple reader single writer concurrency using SQLite's WAL mode is [on the roadmap](https://github.com/BernieSumption/EasyDB/issues/2) and PRs are welcome.
+Genuine multiple reader single writer concurrency using SQLite's WAL mode is [on the roadmap](https://github.com/BernieSumption/EasyDB/issues/2) and PRs are welcome or comment on the issue if this is important for you.
 
 ## Reasons not to use EasyDB
 
 Even in its first release, EasyDB is the best iOS database for _my_ needs. But your needs may be different. If you need any of these features _now_ then use a different database. Bear in mind that it's not hard to migrate from EasyDB to any other SQLite-based database as they all use the same data file format, so if you don't require these features now but think you might in the future, you can use EasyDB knowing that you're not locked in.
 
-**You want type-safety across the full SQL API.** EasyDB does not completely hide you from SQL. Its philosophy is to provide a type-safe API for 90% of use cases and provide access to raw SQL so that you still have the full power of SQLite at your disposal. Personally I think that SQL is fine and your tests should catch any SQL syntax errors. If you disagree, use SQLite.swift
+**You want a Swift interface to the full SQL API.** EasyDB does not completely hide you from SQL. Its philosophy is to provide a type-safe API for 90% of use cases and provide access to raw SQL so that you still have the full power of SQLite at your disposal. Personally I think that writing SQL is fine and your tests should catch any SQL syntax errors. If you disagree, use SQLite.swift
 
-**You want an explicit schema, constraints and migrations.** EasyDB follows the schemaless document database philosophy. The application is responsible for enforcing data consistency, and the database operates as a high-performance but "dumb" data store. You write less code because there is no need to define a schema or write migrations to evolve your schema between application versions. But fans of schema-driven databases regard the schema definition as a kind of double-entry bookkeeping that helps you write reliable applications. If you want to define an explicit schema, use GRDB.
+**You want an explicit schema, constraints and migrations.** EasyDB follows the schemaless document database philosophy. The application is responsible for enforcing data consistency, and the database operates as a high-performance but "dumb" data store. You write less code because there is no need to define a schema or write migrations to evolve your schema between application versions. But fans of schema-driven databases regard the schema definition as "good repetition" - a kind of double-entry bookkeeping that helps you write reliable applications. If you want to define an explicit schema, use GRDB.
 
 **You want to use advanced SQLite features.** EasyDB does not currently support the following features. There's no reason why it can't, it just doesn't yet:
   - _WAL mode:_ SQLite supports single-writer-multiple-reader concurrency via [WAL mode](https://www.sqlite.org/wal.html). Adding this to EasyDB is a high priority but for now EasyDB offers [thread safety but no concurrency](#concurrency-and-transactions). In fairness this is already better than Core Data which has neither concurrency nor thread safety.
-  - _Change notification:_ SQLite can [notify you](https://sqlite.org/c3ref/update_hook.html) when your database is updated by another process. It is easy for your app to notify itself when it writes to the database, but if other processes may write to the same database file and you want to respond to those changes immediately, use GRDB.
-  - _full text search:_ EasyDB does not support full-text search with the [FTS4 module](https://www.sqlite.org/fts3.html). 
+  - _Change notification:_ SQLite can [notify you](https://sqlite.org/c3ref/update_hook.html) when your database is updated by another process. It is easy for your app to notify itself when it writes to the database, but if other processes may write to the same database file and you want to respond to those changes immediately, use GRDB. 
   - _custom builds:_ EasyDB uses the system-provided SQLite and you can not provide your own build, e.g. to use extensions like [SQLCipher](https://www.zetetic.net/sqlcipher/) or) [SpatiaLite](https://www.gaia-gis.it/fossil/libspatialite/index). 

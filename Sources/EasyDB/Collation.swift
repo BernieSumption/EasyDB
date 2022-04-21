@@ -50,19 +50,22 @@ extension Collation {
         return lhs.caseInsensitiveCompare(rhs)
     }
 
-    /// Sort unicode strings using localized comparison with Swift's `String.localizedCompare(_:)` function
+    /// Sort unicode strings using localized comparison with Swift's `String.localizedCompare(_:)` function.
+    ///
+    /// This produces ordering similar to that when you get in the macOS Finder.
     public static let localized = Collation("localized") { (lhs, rhs) in
         return lhs.localizedCompare(rhs)
     }
 
     /// Sort unicode strings using case-insensitive localized comparison with Swift's `String.localizedCaseInsensitiveCompare(_:)` function
     public static let localizedCaseInsensitive = Collation("localizedCaseInsensitive") { (lhs, rhs) in
+        "".localizedCompare("")
         return lhs.localizedCaseInsensitiveCompare(rhs)
     }
 
     /// The built-in SQLite `binary` collation that compares strings using their in-memory binary representation,
     /// regardless of text encoding. WARNING: this is provided as a performance optimisation or because some
-    /// applications may want differentiate between equivalent but differently serialized unicode strings. But for most
+    /// applications may want differentiate between equivalent but differently serialised unicode strings. But for most
     /// real applications it is not a good choice.
     public static let binary = Collation("binary")
 }
