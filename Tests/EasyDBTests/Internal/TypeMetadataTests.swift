@@ -20,11 +20,11 @@ class TypeMetadataTests: XCTestCase {
             try MultifariousDecoder.metadata(for: TwoAnnotations.self).getConfigs("x"),
             [
                 .index(unique: false),
-                .noDefaultUniqueId
+                .collation(.caseInsensitive)
             ])
     }
     struct TwoAnnotations: Codable {
-        @Index @NotUnique var x: Int
+        @Index @CollateCaseInsensitive var x: Int
     }
 
     func testTwoAnnotationsOnSub() throws {
@@ -32,11 +32,11 @@ class TypeMetadataTests: XCTestCase {
             try MultifariousDecoder.metadata(for: TwoAnnotationsOnSub.self).getConfigs("sub"),
             [
                 .index(unique: false),
-                .noDefaultUniqueId
+                .collation(.caseInsensitive)
             ])
     }
     struct TwoAnnotationsOnSub: Codable {
-        @Index @NotUnique var sub: Sub
+        @Index @CollateCaseInsensitive var sub: Sub
 
         struct Sub: Codable, Equatable {
             var foo: String
@@ -72,10 +72,10 @@ class TypeMetadataTests: XCTestCase {
     func testErrorOnDuplicateAnnotations() throws {
         assertErrorMessage(
             try MultifariousDecoder.metadata(for: ErrorOnDuplicateAnnotations.self),
-            contains: "Error decoding property foo: duplicate configuration property wrapper @NotUnique encountered")
+            contains: "Error decoding property foo: duplicate configuration property wrapper @Unique encountered")
     }
     struct ErrorOnDuplicateAnnotations: Codable {
-        @NotUnique @NotUnique var foo: Int
+        @Unique @Unique var foo: Int
     }
 
     func testDefaultMetadata() throws {
@@ -166,48 +166,6 @@ class TypeMetadataTests: XCTestCase {
                 .index(unique: true)
             ], isId: true).index,
             .unique)
-
-        // @NotUnique var id
-        XCTAssertEqual(
-            try combineConfigs([
-                .noDefaultUniqueId
-            ], isId: true).index,
-            nil)
-
-        // @NotUnique @Index var id
-        XCTAssertEqual(
-            try combineConfigs([
-                .noDefaultUniqueId,
-                .index(unique: false)
-            ], isId: true).index,
-            .regular)
-    }
-
-    func testErrorWhenNotUniqueAppliedToNonId() throws {
-        assertErrorMessage(
-            try MultifariousDecoder.metadata(for: ErrorWhenNotUniqueAppliedToNonId.self).getCombinedConfig("foo", isId: false),
-            contains: "@NotUnique can only be applied to the id property of an Identifiable type")
-    }
-    struct ErrorWhenNotUniqueAppliedToNonId: Codable {
-        @NotUnique var foo: Int
-    }
-
-    func testErrorOnConflictingAnnotations() {
-        assertErrorMessage(
-            // @NotUnique @Unique
-            try combineConfigs([
-                .noDefaultUniqueId,
-                .index(unique: true)
-            ], isId: true),
-            contains: "both @NotUnique and @Unique specified")
-
-        assertErrorMessage(
-            // @Unique @NotUnique
-            try combineConfigs([
-                .index(unique: true),
-                .noDefaultUniqueId
-            ], isId: true),
-            contains: "both @Unique and @NotUnique specified")
     }
 
     func testJSONCodingWithAnnotations() throws {
@@ -243,7 +201,7 @@ class TypeMetadataTests: XCTestCase {
         XCTAssertEqual(decoded, instance)
     }
     struct JSONCodingWithAnnotations: Codable, Identifiable, Equatable {
-        @NotUnique @Index var id: UUID
+        @CollateCaseInsensitive @Index var id: UUID
         @Unique var x: Int
         var f: Float
         @CollateCaseInsensitive var foo: String
@@ -253,41 +211,6 @@ class TypeMetadataTests: XCTestCase {
             let s: String
         }
     }
-
-    func testFoo() {
-        print(MemoryLayout<Foo>.size)
-    }
-}
-
-struct Foo {
-    @Wrapper
-    var sub: P
-}
-
-protocol P {
-}
-
-@propertyWrapper
-public class Wrapper<Value>: P {
-    public var wrappedValue: Value
-
-    public init(wrappedValue: Value) {
-        print("Init!", wrappedValue)
-        self.wrappedValue = wrappedValue
-    }
-}
-
-struct Sub {
-    let i1: Int
-    let i2: Int
-    let i3: Int
-    let i4: Int
-    let i5: Int
-    let i6: Int
-    let i7: Int
-    let i8: Int
-    let i9: Int
-    let i10: Int
 }
 
 func combineConfigs(_ configs: [PropertyConfig], isId: Bool = false) throws -> CombinedPropertyConfig {

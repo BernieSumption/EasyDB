@@ -71,38 +71,6 @@ class IndexTests: EasyDBTestCase {
         }
     }
 
-    func testDisableAutoIndexForIdentifiable() throws {
-        db = EasyDB(.memory)
-        let c = try db.collection(DisableAutoIndexForIdentifiable.self)
-
-        let row = DisableAutoIndexForIdentifiable()
-
-        XCTAssertNoThrow(try c.insert([row, row]))
-
-        let indices = try dbIndexSQL()
-        XCTAssertEqual(indices, [])
-    }
-
-    struct DisableAutoIndexForIdentifiable: Codable, Equatable, Identifiable {
-        @NotUnique var id: UUID = UUID()
-    }
-
-    func testNotUniqueIndexForIdentifiable() throws {
-        db = EasyDB(.memory)
-        let c = try db.collection(NotUniqueIndexForIdentifiable.self)
-
-        let row = NotUniqueIndexForIdentifiable()
-
-        XCTAssertNoThrow(try c.insert([row, row]))
-
-        let indices = try dbIndexSQL()
-        XCTAssertEqual(indices.count, 1)
-    }
-
-    struct NotUniqueIndexForIdentifiable: Codable, Equatable, Identifiable {
-        @NotUnique @Index var id: UUID = UUID()
-    }
-
     func testRegularIndexForIdentifiableIsUnique() throws {
         db = EasyDB(.memory)
         let c = try db.collection(RegularIndexForIdentifiableIsUnique.self)

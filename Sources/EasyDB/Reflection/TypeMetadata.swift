@@ -45,7 +45,6 @@ class TypeMetadata {
         var resultCollation: Collation?
         var resultIndex: CombinedPropertyConfig.IndexKind?
 
-        var noDefaultUniqueId: Bool = false
         if let configs = propertyConfigs[propertyName] {
             for config in configs {
                 switch config {
@@ -56,27 +55,15 @@ class TypeMetadata {
                     resultCollation = collation
                 case .index(unique: let unique):
                     if unique {
-                        if noDefaultUniqueId {
-                            throw EasyDBError.misuse(message: "both @NotUnique and @Unique specified")
-                        }
                         resultIndex = .unique
                     } else if resultIndex != .unique {
                         resultIndex = .regular
                     }
-                case .noDefaultUniqueId:
-                    if !isId {
-                        let annotationName = typeNameWithoutGenerics(NotUnique<Int>.self)
-                        throw EasyDBError.misuse(message: "@\(annotationName) can only be applied to the id property of an Identifiable type")
-                    }
-                    if resultIndex == .unique {
-                        throw EasyDBError.misuse(message: "both @Unique and @NotUnique specified")
-                    }
-                    noDefaultUniqueId = true
                 }
             }
         }
 
-        if isId && !noDefaultUniqueId {
+        if isId {
             resultIndex = .unique
         }
 
@@ -105,7 +92,6 @@ enum TypeMetadataError: Error {
 public enum PropertyConfig: Equatable {
     case collation(Collation)
     case index(unique: Bool)
-    case noDefaultUniqueId
 }
 
 struct CombinedPropertyConfig: Equatable {
@@ -238,19 +224,5 @@ public struct Index<Value: Codable & Equatable>: ConfigurationAnnotation {
 
     public static var propertyConfig: PropertyConfig {
         return .index(unique: false)
-    }
-}
-
-/// Disable the default behaviour of applying a unique index to the `id` column of an `Identifiable` collection
-@propertyWrapper
-public struct NotUnique<Value: Codable & Equatable>: ConfigurationAnnotation {
-    public var wrappedValue: Value
-
-    public init(wrappedValue: Value) {
-        self.wrappedValue = wrappedValue
-    }
-
-    public static var propertyConfig: PropertyConfig {
-        return .noDefaultUniqueId
     }
 }
