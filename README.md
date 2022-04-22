@@ -1,8 +1,15 @@
 # EasyDB
 
-EasyDB is an application database for iOS and other Apple platforms. It wraps SQLite to provide an easy to use, high-performance, document-oriented database.
+EasyDB is an application database for iOS and other Apple platforms designed for the best developer experience. Based on SQLite for performance and reliability, it provides:
 
-The goal of EasyDB is to provide the best developer experience with zero configuration, and taking advantage of modern Swift features. Compared to the (many) other SQLite wrappers, EasyDB is the only one that provides a type-safe query API with no boilerplate code or configuration beyond defining your record type:
+- A fully automatic, type-safe API that covers most common use cases
+- Safe access SQL for the less common use cases 
+- Thread-safety: use the database concurrently from multiple threads/tasks
+- Documented-oriented design philosophy: store arbitrary structured data in your records
+
+## Introduction
+
+Compared to the (many) other SQLite wrapper libraries in Swift, EasyDB is the only one that provides a type-safe query API with no boilerplate code or configuration beyond defining your record type:
 
 <!---headline-demo--->
 ```swift
@@ -32,13 +39,25 @@ let cheapBooks = try books.all()
 
 EasyDB is inspired by schemaless databases like MongoDB that allow documents to contain arbitrary hierarchical structured data. Being based on SQLite there is a schema under the hood, but EasyDB manages this schema for you. New database columns are automatically added to the underlying table when you add them to your record type.
 
-Before adopting EasyDB, consider some [reasons not to use EasyDB](#reasons-not-to-use-easydb). 
+Before adopting EasyDB, consider some [reasons not to use EasyDB](#reasons-not-to-use-easydb).
 
 ### System requirements
     
 EasyDB requires Swift 5.5+ and runs on: iOS 13+, macOS 10.15+, watchOS 6+, tvOS 13+.
 
 It would be relatively easy to extend support back a few versions, see [this issue](https://github.com/BernieSumption/EasyDB/issues/1) PRs welcome or comment on the issue if this is important for you.
+
+## Features
+
+- [Defining collections](#defining-collections)
+- [Inserting records](#inserting-records)
+- [Querying records](#querying-records)
+- [Updating records](#updating-records)
+- [Deleting records](#deleting-records)
+- [Adding indices](#adding-indices)
+- [Working with SQL](#working-with-sql)
+- [Collations](#collations)
+- [Concurrency and transactions](#concurrency-and-transactions)
 
 ## Defining collections
 
@@ -225,7 +244,7 @@ This is a "upsert" operation - it will update an existing record or create a new
 
 Like `insert(_:)`, `save(_:)` can also take multiple records and they will be updated in a transaction.
 
-## Bulk update
+### Bulk update
 
 It is also possible to update records in bulk using the `QueryBuilder` API.
 
@@ -407,63 +426,6 @@ To read multiple rows:
 - **An array of the above** e.g. `[String].self`, `[SomeStruct].self` or `[[String: String]].self` will operate as above, except that all rows will be returned in an array.
 - **A 2D array of primitive types** e.g. `[[String]].self` or `[[Int]].self`` will return all columns of all rows. Each row is an array of values in the order that they are returned by the query.
 
-## Constraints on record types
-
-You can probably ignore this section - most Codable types will just work, including all the data types that you'd typically want to store in a database (strings, numbers, booleans, arrays, structs, dictionaries etc). However, if you get an error thrown while creating a querying collection, it may be because of an unsupported type.
-
-There are two constraints on record types:
-
-1. Your record type should use the compiler-synthesised `Codable` implementation: do not implement your own `init(from:)` or `encode(to:)` functions (it is fine however for your record types to use other types that have their own `Codable` implementations).
-2. The primitive data types used by your record type must implement `SampleValueSource` or be decodable from the strings `"0"` or `"1"`, or the numbers `0` or `1`, or the booleans `false` or `true`. Most enums will not meet this requirement.
-
-The second requirement may seem a bit odd. First we'll show how to conform to `SampleValueSource`, then we'll explain why this is necessary.
-
-### Adding support for enums and other unsupported value types
-
-Here's an example of an unsupported `Codable` type. The enum `Direction` encodes as a string, but `"0"` is not a valid direction:
-
-<!---invalid-record-type--->
-```swift
-struct Record: Codable {
-    var direction: Direction
-}
-// "0" is not a valid value for this enum
-enum Direction: String, Codable {
-    case up, down, left, right
-}
-XCTAssertThrowsError(
-    // message: Error thrown from Direction.init(from:) ... Cannot initialize
-    //          Direction from invalid String value 0
-    try database.collection(Record.self)
-)
-```
-
-The fix is as follows:
-
-<!---fix-invalid-record-type--->
-```swift
-extension Direction: SampleValueSource {
-    // return a `SampleValues` containing any two different instances
-    static let sampleValues = SampleValues(Direction.up, Direction.down)
-}
-```
-
-### Why is `SampleValueSource` necessary?
-
-Understanding this requires some explanation of how EasyDB works under the hood.
-
-One of the things that make EasyDB easy is that you can query using key paths, e.g. `filter(\.value, lessThan: 10)`. The algorithm that maps key paths to column names to enable this feature requires that EasyDB be able to create instances of your record types and of any other type used by the record type.
-
-It does using `Codable` - it calls `YourRecordType.init(from: Decoder)`, passing a special Decoder instance that records how it is used. Your record type will ask the decoder for some data in the format that it expects. For example, if `YourRecordType` contains a property `var value: Int32` then `init(from: Decoder)` is going to ask the decoder for an `Int32` called `value` (specifically it will call `decoder.decode(Int32.self, forKey: "value")`). This is how EasyDB figures out the structure of Codable types. The decoder will respond by giving it a value of the kind requested: `"0"` or `"1"` for strings, `0` or `1` for numbers, `false` or `true` for booleans.
-
-In the case of `Direction` in the example above, `"0"` was not a valid direction.
-
-This is fine for types that can be instantiated with one of these values. But some types that represent themselves as strings have requirements on the format of the string that they are instantiated with. Take `UUID` for example. It requires a UUID-formatted string. Trying to create a UUID with the string `"0"` will throw an error.
-
-EasyDB extends a few common built-in types - `Date`, `Data`, `UUID` and `URL` - with conformance to `SampleValueSource`.
-
-But if you use another type that encodes itself to a string but for which `"0"` or `"1"` are not valid representations, you will need to add `SampleValueSource` conformance yourself.
-
 ## Collations
 
 A collation defines how EasyDB compares and sorts strings. For example, under the default `string` collation `"EasyDB"` different from and sorted before `"easydb"`. Under the `caseInsensitive` collation those two strings are the same.
@@ -608,6 +570,61 @@ Bear in mind that no other reads or writes can take place while the block is exe
 
 Genuine multiple reader single writer concurrency using SQLite's WAL mode is [on the roadmap](https://github.com/BernieSumption/EasyDB/issues/2) and PRs are welcome or comment on the issue if this is important for you.
 
+## Constraints on record types
+
+You can probably ignore this section - most Codable types will just work, including all the data types that you'd typically want to store in a database (strings, numbers, booleans, arrays, structs, dictionaries etc). However, if you get an error thrown while creating a querying collection, it may be because your record type does not meet the requirements.
+
+There are two constraints on record types:
+
+1. Your record type should use the compiler-synthesised `Codable` implementation: do not implement your own `init(from:)` or `encode(to:)` functions (it is fine however for your record types to use other types that have their own `Codable` implementations).
+2. The primitive data types used by your record type must implement `SampleValueSource` or be decodable from the strings `"0"` or `"1"`, or the numbers `0` or `1`, or the booleans `false` or `true`. Most enums will not meet this requirement.
+
+The second requirement may seem a bit odd. First we'll show how to conform to `SampleValueSource`, then we'll explain why this is necessary.
+
+### Adding support for enums and other unsupported value types
+
+Here's an example of an unsupported `Codable` type. The enum `Direction` encodes as a string, but `"0"` is not a valid direction:
+
+<!---invalid-record-type--->
+```swift
+struct Record: Codable {
+    var direction: Direction
+}
+// "0" is not a valid value for this enum
+enum Direction: String, Codable {
+    case up, down, left, right
+}
+XCTAssertThrowsError(
+    // message: Error thrown from Direction.init(from:) ... Cannot initialize
+    //          Direction from invalid String value 0
+    try database.collection(Record.self)
+)
+```
+
+The fix is as follows:
+
+<!---fix-invalid-record-type--->
+```swift
+extension Direction: SampleValueSource {
+    // return a `SampleValues` containing any two different instances
+    static let sampleValues = SampleValues(Direction.up, Direction.down)
+}
+```
+
+### Why is `SampleValueSource` necessary?
+
+Understanding this requires some explanation of how EasyDB works under the hood.
+
+One of the things that make EasyDB easy is that you can query using key paths, e.g. `filter(\.value, lessThan: 10)`. The algorithm that maps key paths to column names to enable this feature requires that EasyDB be able to create instances of your record types and of any other type used by the record type.
+
+It does using `Codable` - it calls `YourRecordType.init(from: Decoder)`, passing a special Decoder instance that records how it is used. Your record type will ask the decoder for some data in the format that it expects. For example, if `YourRecordType` contains a property `var value: Int32` then `init(from: Decoder)` is going to ask the decoder for an `Int32` called `value` (specifically it will call `decoder.decode(Int32.self, forKey: "value")`). This is how EasyDB figures out the structure of Codable types. The decoder will respond by giving it a value of the kind requested: `"0"` or `"1"` for strings, `0` or `1` for numbers, `false` or `true` for booleans.
+
+In the case of `Direction` in the example above, `Direction.init(from: Decoder)` will ask for a `String`, EasyDB will respond with `"0"`, and an error will be thrown because `"0"` is not a valid direction.
+
+EasyDB extends a few common built-in types - `Date`, `Data`, `UUID` and `URL` - with conformance to `SampleValueSource`.
+
+But if you use another type that encodes itself to a string but for which `"0"` or `"1"` are not valid representations, you will need to add `SampleValueSource` conformance yourself.
+
 ## Reasons not to use EasyDB
 
 Even in its first release, EasyDB is the best iOS database for _my_ needs. But your needs may be different. If you need any of these features _now_ then use a different database. Bear in mind that it's not hard to migrate from EasyDB to any other SQLite-based database as they all use the same data file format, so if you don't require these features now but think you might in the future, you can use EasyDB knowing that you're not locked in.
@@ -619,4 +636,5 @@ Even in its first release, EasyDB is the best iOS database for _my_ needs. But y
 **You want to use advanced SQLite features.** EasyDB does not currently support the following features. There's no reason why it can't, it just doesn't yet:
   - _WAL mode:_ SQLite supports single-writer-multiple-reader concurrency via [WAL mode](https://www.sqlite.org/wal.html). Adding this to EasyDB is a high priority but for now EasyDB offers [thread safety but no concurrency](#concurrency-and-transactions). In fairness this is already better than Core Data which has neither concurrency nor thread safety.
   - _Change notification:_ SQLite can [notify you](https://sqlite.org/c3ref/update_hook.html) when your database is updated by another process. It is easy for your app to notify itself when it writes to the database, but if other processes may write to the same database file and you want to respond to those changes immediately, use GRDB. 
-  - _custom builds:_ EasyDB uses the system-provided SQLite and you can not provide your own build, e.g. to use extensions like [SQLCipher](https://www.zetetic.net/sqlcipher/) or) [SpatiaLite](https://www.gaia-gis.it/fossil/libspatialite/index). 
+  - _custom builds:_ EasyDB uses the system-provided SQLite and you can not provide your own build, e.g. to use extensions like [SQLCipher](https://www.zetetic.net/sqlcipher/) or) [SpatiaLite](https://www.gaia-gis.it/fossil/libspatialite/index).
+  - _Full-text search_: You can use full text search with EasyDB by writing your own SQL to define FTS virtual tables, but EasyDB does not provide an API to help you. 
