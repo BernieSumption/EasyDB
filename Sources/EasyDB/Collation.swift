@@ -59,7 +59,6 @@ extension Collation {
 
     /// Sort unicode strings using case-insensitive localized comparison with Swift's `String.localizedCaseInsensitiveCompare(_:)` function
     public static let localizedCaseInsensitive = Collation("localizedCaseInsensitive") { (lhs, rhs) in
-        "".localizedCompare("")
         return lhs.localizedCaseInsensitiveCompare(rhs)
     }
 

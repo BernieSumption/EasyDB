@@ -56,7 +56,7 @@ public class EasyDB {
     /// Return a collection. Unless automatic migration is disabled for this database, the table will be automatically
     /// created or any missing columns added.
     ///
-    /// Ccollections of identifiable types will be given a unique index for the `id` property.
+    /// Collections of identifiable types will be given a unique index for the `id` property.
     public func collection<T: Codable & Identifiable>(
         _ type: T.Type
     ) throws -> Collection<T> where T.ID: Codable {
@@ -89,8 +89,8 @@ public class EasyDB {
         try getConnection().execute(sql: sql)
     }
 
-    /// Execute an SQL statement and return the results as an instance of T. T can be any codable type, see the rules
-    /// for decoding queries TODO: link to docs for "selecting results into other types"
+    /// Execute an SQL statement and return the results as an instance of `T`. `T` can be any codable type, see
+    /// [selecting into custom result types](https://github.com/BernieSumption/EasyDB#selecting-into-custom-result-types)
     public func execute<T: Codable>(_ resultType: T.Type, _ sqlFragment: SQLFragment<NoProperties>) throws -> T {
         let sql = try sqlFragment.sql(collations: nil, overrideCollation: nil)
         let parameters = try sqlFragment.parameters()

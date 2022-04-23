@@ -74,19 +74,19 @@ struct Employee: Codable, Identifiable {
 
 Under the hood, EasyDB is using `Codable` to get a list of the properties of this struct and generate a table with `id` and `name` columns. 
 
-Most record types should just work but some - including any that have `enum`s as properties - require a little extra code. See [Constraints on record types](#constraints-on-record-types).
-
 The table is created and migrated the first time the collection is accessed:
 
 <!---create-collections--->
 ```swift
 let database = EasyDB("my-database.sqlite")
 let employees = try database.collection(Employee.self)
-```  
+```
+
+Most record types should just work but some - in particular any that have enums as properties - require a little extra code. See [Constraints on record types](#constraints-on-record-types).
 
 ### Primary keys
 
-To add a primary key, conform your record type to `Identifiable`. A unique index will automatically be added.
+To add a primary key, conform your record type to `Identifiable` and add an `id` property. A unique index for `id` will automatically be added.
 
 We recommend `UUID` for IDs. Auto-incrementing integer IDs are not supported as they do not play nicely with Swift's type system.
 
@@ -167,7 +167,7 @@ _ = try employees.filter("\(\.salary) % 2 == 0").fetchMany()
 //  ^^ SELECT * FROM MyRecord WHERE `salary` % 2 == 0
 ```
 
-Note how the kay path interpolated into the SQL string is converted into a column name. EasyDB uses string interpolation to prevent some errors and SQL injections vulnerabilities, see [working with SQL](#working-with-sql).
+Note how the key path interpolated into the SQL string is converted into a column name. EasyDB uses string interpolation to prevent some errors and SQL injections vulnerabilities, see [working with SQL](#working-with-sql).
 
 You can `orderBy` an SQL expression too:
 
@@ -213,7 +213,7 @@ let names = try employees.all().fetchMany(\.name)
 // names is typed [String]
 ```
 
-Or a subset of fields using a custom result type. Only the fields present in the result type will be selected. This is not type-safe - the property names and types of the result type must match the record type, otherwise an error will be thrown.
+Or select a subset of fields using a custom result type. Only the fields present in the result type will be selected. This is not type-safe - the property names and types of the result type must match the record type, otherwise an error will be thrown.
 
 <!---subset-query-multiple--->
 ```swift

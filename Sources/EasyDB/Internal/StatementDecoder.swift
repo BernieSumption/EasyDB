@@ -1,8 +1,10 @@
 import Foundation
 
 /// Decodes a statement's results into a `Codable` type, making an effort to do something pretty
-/// sensible for any codable type. See TODO: URL for query decoding
+/// sensible for any codable type.
 struct StatementDecoder {
+    /// Decode a statement's results as an instance of `T`. `T` can be any codable type, see
+    /// [selecting into custom result types](https://github.com/BernieSumption/EasyDB#selecting-into-custom-result-types)
     static func decode<T: Decodable>(_ type: T.Type, from statement: Statement) throws -> T {
         _ = try statement.step()
         let decoder = StatementDecoderImpl(statement)
@@ -279,22 +281,22 @@ private class SingleRowUnkeyedContainer: UnkeyedDecodingContainer {
 }
 
 private struct StatementKey: CodingKey {
-    public var stringValue: String
-    public var intValue: Int?
+    var stringValue: String
+    var intValue: Int?
 
-    public init?(stringValue: String) {
+    init?(stringValue: String) {
         self.init(stringValue)
     }
 
-    public init?(intValue: Int) {
+    init?(intValue: Int) {
         self.init(intValue)
     }
 
-    public init(_ string: String) {
+    init(_ string: String) {
         self.stringValue = string
     }
 
-    internal init(_ int: Int) {
+    init(_ int: Int) {
         self.stringValue = int.description
         self.intValue = int
     }

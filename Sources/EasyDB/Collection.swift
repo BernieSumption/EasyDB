@@ -33,7 +33,9 @@ public class Collection<Row: Codable>: Filterable, DefaultCollations {
         var defaultCollations = [String: Collation]()
         for property in mapper.rootProperties {
             let isId = property == idPropertyName
-            defaultCollations[property] = try metadata.getCombinedConfig(property, isId: isId).collation
+            let collation = try metadata.getCombinedConfig(property, isId: isId).collation
+            try database.registerCollation(collation)
+            defaultCollations[property] = collation
         }
         self.defaultCollations = defaultCollations
 

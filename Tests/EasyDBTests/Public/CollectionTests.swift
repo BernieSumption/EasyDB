@@ -114,4 +114,28 @@ class CollectionTests: EasyDBTestCase {
             try db.collection([String: Int].self),
             contains: #"Can't create a collection of "Dictionary<String, Int>" - collection types must be structs with at least one property"#)
     }
+
+    func testCollationAnnotation() throws {
+        let c = try db.collection(CollationAnnotation.self)
+        try c.insert([
+            .init(value: "x"),
+            .init(value: "me first!"),
+            .init(value: "a")
+        ])
+        XCTAssertEqual(
+            try c.all().orderBy(\.value).fetchMany().map(\.value),
+            ["me first!", "a", "x"])
+    }
+    struct CollationAnnotation: Codable {
+        @CollateCustom @Unique var value: String
+    }
+}
+
+@propertyWrapper
+struct CollateCustom<Value: Codable & Equatable>: ConfigurationAnnotation {
+    public var wrappedValue: Value
+
+    public static var propertyConfig: PropertyConfig {
+        return .collation(.stringMeFirstAlwaysGoesFirst)
+    }
 }

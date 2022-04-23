@@ -67,7 +67,7 @@ class KeyPathMapper<T: Codable> {
         }
         let values = try instances.map(keyPath.encode)
         guard let path = valuesToPropertyPath[values] else {
-            throw ReflectionError.keyPathNotFound(T.self)
+            throw EasyDBError.misuse(message: "The provided key path can't be mapped to a property of \(T.self) - note that array and dictionary subscript KeyPaths e.g. \\TypeName.myArray[0] are not supported")
         }
         keyPathToPropertyPath[keyPath.cacheKey] = path
         return path

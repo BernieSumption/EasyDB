@@ -35,7 +35,7 @@ private let codeNames: [CInt: String] = [
     101: "SQLITE_DONE"
 ]
 
-public enum ResultCode: CInt, Error, CustomStringConvertible {
+enum ResultCode: CInt, Error, CustomStringConvertible {
     case OK = 0
     case ERROR = 1
     case INTERNAL = 2
@@ -68,7 +68,7 @@ public enum ResultCode: CInt, Error, CustomStringConvertible {
     case ROW = 100
     case DONE = 101
 
-    public var description: String {
+    var description: String {
         let message = String(cString: sqlite3_errstr(rawValue))
         let name = ResultCode.nameForCode(rawValue)
         return "\(name) (\(message))"

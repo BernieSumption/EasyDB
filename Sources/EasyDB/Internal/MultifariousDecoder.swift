@@ -245,22 +245,22 @@ struct SingleValueContainer: SingleValueDecodingContainer {
 }
 
 internal struct MultifariousKey: CodingKey {
-    public var stringValue: String
-    public var intValue: Int?
+    var stringValue: String
+    var intValue: Int?
 
-    public init?(stringValue: String) {
+    init?(stringValue: String) {
         self.init(stringValue)
     }
 
-    public init?(intValue: Int) {
+    init?(intValue: Int) {
         self.init(intValue)
     }
 
-    public init(_ string: String) {
+    init(_ string: String) {
         self.stringValue = string
     }
 
-    internal init(_ int: Int) {
+    init(_ int: Int) {
         self.stringValue = int.description
         self.intValue = int
     }
