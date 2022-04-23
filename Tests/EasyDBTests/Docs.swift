@@ -325,7 +325,7 @@ class DocsTests: XCTestCase {
             contains: "Error thrown from Direction.init(from:)")
         assertErrorMessage(
             try database.collection(Invalid.self),
-            contains: "Cannot initialize Direction from invalid String value 0")
+            contains: "Cannot initialize Direction from invalid String value")
     }
 
     func testAddSupportForInvalidRecordType() throws {

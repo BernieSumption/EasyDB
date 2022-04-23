@@ -112,10 +112,11 @@ class WriteTests: EasyDBTestCase {
     func testMultipleUpdate() throws {
         let c = try db.collection(MultipleUpdate.self)
 
-        try c.insert([
-            MultipleUpdate(a: "a", b: 0),
-            MultipleUpdate(a: "b", b: 1),
-            MultipleUpdate(a: "c", b: 2)])
+        let ra = MultipleUpdate(a: "a", b: 0)
+        let rb = MultipleUpdate(a: "b", b: 1)
+        let rc = MultipleUpdate(a: "c", b: 2)
+
+        try c.insert([ra, rb, rc])
 
         try c
             .filter(\.a, lessThan: "c")
@@ -126,9 +127,9 @@ class WriteTests: EasyDBTestCase {
         XCTAssertEqual(
             try c.all().fetchMany(),
             [
-                MultipleUpdate(a: "new", b: 10),
-                MultipleUpdate(a: "new", b: 10),
-                MultipleUpdate(a: "c", b: 2)
+                MultipleUpdate(id: ra.id, a: "new", b: 10),
+                MultipleUpdate(id: rb.id, a: "new", b: 10),
+                MultipleUpdate(id: rc.id, a: "c", b: 2)
             ])
     }
     struct MultipleUpdate: Record, Equatable {

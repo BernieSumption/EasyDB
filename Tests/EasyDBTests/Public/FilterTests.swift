@@ -247,14 +247,12 @@ class FilterTests: EasyDBTestCase {
         let c: String?
     }
 
-    struct AC: Record, Equatable {
-        var id = UUID()
+    struct AC: Codable, Equatable {
         let a: String
         let c: String
     }
 
-    struct AE: Record, Equatable {
-        var id = UUID()
+    struct AE: Codable, Equatable {
         let a: String
         let e: String
     }

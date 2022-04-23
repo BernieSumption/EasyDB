@@ -6,13 +6,14 @@ class InternalCollectionTests: EasyDBTestCase {
     func testDefaultCollectionCollationUsedInSQL() throws {
         var sql = ""
         db = EasyDB(.memory)
-        db.logSQL = .custom({ sql = $0 + "\n" })
+        db.logSQL = .custom({ sql += $0 + "\n" })
 
         let c = try db.collection(DefaultCollectionCollationUsedInSQL.self)
 
         // index created with default collation "string"
         assertString(sql, contains: "`value` COLLATE `string`")
 
+        sql = ""
         _ = try c.filter(\.value, equalTo: 4).orderBy(\.value).fetchMany()
         assertString(sql, contains: "WHERE `value` COLLATE `string` IS")
         assertString(sql, contains: "ORDER BY `value` COLLATE `string`")
@@ -26,13 +27,14 @@ class InternalCollectionTests: EasyDBTestCase {
     func testExplicitDefaultCollectionCollationUsedInSQL() throws {
         var sql = ""
         db = EasyDB(.memory)
-        db.logSQL = .custom({ sql = $0 + "\n" })
+        db.logSQL = .custom({ sql += $0 + "\n" })
 
         let c = try db.collection(ExplicitDefaultCollectionCollationUsedInSQL.self)
 
         // index created with "binary" collation
         assertString(sql, contains: "`value` COLLATE `binary`")
 
+        sql = ""
         // "binary" collation used in filter and order by
         _ = try c.filter(\.value, equalTo: 4).orderBy(\.value).fetchMany()
         assertString(sql, contains: "WHERE `value` COLLATE `binary` IS")

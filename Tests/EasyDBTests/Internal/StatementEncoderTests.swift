@@ -7,6 +7,7 @@ class StatementEncoderTests: EasyDBTestCase {
 
         let s = try db.getConnection().notThreadSafe_prepare(sql: """
             SELECT
+            :id as id,
             :i AS i,
             :ioy AS ioy,
             :ion AS ion,

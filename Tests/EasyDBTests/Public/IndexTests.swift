@@ -26,7 +26,7 @@ class IndexTests: EasyDBTestCase {
         try c.insert(Row(value: 5))
         XCTAssertNoThrow(try c.insert(Row(value: 5)))
 
-        let sql = try dbIndexSQL().first ?? ""
+        let sql = try dbIndices().joined()
         XCTAssertTrue(sql.contains("CREATE INDEX `Row-value-string`"))
 
         struct Row: Record {
@@ -85,7 +85,7 @@ class IndexTests: EasyDBTestCase {
             try c.insert(row),
             contains: "UNIQUE constraint failed: RegularIndexForIdentifiableIsUnique.id")
 
-        let indices = try dbIndexSQL()
+        let indices = try dbIndices()
         XCTAssertEqual(indices.count, 1)
     }
 

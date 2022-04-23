@@ -13,8 +13,8 @@ Compared to the (many) other SQLite wrapper libraries in Swift, EasyDB is the on
 
 <!---headline-demo--->
 ```swift
-// Record types are defined as Codable structs
-struct Book: Codable, Identifiable {
+// Record types are simple structs
+struct Book: Record {
     var id = UUID()
     @Unique var name: String
     var author: String
@@ -61,16 +61,18 @@ It would be relatively easy to extend support back a few versions, see [this iss
 
 ## Defining collections
 
-Record types are `Codable` structs. All examples on this page use this example record type:
+Record types are structs that conform to `Record`. All examples on this page use this example record type:
 
 <!---defining-collections--->
 ```swift
-struct Employee: Codable, Identifiable {
+struct Employee: Record {
     var id = UUID()
     var name: String
     var salary: Int
 }
 ```
+
+`Record` inherits from `Codable` and `Identifiable`, so all record types will get an automatic implementation of `Codable` and must have an id.
 
 Under the hood, EasyDB is using `Codable` to get a list of the properties of this struct and generate a table with `id` and `name` columns. 
 
@@ -86,9 +88,11 @@ Most record types should just work but some - in particular any that have enums 
 
 ### Primary keys
 
-To add a primary key, conform your record type to `Identifiable` and add an `id` property. A unique index for `id` will automatically be added.
+A unique index for `id` will automatically be added for all collections.
 
-We recommend `UUID` for IDs. Auto-incrementing integer IDs are not supported as they do not play nicely with Swift's type system.
+We recommend `UUID` for IDs, declared as `var id = UUID()` so that an ID is automatically generated when you create a new instance. If you need to integrate with other systems that expect a different ID format you can use `String`, `Int`, or any other type that is both `Codable` and `Hashable`.
+
+Whatever the type of the `id` property, your application is responsible for generating ids. Developers who are used to working with relational databases may expect the database to generate an auto-incrementing integer ID. EasyDB does not support auto-incrementing IDs as they do not play nicely with Swift's type system.
 
 ## Inserting records
 
@@ -184,7 +188,7 @@ If you use the same SQL filter in many places you can extend `Filterable` to add
 <!---filter-sql-extension--->
 ```swift
 extension Filterable {
-    func filter<V: Codable>(_ property: KeyPath<Row, V>, isEven: Bool) -> QueryBuilder<Row> {
+    func filter<Value: Codable>(_ property: KeyPath<Row, Value>, isEven: Bool) -> QueryBuilder<Row> {
         return filter("\(property) % 2 == \(isEven ? 0 : 1)")
     }
 }
@@ -307,7 +311,7 @@ EasyDB supports regular and unique indices:
 
 <!---indices--->
 ```swift
-struct Book: Codable, Identifiable {
+struct Book: Record {
     var id = UUID() // automatically unique
     @Unique var title: String
     @Index var author: String
@@ -317,7 +321,7 @@ struct Book: Codable, Identifiable {
 
 Attempting to insert a book with the same `id` or `name` as an existing book will result in an error. 
 
-The `@Unique` attribute is only required on `name`. Because `Book` conforms to `Identifiable`, `id` is unique even without specifying a unique index.
+The `@Unique` attribute is only required on `name`. `id` is unique even without specifying a unique index.
 
 ### Compound and expression indices
 
@@ -441,7 +445,8 @@ Set a collation for a property by adding a `@CollateXXX` annotation:
 
 <!---collation-annotation--->
 ```swift
-struct Book: Codable {
+struct Book: Record {
+    var id = UUID()
     var author: String
     @CollateCaseInsensitive var name: String
 }
@@ -521,7 +526,8 @@ And use it like this:
 
 <!---custom-collation-annotation-use--->
 ```swift
-struct Book: Codable {
+struct Book: Record {
+    var id = UUID()
     @CollateByLength var name: String
 }
 let books = try database.collection(Book.self)
@@ -591,7 +597,8 @@ Here's an example of an unsupported `Codable` type. The enum `Direction` encodes
 
 <!---invalid-record-type--->
 ```swift
-struct Record: Codable {
+struct Invalid: Record {
+    var id = UUID()
     var direction: Direction
 }
 // "0" is not a valid value for this enum
@@ -601,7 +608,7 @@ enum Direction: String, Codable {
 XCTAssertThrowsError(
     // message: Error thrown from Direction.init(from:) ... Cannot initialize
     //          Direction from invalid String value 0
-    try database.collection(Record.self)
+    try database.collection(Invalid.self)
 )
 ```
 

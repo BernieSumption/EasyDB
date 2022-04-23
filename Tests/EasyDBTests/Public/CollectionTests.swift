@@ -74,8 +74,8 @@ class CollectionTests: EasyDBTestCase {
         db = EasyDB(.memory)
         _ = try db.collection(DefaultCollationOnIndex.self)
 
-        let sql = try dbIndexSQL().first ?? ""
-        XCTAssertTrue(sql.contains("`myProp` COLLATE `string`"))
+        let sql = try dbIndices().joined()
+        assertString(sql, contains: "`myProp` COLLATE `string`")
     }
     struct DefaultCollationOnIndex: Record, Equatable {
         var id = UUID()

@@ -116,6 +116,7 @@ class StatementDecoderTests: EasyDBTestCase {
         testSelectAs(
             """
                 SELECT
+                "id" AS id,
                 1 AS i,
                 1 AS ioy,
                 NULL AS ion,

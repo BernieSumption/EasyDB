@@ -3,7 +3,7 @@ import XCTest
 import EasyDB
 
 struct KitchenSinkEntity: Record, Equatable {
-    var id = UUID()
+    var id: String
     let i: Int
     let ioy: Int?
     let ion: Int?
@@ -31,7 +31,7 @@ struct KitchenSinkEntity: Record, Equatable {
     }
 
     static let standard = KitchenSinkEntity(
-        i: 1, ioy: 1, ion: nil, i8: 2, i16: 3, i32: 4, i64: 5, ui: 6, ui8: 7, ui16: 8, ui32: 9, ui64: 10,
+        id: "id", i: 1, ioy: 1, ion: nil, i8: 2, i16: 3, i32: 4, i64: 5, ui: 6, ui8: 7, ui16: 8, ui32: 9, ui64: 10,
         f: 11.5, f32: 13.5, f64: 14.5, d: 15.5, s: "16", data: Data([255, 6, 0, 179]),
         date: Date(timeIntervalSinceReferenceDate: 20),
         sub: .init(d: Date(timeIntervalSinceReferenceDate: 20), a: 21))
@@ -134,12 +134,9 @@ class EasyDBTestCase: XCTestCase {
             expectedDataAfterCallback)
     }
 
-    func dbIndexSQL(table: String? = nil) throws -> [String] {
-        var sql = "SELECT sql FROM sqlite_schema WHERE type = 'index'"
-        if let table = table {
-            sql += " AND tbl_name = '\(table)'"
-        }
-        return try db.execute([String].self, "\(literal: sql)")
+    /// Return the SQL for all indices in the database
+    func dbIndices() throws -> [String] {
+        return try db.execute([String].self, "SELECT sql FROM sqlite_schema WHERE type = 'index'")
     }
 }
 
