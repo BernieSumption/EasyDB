@@ -15,11 +15,11 @@ public struct QueryBuilder<Row: Record>: Filterable {
         return try limit(1).fetchMany().first
     }
 
-    public func fetchOne<V: Codable>(_ property: KeyPath<Row, V>) throws -> V? {
+    public func fetchOne<Value: Codable>(_ property: KeyPath<Row, Value>) throws -> Value? {
         return try limit(1).fetchMany(property).first
     }
 
-    public func fetchOne<V: Codable>(_ properties: V.Type) throws -> V? {
+    public func fetchOne<Value: Codable>(_ properties: Value.Type) throws -> Value? {
         return try limit(1).fetchMany(properties).first
     }
 
@@ -98,7 +98,7 @@ public struct QueryBuilder<Row: Record>: Filterable {
     /// Call `update()` on the return value to execute the update.
     ///
     /// Multiple update clauses can be added by chaining function calls: `updating(...).updating(...).update()`.
-    public func updating<V: Codable>(_ property: KeyPath<Row, V>, _ value: V) -> Self {
+    public func updating<Value: Codable>(_ property: KeyPath<Row, Value>, _ value: Value) -> Self {
         return updating("\(property) = \(value)")
     }
 
@@ -115,7 +115,7 @@ public struct QueryBuilder<Row: Record>: Filterable {
     }
 
     /// Append an update clause that sets `property = value` and execute the update.
-    public func update<V: Codable>(_ property: KeyPath<Row, V>, _ value: V) throws {
+    public func update<Value: Codable>(_ property: KeyPath<Row, Value>, _ value: Value) throws {
         try updating(property, value).update()
     }
 
@@ -141,7 +141,7 @@ public struct QueryBuilder<Row: Record>: Filterable {
         case update
     }
 
-    private func execute<V: Codable>(_ type: V.Type, _ mode: CompileMode) throws -> V {
+    private func execute<Value: Codable>(_ type: Value.Type, _ mode: CompileMode) throws -> Value {
         let query = try compile(mode)
         return try getConnection().execute(type, sql: query.sql, parameters: query.parameters)
     }

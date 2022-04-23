@@ -2,7 +2,7 @@ import Foundation
 import XCTest
 import EasyDB
 
-struct KitchenSinkEntity: Record, Equatable {
+struct KitchenSinkRecord: Record, Equatable {
     var id: String
     let i: Int
     let ioy: Int?
@@ -30,7 +30,7 @@ struct KitchenSinkEntity: Record, Equatable {
         let a: Int
     }
 
-    static let standard = KitchenSinkEntity(
+    static let standard = KitchenSinkRecord(
         id: "id", i: 1, ioy: 1, ion: nil, i8: 2, i16: 3, i32: 4, i64: 5, ui: 6, ui8: 7, ui16: 8, ui32: 9, ui64: 10,
         f: 11.5, f32: 13.5, f64: 14.5, d: 15.5, s: "16", data: Data([255, 6, 0, 179]),
         date: Date(timeIntervalSinceReferenceDate: 20),

@@ -30,7 +30,7 @@ class StatementEncoderTests: EasyDBTestCase {
             :sub AS sub
         """)
 
-        try StatementEncoder.encode(KitchenSinkEntity.standard, into: s)
+        try StatementEncoder.encode(KitchenSinkRecord.standard, into: s)
 
         _ = try s.step()
 

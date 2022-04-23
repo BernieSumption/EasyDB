@@ -148,7 +148,7 @@ public class Collection<Row: Record>: Filterable, DefaultCollations {
     }
 }
 
-/// What to do during an insert operation if inserting the entity would violate a uniqueness constraint 
+/// What to do during an insert operation if inserting the record would violate a uniqueness constraint 
 public enum OnConflict {
     /// Throw an error and abort the current transaction
     case abort

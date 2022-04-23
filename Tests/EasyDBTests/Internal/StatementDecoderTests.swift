@@ -139,8 +139,8 @@ class StatementDecoderTests: EasyDBTestCase {
                 "2001-01-01T00:00:20Z" AS date,
                 '{"a":21,"d":"2001-01-01T00:00:20Z"}' AS sub
             """,
-            KitchenSinkEntity.self,
-            KitchenSinkEntity.standard)
+            KitchenSinkRecord.self,
+            KitchenSinkRecord.standard)
     }
 
     func testDecodeDictionary() throws {

@@ -1,6 +1,7 @@
 import XCTest
 import EasyDB
 
+// swiftlint:disable:file_length
 class DocsTests: XCTestCase {
 
     var database: EasyDB!

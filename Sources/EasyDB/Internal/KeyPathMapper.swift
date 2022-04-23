@@ -100,7 +100,7 @@ struct PartialCodableKeyPath<Root: Codable>: Hashable {
     let encode: (Root) throws -> Encoded
     let cacheKey: AnyKeyPath
 
-    init<V: Encodable>(_ keyPath: KeyPath<Root, V>) {
+    init<Value: Encodable>(_ keyPath: KeyPath<Root, Value>) {
         self.encode = { try Encoded($0[keyPath: keyPath]) }
         self.cacheKey = keyPath
     }

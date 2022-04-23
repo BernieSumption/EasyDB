@@ -1,7 +1,7 @@
 import Foundation
 
 /// Configure access to an EasyDB database. Most reading and writing of data is done on the `Collection`
-/// objects returned by `collection(EntityType.self)`
+/// objects returned by `collection(RecordType.self)`
 public class EasyDB {
     let path: String
 

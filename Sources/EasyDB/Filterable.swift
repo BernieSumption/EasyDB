@@ -19,39 +19,47 @@ extension Filterable {
     /// Add a filter limiting the query to records where `property == value`.
     ///
     /// This uses the SQL `IS` operator which has the same semantics as Swift's `==` when comparing null values.
-    public func filter<V: Codable>(_ property: KeyPath<Row, V>, equalTo value: V, collation: Collation? = nil) -> QueryBuilder<Row> {
+    public func filter<Value: Codable>(_ property: KeyPath<Row, Value>, equalTo value: Value, collation: Collation? = nil) -> QueryBuilder<Row> {
         return filter("\(property) IS \(value)", collation: collation)
     }
 
     /// Add a filter limiting the query to records where `property != value`.
     ///
     /// This uses the SQL `IS NOT` operator which has the same semantics as Swift's `!=` when comparing null values.
-    public func filter<V: Codable>(_ property: KeyPath<Row, V>, notEqualTo value: V, collation: Collation? = nil) -> QueryBuilder<Row> {
+    public func filter<Value: Codable>(_ property: KeyPath<Row, Value>, notEqualTo value: Value, collation: Collation? = nil) -> QueryBuilder<Row> {
         return filter("\(property) IS NOT \(value)", collation: collation)
     }
 
     /// Add a filter limiting the query to records where `property > value`
-    public func filter<V: Codable>(_ property: KeyPath<Row, V>, greaterThan value: V, collation: Collation? = nil) -> QueryBuilder<Row> {
+    public func filter<Value: Codable>(_ property: KeyPath<Row, Value>, greaterThan value: Value, collation: Collation? = nil) -> QueryBuilder<Row> {
         return filter("\(property) > \(value)", collation: collation)
     }
 
     /// Add a filter limiting the query to records where `property < value`
-    public func filter<V: Codable>(_ property: KeyPath<Row, V>, lessThan value: V, collation: Collation? = nil) -> QueryBuilder<Row> {
+    public func filter<Value: Codable>(_ property: KeyPath<Row, Value>, lessThan value: Value, collation: Collation? = nil) -> QueryBuilder<Row> {
         return filter("\(property) < \(value)", collation: collation)
     }
 
     /// Add a filter limiting the query to records where `property >= value`
-    public func filter<V: Codable>(_ property: KeyPath<Row, V>, greaterThanOrEqualTo value: V, collation: Collation? = nil) -> QueryBuilder<Row> {
+    public func filter<Value: Codable>(
+        _ property: KeyPath<Row, Value>,
+        greaterThanOrEqualTo value: Value,
+        collation: Collation? = nil
+    ) -> QueryBuilder<Row> {
         return filter("\(property) >= \(value)", collation: collation)
     }
 
     /// Add a filter limiting the query to records where `property <= value`
-    public func filter<V: Codable>(_ property: KeyPath<Row, V>, lessThanOrEqualTo value: V, collation: Collation? = nil) -> QueryBuilder<Row> {
+    public func filter<Value: Codable>(
+        _ property: KeyPath<Row, Value>,
+        lessThanOrEqualTo value: Value,
+        collation: Collation? = nil
+    ) -> QueryBuilder<Row> {
         return filter("\(property) <= \(value)", collation: collation)
     }
 
     /// Add a filter limiting the query to records where `property` is (or is not) `nil` 
-    public func filter<V: Codable>(_ property: KeyPath<Row, V>, isNull: Bool) -> QueryBuilder<Row> {
+    public func filter<Value: Codable>(_ property: KeyPath<Row, Value>, isNull: Bool) -> QueryBuilder<Row> {
         return filter(isNull ? "\(property) ISNULL" : "\(property) NOTNULL")
     }
 

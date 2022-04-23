@@ -29,15 +29,15 @@ public struct SQLFragment<Row: Codable>: ExpressibleByStringInterpolation {
             parts.append(.literal(literal))
         }
 
-        public mutating func appendInterpolation<V: Codable>(_ value: V) {
+        public mutating func appendInterpolation<Value: Codable>(_ value: Value) {
             parts.append(.parameter({ try DatabaseValueEncoder.encode(value) }))
         }
 
-        public mutating func appendInterpolation<V: Codable>(_ property: KeyPath<Row, V>) {
+        public mutating func appendInterpolation<Value: Codable>(_ property: KeyPath<Row, Value>) {
             parts.append(.property(PartialCodableKeyPath(property)))
         }
 
-        public mutating func appendInterpolation<V: Codable>(_ collection: Collection<V>) {
+        public mutating func appendInterpolation<Row: Codable>(_ collection: Collection<Row>) {
             parts.append(.literal(SQL.quoteName(collection.tableName)))
         }
 

@@ -4,10 +4,10 @@ import EasyDB
 class WriteTests: EasyDBTestCase {
 
     func testInsert() throws {
-        let c = try db.collection(KitchenSinkEntity.self)
-        try c.insert(KitchenSinkEntity.standard)
+        let c = try db.collection(KitchenSinkRecord.self)
+        try c.insert(KitchenSinkRecord.standard)
         let row = try c.all().fetchOne()
-        XCTAssertEqual(row, KitchenSinkEntity.standard)
+        XCTAssertEqual(row, KitchenSinkRecord.standard)
     }
 
     func testBulkInsert() throws {
