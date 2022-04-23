@@ -13,7 +13,7 @@ Compared to the (many) other SQLite wrapper libraries in Swift, EasyDB is the on
 
 <!---headline-demo--->
 ```swift
-// Record types are simple structs
+// Record types are defined as Codable structs
 struct Book: Record {
     var id = UUID()
     @Unique var name: String
@@ -50,7 +50,7 @@ It would be relatively easy to extend support back a few versions, see [this iss
 ## Features
 
 - [Defining collections](#defining-collections)
-- [Inserting records](#inserting-records)
+- [Saving records](#saving-records)
 - [Querying records](#querying-records)
 - [Updating records](#updating-records)
 - [Deleting records](#deleting-records)
@@ -94,37 +94,40 @@ We recommend `UUID` for IDs, declared as `var id = UUID()` so that an ID is auto
 
 Whatever the type of the `id` property, your application is responsible for generating ids. Developers who are used to working with relational databases may expect the database to generate an auto-incrementing integer ID. EasyDB does not support auto-incrementing IDs as they do not play nicely with Swift's type system.
 
-## Inserting records
+## Saving records
 
-Insert one record:
+The `save(_:)` method will ensure that a record is persisted to the database:
 
-<!---insert-one--->
+<!---save-one--->
 ```swift
-try collection.insert(UniqueName(name: "a"))
+try employees.save(Employee(name: "Peter Gibbons", salary: 40250))
 ```
 
-Insert many records in a transaction - if one insert fails e.g. due to a unique constraint, no records will be inserted
+`save(_:) is an "upsert" operation - it will insert a new record into the collection or update the existing data if a row with the same id already exists in the database:
 
-<!---insert-many--->
+<!---fetch-edit-save--->
 ```swift
-try collection.insert([
-    UniqueName(name: "b"),
-    UniqueName(name: "c"),
-    UniqueName(name: "d")
+// load a random Employee
+if var row = try employees.all().orderBy("random()").fetchOne() {
+    // reverse the words their name
+    row.name = row.name.split(separator: " ").reversed().joined(separator: " ")
+    // save the record
+    try employees.save(row)
+}
+```
+
+Save many records in a transaction. This is an atomic operation, if one save fails e.g. due to a unique constraint, no an error will be throws and no records will be saved.
+
+<!---save-many--->
+```swift
+try employees.save([
+    Employee(name: "Samir Nagheenanajar", salary: 40_250),
+    Employee(name: "Michael Bolton", salary: 40_250),
+    Employee(name: "Bill Lumbergh", salary: 110_000)
 ])
 ```
 
-To allow rows in a bulk insert to succeed or fail independently, use `onConflict: .ignore`. No errors will be thrown if any rows fail to insert.
-
-<!---insert-many-ignore--->
-```swift
-try collection.insert([
-    UniqueName(name: "d"),
-    UniqueName(name: "e")
-], onConflict: .ignore)
-```
-
-`insert` also supports `onConflict: .replace` for upserts, but you should use the [`save()` alias instead](#saving-records-upsert) which is easier to read.
+There is an alternative method `insert(_:)` which works just like `save(_:)` except that it will only insert, not update. An error will be thrown if you try to `insert` a record with the same `id` as an existing record.
 
 ## Querying records
 
@@ -232,25 +235,7 @@ let namesAndIds = try employees.all().fetchMany(NameAndId.self)
 
 ## Updating records
 
-### Saving records (upsert)
-
-The easiest way to update a record is to fetch it from the database, modify it, and call `save(_:)`:
-
-<!---save--->
-```swift
-if var row = try employees.all().fetchOne() {
-    row.name = "edited"
-    try employees.save(row)
-}
-```
-
-This is a "upsert" operation - it will update an existing record or create a new one of there is none. The "existing record" is identified by it sharing an `id` or another unique index. In fact, `save(row)` is just an alias for `insert(row, onConflict: .replace)`.
-
-Like `insert(_:)`, `save(_:)` can also take multiple records and they will be updated in a transaction.
-
-### Bulk update
-
-It is also possible to update records in bulk using the `QueryBuilder` API.
+The easiest way to update single a record is to fetch it from the database, modify it, and call `save(_:)`. But to update a record in bulk, or save a subset of fields of a single record, you can use the `QueryBuilder` API.
 
 Update every record:
 

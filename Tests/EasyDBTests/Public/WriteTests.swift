@@ -3,7 +3,7 @@ import EasyDB
 
 class WriteTests: EasyDBTestCase {
 
-    func testInsert() throws {
+    func testRoundTrip() throws {
         let c = try db.collection(KitchenSinkRecord.self)
         try c.insert(KitchenSinkRecord.standard)
         let row = try c.all().fetchOne()
@@ -45,7 +45,7 @@ class WriteTests: EasyDBTestCase {
         XCTAssertEqual(try c.all().fetchMany(), [])
     }
 
-    func testUpsertOfIdentifiable() throws {
+    func testSave() throws {
         let r1 = IdAndName(id: UUID(), name: "r1")
         let r2 = IdAndName(id: UUID(), name: "r2")
         let c = try db.collection(IdAndName.self)
@@ -54,16 +54,25 @@ class WriteTests: EasyDBTestCase {
 
         var r1v2 = r1
         r1v2.name = "r1-v2"
-        try c.insert(r1v2, onConflict: .replace)
+        try c.save(r1v2)
         XCTAssertEqual(try c.all().orderBy(\.name).fetchMany(), [r1v2, r2])
+    }
 
-        var r1v3 = r1v2
-        r1v3.name = "r1-v3"
-        try c.insert(r1v3, onConflict: .ignore)
-        XCTAssertEqual(try c.all().orderBy(\.name).fetchMany(), [r1v2, r2])
+    func testInsert() throws {
+        let r1 = IdAndName(id: UUID(), name: "r1")
+        let r2 = IdAndName(id: UUID(), name: "r2")
+        let c = try db.collection(IdAndName.self)
 
-        assertErrorMessage(try c.insert(r1v3), contains: "UNIQUE constraint failed")
-        assertErrorMessage(try c.insert(r1v3, onConflict: .abort), contains: "UNIQUE constraint failed")
+        try c.insert([r1, r2])
+
+        var r1v2 = r1
+        r1v2.name = "r1-v2"
+
+        assertErrorMessage(
+            try c.insert(r1v2),
+            contains: "UNIQUE constraint failed")
+
+        XCTAssertEqual(try c.all().orderBy(\.name).fetchMany(), [r1, r2])
     }
 
     struct IdAndName: Record, Equatable {
@@ -73,30 +82,45 @@ class WriteTests: EasyDBTestCase {
 
     func testUpsertOfUnique() throws {
         db = EasyDB(.memory)
-        let r1 = HandleAndName(handle: "a", name: "r1")
-        let r2 = HandleAndName(handle: "b", name: "r2")
         let c = try db.collection(HandleAndName.self)
 
-        try c.insert([r1, r2])
+        let a1 = HandleAndName(handle: "a")
+        let a2 = HandleAndName(handle: "a")
+        let b1 = HandleAndName(handle: "b")
 
-        var r1v2 = r1
-        r1v2.name = "r1-v2"
-        try c.insert(r1v2, onConflict: .replace)
-        XCTAssertEqual(try c.all().orderBy(\.name).fetchMany(), [r1v2, r2])
+        try c.save(a1)
 
-        var r1v3 = r1v2
-        r1v3.name = "r1-v3"
-        try c.insert(r1v3, onConflict: .ignore)
-        XCTAssertEqual(try c.all().orderBy(\.name).fetchMany(), [r1v2, r2])
+        assertErrorMessage(
+            try c.save(a2),
+            contains: "UNIQUE constraint failed")
 
-        assertErrorMessage(try c.insert(r1v3), contains: "UNIQUE constraint failed")
-        assertErrorMessage(try c.insert(r1v3, onConflict: .abort), contains: "UNIQUE constraint failed")
+        try c.save(b1)
+
+        XCTAssertEqual(try c.all().fetchMany(), [a1, b1])
+    }
+
+    func testBulkUpsertOfUnique() throws {
+        db = EasyDB(.memory)
+        let c = try db.collection(HandleAndName.self)
+
+        let a1 = HandleAndName(handle: "a")
+        let a2 = HandleAndName(handle: "a")
+        let b1 = HandleAndName(handle: "b")
+
+        try c.save([a1])
+
+        assertErrorMessage(
+            try c.save([a2]),
+            contains: "UNIQUE constraint failed")
+
+        try c.save([b1])
+
+        XCTAssertEqual(try c.all().fetchMany(), [a1, b1])
     }
 
     struct HandleAndName: Record, Equatable {
         var id = UUID()
         @Unique var handle: String
-        var name: String
     }
 
     func testUpdate() throws {

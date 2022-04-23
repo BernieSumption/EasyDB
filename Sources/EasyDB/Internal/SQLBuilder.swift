@@ -17,11 +17,8 @@ struct SQL: CustomStringConvertible {
             .quotedName(table)
     }
 
-    func insertInto(_ table: String, columns: [String], onConflict: OnConflict?) -> Self {
-        return raw("INSERT")
-            .raw("OR REPLACE", if: onConflict == .replace)
-            .raw("OR IGNORE", if: onConflict == .ignore)
-            .raw("INTO")
+    func insertInto(_ table: String, columns: [String]) -> Self {
+        return raw("INSERT INTO")
             .quotedName(table)
             .bracketed(quotedNames: columns)
     }

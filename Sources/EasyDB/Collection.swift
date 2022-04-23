@@ -11,6 +11,7 @@ public class Collection<Row: Record>: Filterable, DefaultCollations {
     let defaultCollations: [String: Collation]
 
     private let indices: [IndexSpec]
+    private let idPropertyName: String
 
     internal init(_ type: Row.Type, _ database: EasyDB) throws {
         self.database = database
@@ -24,7 +25,7 @@ public class Collection<Row: Record>: Filterable, DefaultCollations {
 
         let metadata = try MultifariousDecoder.metadata(for: type)
 
-        let idPropertyName = try PartialCodableKeyPath(\Row.id).requireSingleName()
+        idPropertyName = try PartialCodableKeyPath(\Row.id).requireSingleName()
 
         var defaultCollations = [String: Collation]()
         for property in mapper.rootProperties {
@@ -65,32 +66,37 @@ public class Collection<Row: Record>: Filterable, DefaultCollations {
     }
 
     /// Insert one row into the collection
-    ///
-    /// - Parameters:
-    ///   - row: the row to insert
-    ///   - onConflict: What to do when the row violates a uniqueness constraint:
-    ///     - `.abort`:  throw an error
-    ///     - `.ignore`: make no changes to the existing row
-    ///     - `.update`: replace the existing row with the new one
-    public func insert(_ row: Row, onConflict: OnConflict? = nil) throws {
-        let sql = getInsertSQL(onConflict: onConflict)
+    public func insert(_ row: Row) throws {
+        try insert(row, upsert: false)
+    }
+
+    /// Insert many rows into the collection. This operation is atomic: if any row fails to insert e.g. due to a
+    /// unique constraint violation, an error will be thrown and no rows will be inserted.
+    public func insert(_ rows: [Row]) throws {
+        try insert(rows, upsert: false)
+    }
+
+    /// Persist a row, replacing any existing row with the same `id`
+    public func save(_ row: Row) throws {
+        try insert(row, upsert: true)
+    }
+
+    /// Persist multiple rows, each row replacing any existing row with the same `id`. This operation is atomic: if any
+    /// row fails to insert e.g. due to a unique constraint violation, an error will be thrown and no rows will be saved.
+    public func save(_ rows: [Row]) throws {
+        try insert(rows, upsert: true)
+    }
+
+    private func insert(_ row: Row, upsert: Bool) throws {
+        let sql = getInsertSQL(upsert: upsert)
         try database.getConnection().execute(sql: sql, namedParameters: row)
     }
 
-    /// Insert many rows into the collection, using a transaction so that if any row can not
-    /// be inserted due to a uniqueness constraint, no rows will be inserted
-    ///
-    /// - Parameters:
-    ///   - rows: the rows to insert
-    ///   - onConflict: What to do when one of the rows violates a uniqueness constraint:
-    ///     - `.abort`:  prevent all rows from being inserted and throw an error
-    ///     - `.ignore`: allow all non-conflicting rows to be inserted while ignoring conflicting rows
-    ///     - `.update`: replace the existing row with the new one
-    public func insert(_ rows: [Row], onConflict: OnConflict? = nil) throws {
+    private func insert(_ rows: [Row], upsert: Bool) throws {
         guard rows.count > 0 else {
             return
         }
-        let sql = getInsertSQL(onConflict: onConflict)
+        let sql = getInsertSQL(upsert: upsert)
         try database.inAccessQueue {
             let connection = try database.getConnection()
             do {
@@ -112,22 +118,25 @@ public class Collection<Row: Record>: Filterable, DefaultCollations {
         }
     }
 
-    /// Equivalent to `insert(row, onConflict: .replace)`
-    public func save(_ row: Row) throws {
-        try insert(row, onConflict: .replace)
-    }
-
-    /// Equivalent to `insert(rows, onConflict: .replace)`
-    public func save(_ rows: [Row]) throws {
-        try insert(rows, onConflict: .replace)
-    }
-
-    private func getInsertSQL(onConflict: OnConflict?) -> String {
-        return SQL()
-            .insertInto(tableName, columns: columns, onConflict: onConflict)
+    private func getInsertSQL(upsert: Bool) -> String {
+        let sql = SQL()
+            .insertInto(tableName, columns: columns)
             .values()
             .bracketed(namedParameters: columns)
+        if !upsert {
+            return sql.text
+        }
+        return sql
+            .raw("ON CONFLICT")
+            .bracketed(quotedNames: [idPropertyName])
+            .raw("DO UPDATE SET")
+            .raw(
+                columns
+                    .map({"\(SQL.quoteName($0))=:\($0)"})
+                    .joined(separator: ", ")
+            )
             .text
+
     }
 
     public func all() -> QueryBuilder<Row> {
@@ -146,16 +155,6 @@ public class Collection<Row: Record>: Filterable, DefaultCollations {
         let name = try property.requireSingleName()
         return defaultCollations[name] ?? .string
     }
-}
-
-/// What to do during an insert operation if inserting the record would violate a uniqueness constraint 
-public enum OnConflict {
-    /// Throw an error and abort the current transaction
-    case abort
-    /// Silently ignore rows that can't be inserted
-    case ignore
-    /// Replace conflicting rows with the new data provided
-    case replace
 }
 
 protocol DefaultCollations {

@@ -63,35 +63,28 @@ class DocsTests: XCTestCase {
         XCTAssertNotNil(cheapBooks)
     }
 
-    func testInsert() throws {
-        struct UniqueName: Record {
-            var id = UUID()
-            @Unique var name: String
-        }
-        let collection = try database.collection(UniqueName.self)
-
-        // docs:start:insert-one
-        try collection.insert(UniqueName(name: "a"))
+    func testSave() throws {
+        // docs:start:save-one
+        try employees.save(Employee(name: "Peter Gibbons", salary: 40250))
         // docs:end
 
-        // docs:start:insert-many
-        try collection.insert([
-            UniqueName(name: "b"),
-            UniqueName(name: "c"),
-            UniqueName(name: "d")
+        // docs:start:save-many
+        try employees.save([
+            Employee(name: "Samir Nagheenanajar", salary: 40_250),
+            Employee(name: "Michael Bolton", salary: 40_250),
+            Employee(name: "Bill Lumbergh", salary: 110_000)
         ])
         // docs:end
 
-        // docs:start:insert-many-ignore
-        try collection.insert([
-            UniqueName(name: "d"),
-            UniqueName(name: "e")
-        ], onConflict: .ignore)
+        // docs:start:fetch-edit-save
+        // load a random Employee
+        if var row = try employees.all().orderBy("random()").fetchOne() {
+            // reverse the words their name
+            row.name = row.name.split(separator: " ").reversed().joined(separator: " ")
+            // save the record
+            try employees.save(row)
+        }
         // docs:end
-
-        XCTAssertEqual(
-            try collection.all().fetchMany().map(\.name),
-            ["a", "b", "c", "d", "e"])
     }
 
     func testQuery() throws {
@@ -162,12 +155,6 @@ class DocsTests: XCTestCase {
     }
 
     func testUpdate() throws {
-        // docs:start:save
-        if var row = try employees.all().fetchOne() {
-            row.name = "edited"
-            try employees.save(row)
-        }
-        // docs:end
 
         // docs:start:update
         try employees.all().update(\.name, "new-name")
