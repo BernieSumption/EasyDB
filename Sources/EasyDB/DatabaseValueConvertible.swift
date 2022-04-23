@@ -1,6 +1,6 @@
 import Foundation
 
-/// Types should conform to `DatabaseValueConvertible` to use a different
+/// Types should conform to `DatabaseValueConvertible` in order to use a different
 /// database representation than would be provided by their `Codable` implementation.
 ///
 /// For example, `Date` encodes to a single `Double` - the number of seconds since

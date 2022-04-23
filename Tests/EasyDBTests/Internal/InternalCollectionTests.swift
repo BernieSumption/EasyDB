@@ -18,7 +18,8 @@ class InternalCollectionTests: EasyDBTestCase {
         assertString(sql, contains: "ORDER BY `value` COLLATE `string`")
     }
 
-    struct DefaultCollectionCollationUsedInSQL: Codable, Equatable {
+    struct DefaultCollectionCollationUsedInSQL: Record {
+        var id = UUID()
         @Index var value: Int
     }
 
@@ -38,7 +39,8 @@ class InternalCollectionTests: EasyDBTestCase {
         assertString(sql, contains: "ORDER BY `value` COLLATE `binary`")
     }
 
-    struct ExplicitDefaultCollectionCollationUsedInSQL: Codable, Equatable {
+    struct ExplicitDefaultCollectionCollationUsedInSQL: Record {
+        var id = UUID()
         @CollateBinary @Index var value: Int
     }
 
@@ -57,7 +59,8 @@ class InternalCollectionTests: EasyDBTestCase {
         assertString(sql, contains: "ORDER BY `value` COLLATE `localized`")
     }
 
-    struct OverrideCollationUsedInSQL: Codable, Equatable {
+    struct OverrideCollationUsedInSQL: Record {
+        var id = UUID()
         @CollateBinary @Index var value: Int
     }
 

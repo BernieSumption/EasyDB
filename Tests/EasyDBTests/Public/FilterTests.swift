@@ -37,6 +37,9 @@ class FilterTests: EasyDBTestCase {
             { $0.filter(\.value, equalTo: b) },
             [b])
     }
+    struct Struct: Codable, Equatable {
+        let foo: String
+    }
 
     func testNotEquals() throws {
         try assertFilter(
@@ -237,18 +240,21 @@ class FilterTests: EasyDBTestCase {
             [])
     }
 
-    struct ABC: Codable, Equatable {
+    struct ABC: Record, Equatable {
+        var id = UUID()
         let a: String?
         let b: String?
         let c: String?
     }
 
-    struct AC: Codable, Equatable {
+    struct AC: Record, Equatable {
+        var id = UUID()
         let a: String
         let c: String
     }
 
-    struct AE: Codable, Equatable {
+    struct AE: Record, Equatable {
+        var id = UUID()
         let a: String
         let e: String
     }
@@ -262,12 +268,5 @@ class FilterTests: EasyDBTestCase {
         assertErrorMessage(
             try c.all().fetchMany(AE.self),
             contains: "no such column: e")
-    }
-}
-
-extension FilterTests {
-
-    struct Struct: Codable, Equatable {
-        let foo: String
     }
 }

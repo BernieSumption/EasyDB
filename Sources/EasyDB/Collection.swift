@@ -1,8 +1,8 @@
-/// A collection of Codable objects, backed by an SQLite table
+/// A collection of records, backed by an SQLite table
 ///
 /// `Collection` is the main interface to data in EasyDB, handling reading and writing data as well as
 /// migrating the underlying table to fit `Row`
-public class Collection<Row: Codable>: Filterable, DefaultCollations {
+public class Collection<Row: Record>: Filterable, DefaultCollations {
     public let tableName: String
 
     let database: EasyDB
@@ -12,15 +12,11 @@ public class Collection<Row: Codable>: Filterable, DefaultCollations {
 
     private let indices: [IndexSpec]
 
-    internal init(
-        _ type: Row.Type,
-        _ database: EasyDB,
-        idProperty: PartialCodableKeyPath<Row>?
-    ) throws {
+    internal init(_ type: Row.Type, _ database: EasyDB) throws {
         self.database = database
         self.mapper = try KeyPathMapper.forType(type)
         self.columns = mapper.rootProperties
-        self.tableName = defaultTableName(for: Row.self)
+        self.tableName = Row.tableName
 
         if columns.count == 0 {
             throw EasyDBError.misuse(message: "Can't create a collection of \"\(Row.self)\" - collection types must be structs with at least one property")
@@ -28,7 +24,7 @@ public class Collection<Row: Codable>: Filterable, DefaultCollations {
 
         let metadata = try MultifariousDecoder.metadata(for: type)
 
-        let idPropertyName = try idProperty.map({ try $0.requireSingleName() })
+        let idPropertyName = try PartialCodableKeyPath(\Row.id).requireSingleName()
 
         var defaultCollations = [String: Collation]()
         for property in mapper.rootProperties {
@@ -164,15 +160,4 @@ public enum OnConflict {
 
 protocol DefaultCollations {
     func defaultCollation<T: Codable>(for property: PartialCodableKeyPath<T>) throws -> Collation
-}
-
-public protocol CustomTableName {
-    static var tableName: String { get }
-}
-
-func defaultTableName<T>(for type: T.Type) -> String {
-    if let custom = type as? CustomTableName.Type {
-        return custom.tableName
-    }
-    return String(describing: type)
 }

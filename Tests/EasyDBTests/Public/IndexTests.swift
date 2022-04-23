@@ -14,7 +14,8 @@ class IndexTests: EasyDBTestCase {
 
         XCTAssertNoThrow(try c.insert(Row(value: 6)))
 
-        struct Row: Codable, Equatable {
+        struct Row: Record {
+            var id = UUID()
             @Unique var value: Int
         }
     }
@@ -28,7 +29,8 @@ class IndexTests: EasyDBTestCase {
         let sql = try dbIndexSQL().first ?? ""
         XCTAssertTrue(sql.contains("CREATE INDEX `Row-value-string`"))
 
-        struct Row: Codable, Equatable {
+        struct Row: Record {
+            var id = UUID()
             @Index var value: Int
         }
     }
@@ -59,7 +61,7 @@ class IndexTests: EasyDBTestCase {
         XCTAssertNoThrow(try c.insert(rowB))
     }
 
-    struct RowWithIdUsingCodingKeys: Codable, Equatable, Identifiable {
+    struct RowWithIdUsingCodingKeys: Record, Equatable {
         let id: UUID
 
         init(_ id: UUID = UUID()) {
@@ -87,7 +89,7 @@ class IndexTests: EasyDBTestCase {
         XCTAssertEqual(indices.count, 1)
     }
 
-    struct RegularIndexForIdentifiableIsUnique: Codable, Equatable, Identifiable {
+    struct RegularIndexForIdentifiableIsUnique: Record, Equatable {
         @Index var id: UUID = UUID()
     }
 }

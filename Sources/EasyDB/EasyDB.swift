@@ -48,24 +48,8 @@ public class EasyDB {
     }
 
     /// Return a collection. Unless automatic migration is disabled for this database, the table will be automatically
-    /// created or any missing columns added.
-    public func collection<T: Codable>(_ type: T.Type) throws -> Collection<T> {
-        return try collection(type, idProperty: nil)
-    }
-
-    /// Return a collection. Unless automatic migration is disabled for this database, the table will be automatically
-    /// created or any missing columns added.
-    ///
-    /// Collections of identifiable types will be given a unique index for the `id` property.
-    public func collection<T: Codable & Identifiable>(
-        _ type: T.Type
-    ) throws -> Collection<T> where T.ID: Codable {
-        return try collection(type, idProperty: PartialCodableKeyPath(\T.id))
-    }
-
-    /// Return a collection. Unless automatic migration is disabled for this database, the table will be automatically
     /// created or any missing columns added
-    func collection<T: Codable>(_ type: T.Type, idProperty: PartialCodableKeyPath<T>?) throws -> Collection<T> {
+    public func collection<T: Record>(_ type: T.Type) throws -> Collection<T> {
         return try collectionCreateQueue.sync {
             let typeId = ObjectIdentifier(type)
             if let collection = collections[typeId] {
@@ -74,7 +58,7 @@ public class EasyDB {
                 }
                 return collection
             }
-            let collection = try Collection(type, self, idProperty: idProperty)
+            let collection = try Collection(type, self)
             if autoMigrate {
                 try collection.migrate(dropColumns: autoDropColumns)
             }
@@ -91,7 +75,7 @@ public class EasyDB {
 
     /// Execute an SQL statement and return the results as an instance of `T`. `T` can be any codable type, see
     /// [selecting into custom result types](https://github.com/BernieSumption/EasyDB#selecting-into-custom-result-types)
-    public func execute<T: Codable>(_ resultType: T.Type, _ sqlFragment: SQLFragment<NoProperties>) throws -> T {
+    public func execute<Result: Codable>(_ resultType: Result.Type, _ sqlFragment: SQLFragment<NoProperties>) throws -> Result {
         let sql = try sqlFragment.sql(collations: nil, overrideCollation: nil, registerCollation: registerCollation)
         let parameters = try sqlFragment.parameters()
         return try getConnection().execute(resultType, sql: sql, parameters: parameters)

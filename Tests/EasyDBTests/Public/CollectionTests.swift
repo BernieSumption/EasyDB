@@ -10,21 +10,28 @@ class CollectionTests: EasyDBTestCase {
     func testMigrateData() throws {
         db = EasyDB(.memory)
         let v1c = try db.collection(V1.self)
-        try v1c.insert(V1(a: 4))
-        try v1c.insert(V1(a: 5))
+        let record1 = V1(a: 4)
+        let record2 = V1(a: 5)
+        try v1c.insert([record1, record2])
 
         let v2c = try db.collection(V2.self)
-
-        try v2c.insert(V2(a: 6, b: "yo"))
+        let record3 = V2(a: 6, b: "yo")
+        try v2c.insert(record3)
         let rows = try v2c.all().fetchMany()
-        XCTAssertEqual(rows, [V2(a: 4, b: nil), V2(a: 5, b: nil), V2(a: 6, b: "yo")])
+        XCTAssertEqual(rows, [
+            V2(id: record1.id, a: 4, b: nil),
+            V2(id: record2.id, a: 5, b: nil),
+            record3
+        ])
 
-        struct V1: Codable, Equatable, CustomTableName {
+        struct V1: Record, Equatable {
+            var id = UUID()
             var a: Int
 
             static let tableName = "x"
         }
-        struct V2: Codable, Equatable, CustomTableName {
+        struct V2: Record, Equatable {
+            var id = UUID()
             var a: Int
             var b: String?
 
@@ -36,7 +43,7 @@ class CollectionTests: EasyDBTestCase {
         let c = try db.collection(Row.self)
 
         // create rows where reading row #2 will cause an error
-        try db.execute(#"INSERT INTO Row (t) VALUES ('OK'), (NULL)"#)
+        try db.execute(#"INSERT INTO Row (id, t) VALUES (1, 'OK'), (2, NULL)"#)
 
         // check that reading all rows does indeed cause an error
         XCTAssertThrowsError(try c.all().fetchMany())
@@ -45,8 +52,9 @@ class CollectionTests: EasyDBTestCase {
         // never try to decode row 2
         XCTAssertNoThrow(try c.all().fetchOne())
 
-        struct Row: Codable, Equatable {
-            let t: String
+        struct Row: Record, Equatable {
+            var id: Int
+            var t: String
         }
     }
 
@@ -69,7 +77,8 @@ class CollectionTests: EasyDBTestCase {
         let sql = try dbIndexSQL().first ?? ""
         XCTAssertTrue(sql.contains("`myProp` COLLATE `string`"))
     }
-    struct DefaultCollationOnIndex: Codable, Equatable {
+    struct DefaultCollationOnIndex: Record, Equatable {
+        var id = UUID()
         @Index var myProp: String
     }
 
@@ -97,22 +106,9 @@ class CollectionTests: EasyDBTestCase {
             try c.all().orderBy(\.value).fetchMany().map(\.value),
             ["a", "B", "c"])
     }
-    struct ColumnCollationOnIndex: Codable, Equatable {
+    struct ColumnCollationOnIndex: Record, Equatable {
+        var id = UUID()
         @CollateCaseInsensitive @Unique var value: String
-    }
-
-    func testInvalidCollectionTypes() {
-        assertErrorMessage(
-            try db.collection(Int.self),
-            contains: #"Can't create a collection of "Int" - collection types must be structs with at least one property"#)
-
-        assertErrorMessage(
-            try db.collection([Int].self),
-            contains: #"Can't create a collection of "Array<Int>" - collection types must be structs with at least one property"#)
-
-        assertErrorMessage(
-            try db.collection([String: Int].self),
-            contains: #"Can't create a collection of "Dictionary<String, Int>" - collection types must be structs with at least one property"#)
     }
 
     func testCollationAnnotation() throws {
@@ -126,7 +122,8 @@ class CollectionTests: EasyDBTestCase {
             try c.all().orderBy(\.value).fetchMany().map(\.value),
             ["me first!", "a", "x"])
     }
-    struct CollationAnnotation: Codable {
+    struct CollationAnnotation: Record {
+        var id = UUID()
         @CollateCustom @Unique var value: String
     }
 }

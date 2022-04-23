@@ -2,7 +2,8 @@ import Foundation
 import XCTest
 import EasyDB
 
-struct KitchenSinkEntity: Codable, Equatable {
+struct KitchenSinkEntity: Record, Equatable {
+    var id = UUID()
     let i: Int
     let ioy: Int?
     let ion: Int?
@@ -36,7 +37,8 @@ struct KitchenSinkEntity: Codable, Equatable {
         sub: .init(d: Date(timeIntervalSinceReferenceDate: 20), a: 21))
 }
 
-struct Row: Codable, Equatable, CustomStringConvertible {
+struct Row: Record, Equatable, CustomStringConvertible {
+    var id = UUID()
     var value: Int
 
     init(_ value: Int) {
@@ -48,7 +50,8 @@ struct Row: Codable, Equatable, CustomStringConvertible {
     }
 }
 
-struct RowT<T: Codable & Equatable>: Codable, Equatable, CustomStringConvertible, CustomTableName {
+struct RowT<T: Codable & Equatable>: Record, Equatable, CustomStringConvertible {
+    var id = UUID()
     var value: T
 
     init(_ value: T) {
@@ -62,7 +65,7 @@ struct RowT<T: Codable & Equatable>: Codable, Equatable, CustomStringConvertible
     static var tableName: String { "RowT" }
 }
 
-struct RowWithId: Codable, Equatable, Identifiable, CustomStringConvertible {
+struct RowWithId: Record, Equatable, CustomStringConvertible {
     let id: UUID
 
     init(_ id: UUID = UUID()) {
@@ -74,8 +77,9 @@ struct RowWithId: Codable, Equatable, Identifiable, CustomStringConvertible {
     }
 }
 
-struct RowWithString: Codable, Equatable, CustomStringConvertible {
-    let string: String
+struct RowWithString: Record, Equatable, CustomStringConvertible {
+    var id = UUID()
+    var string: String
 
     init(_ string: String) {
         self.string = string
@@ -93,8 +97,8 @@ class EasyDBTestCase: XCTestCase {
         db = EasyDB(.memory)
     }
 
-    func populateCollection<T: Codable>(_ data: [T]) throws -> Collection<T> {
-        let c = try db.collection(T.self)
+    func populateCollection<Row: Record>(_ data: [Row]) throws -> Collection<Row> {
+        let c = try db.collection(Row.self)
         try c.all().delete()
         try c.insert(data)
         return c

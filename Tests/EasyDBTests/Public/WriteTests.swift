@@ -66,7 +66,7 @@ class WriteTests: EasyDBTestCase {
         assertErrorMessage(try c.insert(r1v3, onConflict: .abort), contains: "UNIQUE constraint failed")
     }
 
-    struct IdAndName: Codable, Equatable, Identifiable {
+    struct IdAndName: Record, Equatable {
         var id: UUID
         var name: String
     }
@@ -93,7 +93,8 @@ class WriteTests: EasyDBTestCase {
         assertErrorMessage(try c.insert(r1v3, onConflict: .abort), contains: "UNIQUE constraint failed")
     }
 
-    struct HandleAndName: Codable, Equatable {
+    struct HandleAndName: Record, Equatable {
+        var id = UUID()
         @Unique var handle: String
         var name: String
     }
@@ -130,7 +131,8 @@ class WriteTests: EasyDBTestCase {
                 MultipleUpdate(a: "c", b: 2)
             ])
     }
-    struct MultipleUpdate: Codable, Equatable {
+    struct MultipleUpdate: Record, Equatable {
+        var id = UUID()
         let a: String
         let b: Int
     }

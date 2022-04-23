@@ -56,7 +56,7 @@ class KeyPathMapper<T: Codable> {
     }
 
     /// Given a KeyPath, return the path of key names that locates the same value in the type's encoded representation
-    func propertyPath<V: Encodable>(for keyPath: KeyPath<T, V>) throws -> [String] {
+    func propertyPath<Value: Encodable>(for keyPath: KeyPath<T, Value>) throws -> [String] {
         return try propertyPath(for: PartialCodableKeyPath(keyPath))
     }
 
@@ -96,16 +96,16 @@ extension KeyPathMapper {
 }
 
 /// A KeyPath with the value type erased, but constrained to Codable values
-struct PartialCodableKeyPath<Row: Codable>: Hashable {
-    let encode: (Row) throws -> Encoded
+struct PartialCodableKeyPath<Root: Codable>: Hashable {
+    let encode: (Root) throws -> Encoded
     let cacheKey: AnyKeyPath
 
-    init<V: Encodable>(_ keyPath: KeyPath<Row, V>) {
+    init<V: Encodable>(_ keyPath: KeyPath<Root, V>) {
         self.encode = { try Encoded($0[keyPath: keyPath]) }
         self.cacheKey = keyPath
     }
 
-    static func == (lhs: PartialCodableKeyPath<Row>, rhs: PartialCodableKeyPath<Row>) -> Bool {
+    static func == (lhs: PartialCodableKeyPath<Root>, rhs: PartialCodableKeyPath<Root>) -> Bool {
         return lhs.cacheKey == rhs.cacheKey
     }
 
@@ -116,7 +116,7 @@ struct PartialCodableKeyPath<Row: Codable>: Hashable {
     /// Return the root name of this key path, throwing an error if it is not a
     /// path to a root property
     func requireSingleName() throws -> String {
-        let mapper = try KeyPathMapper.forType(Row.self)
+        let mapper = try KeyPathMapper.forType(Root.self)
         let path = try mapper.propertyPath(for: self)
         guard path.count == 1 else {
             let pathString = path.joined(separator: ".")

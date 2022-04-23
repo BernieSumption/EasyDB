@@ -1,5 +1,5 @@
 public protocol Filterable {
-    associatedtype Row: Codable
+    associatedtype Row: Record
 
     /// Add an SQL filter using string interpolation to provide parameters. String interpolation is used to
     /// provide parameters safely (i.e. without the possibility of SQL injection). This low-level method is
@@ -68,9 +68,7 @@ extension Filterable {
     public func filter(_ property: KeyPath<Row, String>, notLike pattern: String) -> QueryBuilder<Row> {
         return filter("\(property) NOT LIKE \(pattern)")
     }
-}
 
-extension Filterable where Row: Identifiable, Row.ID: Codable {
     /// Select records whose `id` property is equal to the provided value
     public func filter(id: Row.ID) -> QueryBuilder<Row> {
         return filter(\.id, equalTo: id)

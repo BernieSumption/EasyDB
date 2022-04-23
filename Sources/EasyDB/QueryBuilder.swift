@@ -1,6 +1,6 @@
 import Foundation
 
-public struct QueryBuilder<Row: Codable>: Filterable {
+public struct QueryBuilder<Row: Record>: Filterable {
     private let collection: Collection<Row>
     private var filters = [Filter]()
     private var orders = [Order]()
@@ -27,13 +27,13 @@ public struct QueryBuilder<Row: Codable>: Filterable {
         return try execute([Row].self, .select)
     }
 
-    public func fetchMany<V: Codable>(_ property: KeyPath<Row, V>) throws -> [V] {
-        return try execute([V].self, .selectProperty(PartialCodableKeyPath(property)))
+    public func fetchMany<Value: Codable>(_ property: KeyPath<Row, Value>) throws -> [Value] {
+        return try execute([Value].self, .selectProperty(PartialCodableKeyPath(property)))
     }
 
-    public func fetchMany<T: Codable>(_ properties: T.Type) throws -> [T] {
+    public func fetchMany<Result: Codable>(_ properties: Result.Type) throws -> [Result] {
         let mapper = try KeyPathMapper.forType(properties)
-        return try execute([T].self, .selectProperties(mapper.rootProperties))
+        return try execute([Result].self, .selectProperties(mapper.rootProperties))
     }
 
     public func fetchCount() throws -> Int {

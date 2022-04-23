@@ -78,7 +78,8 @@ class SortingTests: EasyDBTestCase {
             ["C", "D", "a", "b"])
     }
 
-    struct OrderByDefaultCollation: Codable, Equatable {
+    struct OrderByDefaultCollation: Record, Equatable {
+        var id = UUID()
         @CollateCaseInsensitive @Unique var value: String
     }
 

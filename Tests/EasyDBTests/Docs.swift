@@ -17,7 +17,7 @@ class DocsTests: XCTestCase {
     }
 
     // docs:start:defining-collections
-    struct Employee: Codable, Identifiable {
+    struct Employee: Record {
         var id = UUID()
         var name: String
         var salary: Int
@@ -36,7 +36,7 @@ class DocsTests: XCTestCase {
     func testHeadlineDemo() throws {
         // docs:start:headline-demo
         // Record types are defined as Codable structs
-        struct Book: Codable, Identifiable {
+        struct Book: Record {
             var id = UUID()
             @Unique var name: String
             var author: String
@@ -63,7 +63,7 @@ class DocsTests: XCTestCase {
     }
 
     func testInsert() throws {
-        struct UniqueName: Codable, Identifiable {
+        struct UniqueName: Record {
             var id = UUID()
             @Unique var name: String
         }
@@ -210,7 +210,7 @@ class DocsTests: XCTestCase {
 
     func testIndices() throws {
         // docs:start:indices
-        struct Book: Codable, Identifiable {
+        struct Book: Record {
             var id = UUID() // automatically unique
             @Unique var title: String
             @Index var author: String
@@ -239,7 +239,8 @@ class DocsTests: XCTestCase {
 
     func testCollations() throws {
         // docs:start:collation-annotation
-        struct Book: Codable {
+        struct Book: Record {
+            var id = UUID()
             var author: String
             @CollateCaseInsensitive var name: String
         }
@@ -304,7 +305,8 @@ class DocsTests: XCTestCase {
 
     func testInvalidRecordType() throws {
         // docs:start:invalid-record-type
-        struct Record: Codable {
+        struct Invalid: Record {
+            var id = UUID()
             var direction: Direction
         }
         // "0" is not a valid value for this enum
@@ -314,24 +316,25 @@ class DocsTests: XCTestCase {
         XCTAssertThrowsError(
             // message: Error thrown from Direction.init(from:) ... Cannot initialize
             //          Direction from invalid String value 0
-            try database.collection(Record.self)
+            try database.collection(Invalid.self)
         )
         // docs:end
 
         assertErrorMessage(
-            try database.collection(Record.self),
+            try database.collection(Invalid.self),
             contains: "Error thrown from Direction.init(from:)")
         assertErrorMessage(
-            try database.collection(Record.self),
+            try database.collection(Invalid.self),
             contains: "Cannot initialize Direction from invalid String value 0")
     }
 
     func testAddSupportForInvalidRecordType() throws {
-        struct Record: Codable {
+        struct Fixed: Record {
+            var id = UUID()
             var direction: Direction
         }
         XCTAssertNoThrow(
-            try database.collection(Record.self)
+            try database.collection(Fixed.self)
         )
     }
 
@@ -348,7 +351,8 @@ class DocsTests: XCTestCase {
 
     func testUseCustomCollationAnnotation() throws {
         // docs:start:custom-collation-annotation-use
-        struct Book: Codable {
+        struct Book: Record {
+            var id = UUID()
             @CollateByLength var name: String
         }
         let books = try database.collection(Book.self)
@@ -394,7 +398,7 @@ extension Direction: SampleValueSource {
 
 // docs:start:filter-sql-extension
 extension Filterable {
-    func filter<V: Codable>(_ property: KeyPath<Row, V>, isEven: Bool) -> QueryBuilder<Row> {
+    func filter<Value: Codable>(_ property: KeyPath<Row, Value>, isEven: Bool) -> QueryBuilder<Row> {
         return filter("\(property) % 2 == \(isEven ? 0 : 1)")
     }
 }
