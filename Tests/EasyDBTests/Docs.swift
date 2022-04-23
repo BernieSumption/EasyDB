@@ -295,6 +295,11 @@ class DocsTests: XCTestCase {
         try database.execute("DROP TABLE \(employees)")
         //  ^^ DROP TABLE `Employees`
         // docs:end
+
+        // docs:start:execute-sql-interpolation-collation
+        try database.execute("CREATE TABLE Tmp (col STRING COLLATE \(.caseInsensitive))")
+        //  ^^ CREATE TABLE Tmp (col STRING COLLATE `caseInsensitive`)
+        // docs:end
     }
 
     func testInvalidRecordType() throws {
@@ -355,14 +360,25 @@ class DocsTests: XCTestCase {
     }
 
     func testRegisterCustomCollation() throws {
+        try employees.insert([
+            Employee(name: "aaa", salary: 123),
+            Employee(name: "a", salary: 12),
+            Employee(name: "cccc", salary: 1234),
+            Employee(name: "bbb", salary: 1234)
+        ])
+        database.logSQL = .print
         // docs:start:custom-collation-register
-        try database.registerCollation(.byLength)
-        try database.execute("""
-            CREATE TABLE foo (
-                bar COLLATE `byLength`
-            )
-        """)
+        let results = try employees
+            .filter("""
+                \(\.name) COLLATE \(.byLength) = CAST(\(\.salary) AS TEXT) COLLATE \(.byLength)
+            """)
+            .fetchMany()
+        //  ^^ Select employees whose name is the same number of characters as the
+        //     of digits in their Salary. Hey it seems like an odd feature but I'm
+        //     sure the analysts know what they're doing when they asked for it?
         // docs:end
+
+        XCTAssertEqual(results.map(\.name), ["aaa", "cccc"])
     }
 }
 
@@ -386,15 +402,12 @@ extension Filterable {
 
 // docs:start:custom-collation
 extension Collation {
-    /// Sort short strings before long strings
+    /// Ignore string content and sort by length
     static let byLength = Collation("byLength") { (lhs, rhs) in
-        if lhs.count != rhs.count {
-            return lhs.count < rhs.count ? .orderedAscending : .orderedDescending
-        }
-        if lhs == rhs {
+        if lhs.count == rhs.count {
             return .orderedSame
         }
-        return lhs < rhs ? .orderedAscending : .orderedDescending
+        return lhs.count < rhs.count ? .orderedAscending : .orderedDescending
     }
 }
 // docs:end

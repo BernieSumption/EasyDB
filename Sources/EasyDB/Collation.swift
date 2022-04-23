@@ -1,7 +1,7 @@
 import Foundation
 
 /// Define a sorting order for strings
-public struct Collation: Equatable {
+public struct Collation: Hashable {
 
     /// The name of this collation that can be used in SQL queries
     public let name: String
@@ -31,6 +31,10 @@ public struct Collation: Equatable {
 
     public static func == (lhs: Collation, rhs: Collation) -> Bool {
         return lhs.normalizedName == rhs.normalizedName
+    }
+
+    public func hash(into hasher: inout Hasher) {
+        hasher.combine(normalizedName)
     }
 }
 

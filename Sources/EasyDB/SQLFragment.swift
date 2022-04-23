@@ -1,10 +1,11 @@
 public struct SQLFragment<Row: Codable>: ExpressibleByStringInterpolation {
-    var parts = [Part]()
+    private var parts = [Part]()
 
     enum Part {
         case literal(String)
         case property(PartialCodableKeyPath<Row>)
         case parameter(() throws -> DatabaseValue)
+        case collation(Collation)
     }
 
     init() {}
@@ -17,22 +18,12 @@ public struct SQLFragment<Row: Codable>: ExpressibleByStringInterpolation {
         parts = stringInterpolation.parts
     }
 
-    mutating func append(literal: String) {
-        parts.append(.literal(literal))
-    }
-
-    mutating func append<V: Codable>(parameter value: V) {
-        parts.append(.parameter({ try DatabaseValueEncoder.encode(value) }))
-    }
-
-    mutating func append<V: Codable>(property: KeyPath<Row, V>) {
-        parts.append(.property(PartialCodableKeyPath(property)))
-    }
-
     public struct StringInterpolation: StringInterpolationProtocol {
         var parts = [Part]()
 
         public init(literalCapacity: Int, interpolationCount: Int) {}
+
+        init() {}
 
         public mutating func appendLiteral(_ literal: String) {
             parts.append(.literal(literal))
@@ -48,6 +39,10 @@ public struct SQLFragment<Row: Codable>: ExpressibleByStringInterpolation {
 
         public mutating func appendInterpolation<V: Codable>(_ collection: Collection<V>) {
             parts.append(.literal(SQL.quoteName(collection.tableName)))
+        }
+
+        public mutating func appendInterpolation(_ collation: Collation) {
+            parts.append(.collation(collation))
         }
 
         public mutating func appendInterpolation(literal sql: String) {
@@ -66,7 +61,11 @@ public struct SQLFragment<Row: Codable>: ExpressibleByStringInterpolation {
         }
     }
 
-    func sql(collations: DefaultCollations?, overrideCollation: Collation?) throws -> String {
+    func sql(
+        collations: DefaultCollations?,
+        overrideCollation: Collation?,
+        registerCollation: (Collation) throws -> Void
+    ) throws -> String {
         return try parts.compactMap { part -> String? in
             switch part {
             case .literal(let string):
@@ -80,11 +79,16 @@ public struct SQLFragment<Row: Codable>: ExpressibleByStringInterpolation {
                 return result
             case .parameter:
                 return "?"
+            case .collation(let collation):
+                try registerCollation(collation)
+                return SQL.quoteName(collation.name)
             }
         }
         .joined(separator: "")
     }
 
+    /// Get parameters, passing a handler to register collations. The handler isn't strictly necessary to get parameters, but
+    /// it's easy to forget to register collations wherever the API accepts an SQLFragment, and this API makes it harder to forget
     func parameters() throws -> [DatabaseValue] {
         return try parts.compactMap { part -> DatabaseValue? in
             switch part {

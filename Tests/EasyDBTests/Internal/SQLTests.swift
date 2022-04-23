@@ -24,7 +24,16 @@ class SQLTests: EasyDBTestCase {
         let c = try db.collection(Row.self)
         let sql: SQLFragment<NoProperties> = "foo \(c) baz"
         XCTAssertEqual(
-            try sql.sql(collations: nil, overrideCollation: nil),
+            try sql.sql(collations: nil, overrideCollation: nil, registerCollation: {_ = $0}),
             "foo `Row` baz")
+    }
+
+    func testInterpolateCollation() throws {
+        let sql: SQLFragment<NoProperties> = "foo \(Collation.caseInsensitive) baz"
+        var registered: Collation?
+        XCTAssertEqual(
+            try sql.sql(collations: nil, overrideCollation: nil, registerCollation: {registered = $0}),
+            "foo `caseInsensitive` baz")
+        XCTAssertEqual(registered, Collation.caseInsensitive)
     }
 }

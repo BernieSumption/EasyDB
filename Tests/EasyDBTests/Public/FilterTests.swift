@@ -157,6 +157,13 @@ class FilterTests: EasyDBTestCase {
             ["æ", "Æ"])
     }
 
+    func testFiltersWithCustomCollation() throws {
+        try assertFilter(
+            ["aa", "b", "ccc"],
+            { $0.filter(\.value, lessThan: "aa", collation: .byLength) },
+            ["b"])
+    }
+
     func testFilterCount() throws {
         let c = try populateCollectionOfRowT([1, 2, 3, 4, 5])
 

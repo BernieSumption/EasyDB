@@ -152,6 +152,7 @@ public struct QueryBuilder<Row: Codable>: Filterable {
     }
 
     private func compile(_ mode: CompileMode) throws -> CompileResult {
+        let connection = try getConnection()
         var parameters = [DatabaseValue]()
         var sql = SQL()
         switch mode {
@@ -187,29 +188,31 @@ public struct QueryBuilder<Row: Codable>: Filterable {
                 .quotedName(collection.tableName)
                 .raw("SET")
                 .commaSeparated(raw: try updates.map { update in
-                    try update.sql(collations: nil, overrideCollation: nil)
+                    try update.sql(
+                        collations: nil,
+                        overrideCollation: nil,
+                        registerCollation: connection.registerCollation)
                 })
             for update in updates {
                 parameters.append(contentsOf: try update.parameters())
             }
         }
 
-        let connection = try getConnection()
-
         if !filters.isEmpty {
             sql = sql
                 .raw("WHERE")
                 .raw(
                     try filters
-                        .map({ try $0.sql(collection) })
+                        .map({ try $0.sqlFragment.sql(
+                            collations: collection,
+                            overrideCollation: $0.collation,
+                            registerCollation: connection.registerCollation) })
                         .joined(separator: " AND ")
                 )
 
             for filter in filters {
                 parameters += try filter.sqlFragment.parameters()
-                if let collation = filter.collation {
-                    connection.registerCollation(collation)
-                }
+                filter.collation.map(connection.registerCollation)
             }
         }
 
@@ -218,17 +221,15 @@ public struct QueryBuilder<Row: Codable>: Filterable {
                 .raw("ORDER BY")
                 .raw(
                     try orders
-                        .map({ try $0.sqlFragment.sql(collations: collection, overrideCollation: $0.collation) })
+                        .map({ try $0.sqlFragment.sql(
+                            collations: collection,
+                            overrideCollation: $0.collation,
+                            registerCollation: connection.registerCollation) })
                         .joined(separator: ", ")
                 )
             for order in orders {
                 parameters.append(contentsOf: try order.sqlFragment.parameters())
-            }
-        }
-
-        for order in orders {
-            if let collation = order.collation {
-                connection.registerCollation(collation)
+                order.collation.map(connection.registerCollation)
             }
         }
 
@@ -242,10 +243,6 @@ public struct QueryBuilder<Row: Codable>: Filterable {
     struct Filter {
         let sqlFragment: SQLFragment<Row>
         let collation: Collation?
-
-        func sql(_ collection: Collection<Row>) throws -> String {
-            return try sqlFragment.sql(collations: collection, overrideCollation: collation)
-        }
     }
 
     struct Order {
@@ -258,16 +255,9 @@ public struct QueryBuilder<Row: Codable>: Filterable {
             direction: QueryBuilder<Row>.Direction?,
             nulls: QueryBuilder<Row>.Nulls?
         ) {
-            var sql: SQLFragment<Row> = "\(property)"
-            if let direction = direction {
-                sql.append(literal: " ")
-                sql.append(literal: direction.name)
-            }
-            if let nulls = nulls {
-                sql.append(literal: " NULLS ")
-                sql.append(literal: nulls.name)
-            }
-            self.sqlFragment = sql
+            let directionSQL = direction.map({ " " + $0.name }) ?? ""
+            let nullsSQL = nulls.map({ " NULLS " + $0.name }) ?? ""
+            self.sqlFragment = "\(property)\(raw: directionSQL)\(raw: nullsSQL)"
             self.collation = collation
         }
 

@@ -85,14 +85,14 @@ public class EasyDB {
 
     /// Execute an SQL statement. If the statement has results, they will be ignored
     public func execute(_ sqlFragment: SQLFragment<NoProperties>) throws {
-        let sql = try sqlFragment.sql(collations: nil, overrideCollation: nil)
+        let sql = try sqlFragment.sql(collations: nil, overrideCollation: nil, registerCollation: registerCollation)
         try getConnection().execute(sql: sql)
     }
 
     /// Execute an SQL statement and return the results as an instance of `T`. `T` can be any codable type, see
     /// [selecting into custom result types](https://github.com/BernieSumption/EasyDB#selecting-into-custom-result-types)
     public func execute<T: Codable>(_ resultType: T.Type, _ sqlFragment: SQLFragment<NoProperties>) throws -> T {
-        let sql = try sqlFragment.sql(collations: nil, overrideCollation: nil)
+        let sql = try sqlFragment.sql(collations: nil, overrideCollation: nil, registerCollation: registerCollation)
         let parameters = try sqlFragment.parameters()
         return try getConnection().execute(resultType, sql: sql, parameters: parameters)
     }

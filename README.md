@@ -404,11 +404,18 @@ try employees.filter("salary \(literal: operation) 50000").delete()
 
 - **Collections** will be replaces with the quoted table name:
 
-<!---execute-sql-interpolation-collection--->
+<!---execute-sql-interpolation-collation--->
 ```swift
-let employees = try database.collection(Employee.self)
-try database.execute("DROP TABLE \(employees)")
-//  ^^ DROP TABLE `Employees`
+try database.execute("CREATE TABLE Tmp (col STRING COLLATE \(.caseInsensitive))")
+//  ^^ CREATE TABLE Tmp (col STRING COLLATE `caseInsensitive`)
+```
+
+- **Collations** will be replaced with the quoted table name and also registers the collation with SQLite so that it can be used. For this reason, always use this form rather than using the collation name directly in SQL:
+
+<!---execute-sql-interpolation-collation--->
+```swift
+try database.execute("CREATE TABLE Tmp (col STRING COLLATE \(.caseInsensitive))")
+//  ^^ CREATE TABLE Tmp (col STRING COLLATE `caseInsensitive`)
 ```
 
 ### Selecting into custom result types
@@ -476,15 +483,12 @@ If you have need for a custom collation, you can define one:
 <!---custom-collation--->
 ```swift
 extension Collation {
-    /// Sort short strings before long strings
+    /// Ignore string content and sort by length
     static let byLength = Collation("byLength") { (lhs, rhs) in
-        if lhs.count != rhs.count {
-            return lhs.count < rhs.count ? .orderedAscending : .orderedDescending
-        }
-        if lhs == rhs {
+        if lhs.count == rhs.count {
             return .orderedSame
         }
-        return lhs < rhs ? .orderedAscending : .orderedDescending
+        return lhs.count < rhs.count ? .orderedAscending : .orderedDescending
     }
 }
 ```
@@ -525,20 +529,20 @@ let results = try books.all().orderBy(\.name).fetchMany()
 //  ^^ results sorted by your custom collation
 ``` 
 
-### Registering custom collations
+### Using collations in SQL
 
-It is not normally necessary to register a custom collation, because EasyDB registers it for you the first time it is used through the API.
-
-However if you want to use a collation in SQL without first using it through the API, you will need to register it so that you can refer to it by name:
+A collation can be used with a string interpolation anywhere that SQL is accepted:
 
 <!---custom-collation-register--->
 ```swift
-try database.registerCollation(.byLength)
-try database.execute("""
-    CREATE TABLE foo (
-        bar COLLATE `byLength`
-    )
-""")
+let results = try employees
+    .filter("""
+        \(\.name) COLLATE \(.byLength) = CAST(\(\.salary) AS TEXT) COLLATE \(.byLength)
+    """)
+    .fetchMany()
+//  ^^ Select employees whose name is the same number of characters as the
+//     of digits in their Salary. Hey it seems like an odd feature but I'm
+//     sure the analysts know what they're doing when they asked for it?
 ```
 
 ## Concurrency and transactions
