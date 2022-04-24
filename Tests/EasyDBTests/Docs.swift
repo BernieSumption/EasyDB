@@ -358,7 +358,7 @@ class DocsTests: XCTestCase {
             Employee(name: "cccc", salary: 1234),
             Employee(name: "bbb", salary: 1234)
         ])
-        database.logSQL = .print
+        
         // docs:start:custom-collation-register
         let results = try employees
             .filter("""

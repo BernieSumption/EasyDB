@@ -41,7 +41,6 @@ class IndexTests: EasyDBTestCase {
         let rowB = RowWithId()
         try c.insert(rowA)
 
-        db.logSQL = .print
         assertErrorMessage(
             try c.insert(rowA),
             contains: "UNIQUE constraint failed: RowWithId.id")

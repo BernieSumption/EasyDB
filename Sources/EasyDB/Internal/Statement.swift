@@ -67,7 +67,7 @@ class Statement {
         }
     }
 
-    /// Bind a value to a parameter by index
+    /// Bind a value to a parameter by name
     func bind(_ parameter: DatabaseValue, to name: String) throws {
         try bind(parameter, to: getParameterIndex(name))
     }
