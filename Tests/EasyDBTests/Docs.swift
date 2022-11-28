@@ -1,7 +1,8 @@
 import XCTest
 import EasyDB
 
-// swiftlint:disable:file_length
+// swiftlint:disable file_length
+
 class DocsTests: XCTestCase {
 
     var database: EasyDB!
@@ -358,7 +359,7 @@ class DocsTests: XCTestCase {
             Employee(name: "cccc", salary: 1234),
             Employee(name: "bbb", salary: 1234)
         ])
-        
+
         // docs:start:custom-collation-register
         let results = try employees
             .filter("""
