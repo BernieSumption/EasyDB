@@ -8,7 +8,7 @@ class CollectionTests: EasyDBTestCase {
     }
 
     func testMigrateData() throws {
-        db = EasyDB(.memory)
+        db.logSQL = .print
         let v1c = try db.collection(V1.self)
         let record1 = V1(a: 4)
         let record2 = V1(a: 5)
@@ -62,7 +62,6 @@ class CollectionTests: EasyDBTestCase {
     let eWithAcute = "\u{00E9}" // "Latin Small Letter E with Acute"
 
     func testDefaultColumnCollation() throws {
-        db = EasyDB(.memory)
         let c = try db.collection(RowWithString.self)
         try c.insert([RowWithString(eWithAcute), RowWithString(eWithAcuteCombining)])
 
@@ -71,7 +70,6 @@ class CollectionTests: EasyDBTestCase {
     }
 
     func testDefaultCollationOnIndex() throws {
-        db = EasyDB(.memory)
         _ = try db.collection(DefaultCollationOnIndex.self)
 
         let sql = try dbIndices().joined()
@@ -83,8 +81,6 @@ class CollectionTests: EasyDBTestCase {
     }
 
     func testColumnCollationOnIndex() throws {
-        db = EasyDB(.memory)
-
         let c = try db.collection(ColumnCollationOnIndex.self)
 
         try c.insert(ColumnCollationOnIndex(value: "B"))

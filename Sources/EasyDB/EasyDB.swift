@@ -9,10 +9,7 @@ public class EasyDB {
     private let autoDropColumns: Bool
 
     private var collections = [ObjectIdentifier: Any]()
-
-    // TODO: remove these 2
-    private let collectionCreateQueue = DispatchQueue(label: "EasyDB.collectionCreateQueue")
-    private let accessQueue = DispatchQueue(label: "EasyDB.databaseAccessQueue")
+    private let collectionsSemaphore = DispatchSemaphore(value: 1)
 
     private var connectionManager = ConnectionManager()
 
@@ -32,8 +29,6 @@ public class EasyDB {
         autoDropColumns: Bool = false
     ) {
         switch location {
-        case .memory:
-            self.path = ":memory:"
         case .path(let path):
             self.path = path
         }
@@ -41,8 +36,7 @@ public class EasyDB {
         self.autoDropColumns = autoDropColumns
     }
 
-    public enum Location: ExpressibleByStringLiteral {
-        case memory
+    public enum Location: ExpressibleByStringLiteral, Equatable {
         case path(String)
 
         public init(stringLiteral path: String) {
@@ -53,45 +47,46 @@ public class EasyDB {
     /// Return a collection. Unless automatic migration is disabled for this database, the table will be automatically
     /// created or any missing columns added
     public func collection<T: Record>(_ type: T.Type) throws -> Collection<T> {
-        return try collectionCreateQueue.sync {
-            let typeId = ObjectIdentifier(type)
-            if let collection = collections[typeId] {
-                guard let collection = collection as? Collection<T> else {
-                    throw EasyDBError.unexpected(message: "cached collection has wrong type")
-                }
-                return collection
+        collectionsSemaphore.wait()
+        defer {
+            collectionsSemaphore.signal()
+        }
+        let typeId = ObjectIdentifier(type)
+        if let collection = collections[typeId] {
+            guard let collection = collection as? Collection<T> else {
+                throw EasyDBError.unexpected(message: "cached collection has wrong type")
             }
-            let collection = try Collection(type, self)
-            if autoMigrate {
-                try collection.migrate(dropColumns: autoDropColumns)
-            }
-            collections[typeId] = collection
             return collection
         }
+        let collection = try Collection(type, self)
+        if autoMigrate {
+            try collection.migrate(dropColumns: autoDropColumns)
+        }
+        collections[typeId] = collection
+        return collection
     }
 
     /// Execute an SQL statement. If the statement has results, they will be ignored
     public func execute(_ sqlFragment: SQLFragment<NoProperties>) throws {
-        let sql = try sqlFragment.sql(collations: nil, overrideCollation: nil, registerCollation: registerCollation)
-        try withConnection(write: true, transaction: false) { conn in
-            try conn.execute(sql: sql)
+        try withConnection(write: true, transaction: false) { connection in
+            let sql = try sqlFragment.sql(collations: nil, overrideCollation: nil, registerCollation: connection.registerCollation)
+            try connection.execute(sql: sql)
         }
     }
 
     /// Execute an SQL statement and return the results as an instance of `T`. `T` can be any codable type, see
     /// [selecting into custom result types](https://github.com/BernieSumption/EasyDB#selecting-into-custom-result-types)
     public func execute<Result: Codable>(_ resultType: Result.Type, _ sqlFragment: SQLFragment<NoProperties>) throws -> Result {
-        let sql = try sqlFragment.sql(collations: nil, overrideCollation: nil, registerCollation: registerCollation)
-        let parameters = try sqlFragment.parameters()
-
-        return try withConnection(write: true, transaction: false) { conn in
-            return try conn.execute(resultType, sql: sql, parameters: parameters)
+        return try withConnection(write: true, transaction: false) { connection in
+            let sql = try sqlFragment.sql(collations: nil, overrideCollation: nil, registerCollation: connection.registerCollation)
+            let parameters = try sqlFragment.parameters()
+            return try connection.execute(resultType, sql: sql, parameters: parameters)
         }
     }
 
     /// Execute a block of code in a transaction, rolling back the transaction if the block throws an error
-    public func transaction<T>(block: () throws -> T) rethrows -> T {
-        return try inAccessQueue {
+    public func transaction<T>(block: () throws -> T) throws -> T {
+        return try withConnection(write: true) { _ in
             do {
                 try execute("BEGIN TRANSACTION")
                 let result = try block()
@@ -109,8 +104,8 @@ public class EasyDB {
     /// in SQL without first using it in the API, you will need to register it
     public func registerCollation(_ collation: Collation) throws {
         // TODO: now that we have multiple collations, this should be moved to a configuration API or removed from the public API
-        try withConnection(write: true, transaction: false) { conn in
-            conn.registerCollation(collation)
+        try withConnection(write: true, transaction: false) { connection in
+            connection.registerCollation(collation)
         }
     }
 
@@ -124,21 +119,6 @@ public class EasyDB {
             }
         }
         return try block(current)
-    }
-
-    @TaskLocal static var isInAccessQueue = false
-
-    func inAccessQueue<T>(_ block: () throws -> T) rethrows -> T {
-        if EasyDB.isInAccessQueue {
-            // Avoid deadlock through reentrance: don't use accessQueue.sync if we're currently being
-            // executed by the same dispatch queue
-            return try block()
-        }
-        return try accessQueue.sync {
-            return try EasyDB.$isInAccessQueue.withValue(true) {
-                return try block()
-            }
-        }
     }
 }
 

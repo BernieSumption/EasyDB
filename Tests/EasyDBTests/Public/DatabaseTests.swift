@@ -13,7 +13,7 @@ class DatabaseTests: EasyDBTestCase {
     }
 
     func testTransaction() throws {
-        let database = EasyDB(.memory)
+        let database = db!
         struct Account: Record {
             var id: Int
             var balance: Int

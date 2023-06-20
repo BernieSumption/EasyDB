@@ -5,7 +5,7 @@ class StatementEncoderTests: EasyDBTestCase {
 
     func testEncodeCodable() throws {
 
-        let s = try getConnection().notThreadSafe_prepare(sql: """
+        let s = try getConnection().prepare(sql: """
             SELECT
             :id as id,
             :i AS i,
@@ -58,7 +58,7 @@ class StatementEncoderTests: EasyDBTestCase {
     }
 
     func testRegressionEncodeNulls() throws {
-        let s = try getConnection().notThreadSafe_prepare(sql: """
+        let s = try getConnection().prepare(sql: """
             SELECT :a AS a
         """)
 
@@ -83,7 +83,7 @@ class StatementEncoderTests: EasyDBTestCase {
     }
 
     func testEncodeDictionary() throws {
-        let s = try getConnection().notThreadSafe_prepare(sql: """
+        let s = try getConnection().prepare(sql: """
             SELECT
             :ioy AS ioy,
             :ion AS ion
@@ -100,7 +100,7 @@ class StatementEncoderTests: EasyDBTestCase {
     }
 
     func testEncodeCodableArray() throws {
-        let s = try getConnection().notThreadSafe_prepare(sql: "SELECT ?, ?, ?")
+        let s = try getConnection().prepare(sql: "SELECT ?, ?, ?")
 
         XCTAssertThrowsError(try StatementEncoder.encode([1, 2, 3], into: s)) { error in
             XCTAssertTrue(String(describing: error).contains("providing arrays of parameter values"))
@@ -108,7 +108,7 @@ class StatementEncoderTests: EasyDBTestCase {
     }
 
     func testEncodeCodableScalars() throws {
-        let s = try getConnection().notThreadSafe_prepare(sql: "SELECT ?")
+        let s = try getConnection().prepare(sql: "SELECT ?")
 
         XCTAssertThrowsError(try StatementEncoder.encode(1, into: s)) { error in
             XCTAssertTrue(String(describing: error).contains("providing single parameter values"), String(describing: error))
@@ -116,7 +116,7 @@ class StatementEncoderTests: EasyDBTestCase {
     }
 
     func testEncodeDate() throws {
-        let s = try getConnection().notThreadSafe_prepare(sql: "SELECT :date as date")
+        let s = try getConnection().prepare(sql: "SELECT :date as date")
 
         let date = Date(timeIntervalSinceReferenceDate: 20)
         try StatementEncoder.encode(["date": date], into: s)

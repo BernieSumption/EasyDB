@@ -90,11 +90,23 @@ struct RowWithString: Record, Equatable, CustomStringConvertible {
     }
 }
 
+let testFilePath = NSTemporaryDirectory() + "EasyDBTestCase.sqlite"
+
 class EasyDBTestCase: XCTestCase {
     var db: EasyDB!
 
     override func setUpWithError() throws {
-        db = EasyDB(.memory)
+        if FileManager.default.fileExists(atPath: testFilePath) {
+            try? FileManager.default.removeItem(atPath: testFilePath)
+        }
+        db = EasyDB(.path(testFilePath))
+    }
+
+    override func tearDownWithError() throws {
+        if FileManager.default.fileExists(atPath: testFilePath) {
+            try? FileManager.default.removeItem(atPath: testFilePath)
+        }
+        db = nil
     }
 
     func populateCollection<Row: Record>(_ data: [Row]) throws -> Collection<Row> {

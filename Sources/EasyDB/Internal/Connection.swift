@@ -27,47 +27,44 @@ class Connection {
         registerCollation(.caseInsensitive)
         registerCollation(.localized)
         registerCollation(.localizedCaseInsensitive)
+
     }
 
     deinit {
         let result = sqlite3_close(connectionPointer)
         if result != SQLITE_OK {
             sqlite3_close_v2(connectionPointer)
-            assert(false, "Failed to close connection, sqlite3_close returned \(result) - this is probably a bug in EasyDB that should be reported")
+            assert(false, "Failed to close connection, sqlite3_close returned \(result) - this is a bug in EasyDB that should be reported")
         }
     }
 
     /// Compile and execute an SQL query, decoding the results into an instance of `T`
     func execute<T: Decodable>(_ resultType: T.Type, sql: String, parameters: [DatabaseValue] = []) throws -> T {
-        return try database.inAccessQueue {
-            let statement = try notThreadSafe_prepare(sql: sql)
-            defer { statement.reset() }
-            try statement.bind(parameters)
-            return try StatementDecoder.decode(resultType, from: statement)
-        }
+        let statement = try prepare(sql: sql)
+        defer { statement.reset() }
+        try statement.bind(parameters)
+        return try StatementDecoder.decode(resultType, from: statement)
     }
 
     /// Compile and execute an SQL query that returns no results
     func execute(sql: String, parameters: [DatabaseValue] = []) throws {
-        return try database.inAccessQueue {
-            let statement = try notThreadSafe_prepare(sql: sql)
-            defer { statement.reset() }
-            try statement.bind(parameters)
-            _ = try statement.step()
-        }
+        let statement = try prepare(sql: sql)
+        defer { statement.reset() }
+        try statement.bind(parameters)
+        _ = try statement.step()
     }
 
     /// Compile and execute an SQL query that returns no results, getting named parameters from the provided struct or dictionary
     func execute<P: Codable>(sql: String, namedParameters: P) throws {
-        return try database.inAccessQueue {
-            let statement = try notThreadSafe_prepare(sql: sql)
+        return try database.withConnection(write: true) { _ in
+            let statement = try prepare(sql: sql)
             defer { statement.reset() }
             try StatementEncoder.encode(namedParameters, into: statement)
             _ = try statement.step()
         }
     }
 
-    func notThreadSafe_prepare(sql: String) throws -> Statement {
+    func prepare(sql: String) throws -> Statement {
         return try Statement(connectionPointer, sql, logSQL: database.logSQL)
     }
 

@@ -5,7 +5,6 @@ class InternalCollectionTests: EasyDBTestCase {
 
     func testDefaultCollectionCollationUsedInSQL() throws {
         var sql = ""
-        db = EasyDB(.memory)
         db.logSQL = .custom({ sql += $0 + "\n" })
 
         let c = try db.collection(DefaultCollectionCollationUsedInSQL.self)
@@ -26,7 +25,6 @@ class InternalCollectionTests: EasyDBTestCase {
 
     func testExplicitDefaultCollectionCollationUsedInSQL() throws {
         var sql = ""
-        db = EasyDB(.memory)
         db.logSQL = .custom({ sql += $0 + "\n" })
 
         let c = try db.collection(ExplicitDefaultCollectionCollationUsedInSQL.self)
@@ -48,7 +46,6 @@ class InternalCollectionTests: EasyDBTestCase {
 
     func testOverrideCollationUsedInSQL() throws {
         var sql = ""
-        db = EasyDB(.memory)
         db.logSQL = .custom({ sql = $0 + "\n" })
         let c = try db.collection(OverrideCollationUsedInSQL.self)
 

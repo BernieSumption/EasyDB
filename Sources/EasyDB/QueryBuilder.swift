@@ -119,7 +119,7 @@ public struct QueryBuilder<Row: Record>: Filterable {
         try updating(property, value).update()
     }
 
-    /// Append an SQL update clause and execute the update, e.g. `.updating("\(\.a) = \(\.a) + 1")` will increment the value of `a` by 1.
+    /// Append an SQL update clause and execute the update, e.g. `.update("\(\.a) = \(\.a) + 1")` will increment the value of `a` by 1.
     public func update(_ sqlFragment: SQLFragment<Row>) throws {
         try updating(sqlFragment).update()
     }
@@ -132,26 +132,31 @@ public struct QueryBuilder<Row: Record>: Filterable {
         return try execute(.update)
     }
 
-    enum CompileMode {
+    enum CompileMode: Equatable {
         case select
         case selectProperty(PartialCodableKeyPath<Row>)
         case selectProperties([String])
-        case delete
         case count
+
+        case delete
         case update
+
+        var isWrite: Bool {
+            return self == .delete || self == .update
+        }
     }
 
     private func execute<Value: Codable>(_ type: Value.Type, _ mode: CompileMode) throws -> Value {
-        try collection.database.withConnection { conn in
-            let query = try compile(mode, conn)
-            return try conn.execute(type, sql: query.sql, parameters: query.parameters)
+        try collection.database.withConnection(write: mode.isWrite) { connection in
+            let query = try compile(mode, connection)
+            return try connection.execute(type, sql: query.sql, parameters: query.parameters)
         }
     }
 
     private func execute(_ mode: CompileMode) throws {
-        try collection.database.withConnection { conn in
-            let query = try compile(mode, conn)
-            try conn.execute(sql: query.sql, parameters: query.parameters)
+        try collection.database.withConnection(write: mode.isWrite) { connection in
+            let query = try compile(mode, connection)
+            try connection.execute(sql: query.sql, parameters: query.parameters)
         }
     }
 

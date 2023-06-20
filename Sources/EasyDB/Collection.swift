@@ -13,7 +13,7 @@ public class Collection<Row: Record>: Filterable, DefaultCollations {
     private let indices: [IndexSpec]
     private let idPropertyName: String
 
-    internal init(_ type: Row.Type, _ database: EasyDB) throws {
+    init(_ type: Row.Type, _ database: EasyDB) throws {
         self.database = database
         self.mapper = try KeyPathMapper.forType(type)
         self.columns = mapper.rootProperties
@@ -60,8 +60,8 @@ public class Collection<Row: Record>: Filterable, DefaultCollations {
     ///
     /// - Parameter dropColumns: Remove unused columns. This defaults to `false`
     public func migrate(dropColumns: Bool = false) throws {
-        try database.withConnection(write: true, transaction: false) { conn in
-            let migration = SchemaMigration(connection: conn)
+        try database.withConnection(write: true, transaction: false) { connection in
+            let migration = SchemaMigration(connection: connection)
             try migration.migrateColumns(table: tableName, columns: columns)
             try migration.migrateIndices(table: tableName, indices: indices)
         }
@@ -104,7 +104,7 @@ public class Collection<Row: Record>: Filterable, DefaultCollations {
         let sql = getInsertSQL(upsert: upsert)
         try database.withConnection(write: true, transaction: false) { connection in
             do {
-                let statement = try connection.notThreadSafe_prepare(sql: sql)
+                let statement = try connection.prepare(sql: sql)
                 try connection.execute(sql: "BEGIN TRANSACTION")
                 for row in rows {
                     try statement.clearBoundParameters()

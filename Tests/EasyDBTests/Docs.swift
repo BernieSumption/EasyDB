@@ -3,13 +3,14 @@ import EasyDB
 
 // swiftlint:disable file_length
 
-class DocsTests: XCTestCase {
+class DocsTests: EasyDBTestCase {
 
     var database: EasyDB!
     var employees: Collection<Employee>!
 
     override func setUpWithError() throws {
-        database = EasyDB(.memory)
+        try super.setUpWithError()
+        database = db!
         employees = try database.collection(Employee.self)
         try? FileManager.default.removeItem(atPath: "my-database.sqlite")
     }
