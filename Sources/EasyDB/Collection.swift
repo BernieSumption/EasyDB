@@ -5,6 +5,7 @@
 public class Collection<Row: Record>: Filterable, DefaultCollations {
     public let tableName: String
 
+    // TODO: check and throw error instead of assertion
     weak var database: EasyDB!
     let columns: [String]
     let mapper: KeyPathMapper<Row>
@@ -50,6 +51,11 @@ public class Collection<Row: Record>: Filterable, DefaultCollations {
             }
         }
         self.indices = indices
+        liveCollectionInstances += 1
+    }
+
+    deinit {
+        liveCollectionInstances -= 1
     }
 
     struct Config: Equatable {
@@ -169,3 +175,6 @@ public class Collection<Row: Record>: Filterable, DefaultCollations {
 protocol DefaultCollations {
     func defaultCollation<T: Codable>(for property: PartialCodableKeyPath<T>) throws -> Collation
 }
+
+
+var liveCollectionInstances = 0

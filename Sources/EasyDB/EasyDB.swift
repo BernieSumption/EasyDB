@@ -34,15 +34,14 @@ public class EasyDB {
         }
         self.autoMigrate = autoMigrate
         self.autoDropColumns = autoDropColumns
-        EasyDB.liveInstances += 1
+        liveEasyDBInstances += 1
     }
 
     deinit {
         collections.removeAll()
-        EasyDB.liveInstances -= 1
+        connectionManager = ConnectionManager()
+        liveEasyDBInstances -= 1
     }
-
-    static var liveInstances = 0
 
     public enum Location: ExpressibleByStringLiteral, Equatable {
         case path(String)
@@ -142,3 +141,5 @@ public enum SQLLogger {
         return true
     }
 }
+
+var liveEasyDBInstances = 0

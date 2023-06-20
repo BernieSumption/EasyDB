@@ -104,7 +104,8 @@ class EasyDBTestCase: XCTestCase {
 
     override func tearDownWithError() throws {
         db = nil
-        XCTAssertEqual(EasyDB.liveInstances, 0)
+        XCTAssertEqual(liveEasyDBInstances, 0, "Memory leak detected: \(liveEasyDBInstances) live EasyDB instances remain")
+        XCTAssertEqual(liveCollectionInstances, 0, "Memory leak detected: \(liveCollectionInstances) live Collection instances remain")
         if FileManager.default.fileExists(atPath: testFilePath) {
             try? FileManager.default.removeItem(atPath: testFilePath)
         }

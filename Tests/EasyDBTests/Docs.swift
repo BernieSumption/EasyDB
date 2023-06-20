@@ -15,8 +15,11 @@ class DocsTests: EasyDBTestCase {
         try? FileManager.default.removeItem(atPath: "my-database.sqlite")
     }
 
-    override func tearDown() {
+    override func tearDownWithError() throws {
+        database = nil
+        employees = nil
         try? FileManager.default.removeItem(atPath: "my-database.sqlite")
+        try super.tearDownWithError()
     }
 
     // docs:start:defining-collections

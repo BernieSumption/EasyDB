@@ -45,4 +45,9 @@ struct ConnectionManager {
         readConnection = connection
         return connection
     }
+
+//    mutating func releaseConnections() {
+//        readConnection = nil
+//        writeConnection = nil
+//    }
 }

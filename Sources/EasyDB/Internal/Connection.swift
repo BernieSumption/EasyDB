@@ -2,7 +2,8 @@ import Foundation
 import SQLite3
 
 class Connection {
-    private let database: EasyDB
+    // TODO: check and throw error instead of assertion
+    private weak var database: EasyDB!
     private let connectionPointer: OpaquePointer
     private var registeredCollationNames = Set<String>()
     private var registeredCollections = Set<ObjectIdentifier>()
@@ -70,6 +71,7 @@ class Connection {
     }
 
     func registerCollection<T>(_ collection: Collection<T>) {
+        // TODO: don't use ObjectIdentifier on an instance as they can be reused
         let id = ObjectIdentifier(collection)
         guard !registeredCollections.contains(id) else {
             return
