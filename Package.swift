@@ -6,7 +6,7 @@ let package = Package(
     name: "EasyDB",
     platforms: [
         .iOS(.v13),
-        .macOS(.v10_15),
+        .macOS(.v12),
         .watchOS(.v6),
         .tvOS(.v13)
     ],

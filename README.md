@@ -391,7 +391,7 @@ try employees.filter("salary \(literal: operation) 50000").delete()
 //  ^^ DELETE FROM Employees where salary < 50000
 ```
 
-- **Collections** will be replaces with the quoted table name:
+**Collections** will be replaces with the quoted table name:
 
 <!---execute-sql-interpolation-collation--->
 ```swift
@@ -399,7 +399,7 @@ try database.execute("CREATE TABLE Tmp (col STRING COLLATE \(.caseInsensitive))"
 //  ^^ CREATE TABLE Tmp (col STRING COLLATE `caseInsensitive`)
 ```
 
-- **Collations** will be replaced with the quoted table name and also registers the collation with SQLite so that it can be used. For this reason, always use this form rather than using the collation name directly in SQL:
+**Collations** will be replaced with the quoted table name and also registers the collation with SQLite so that it can be used. For this reason, always use this form rather than using the collation name directly in SQL:
 
 <!---execute-sql-interpolation-collation--->
 ```swift
@@ -424,7 +424,7 @@ To read multiple rows:
 
 ## Collations
 
-A collation defines how EasyDB compares and sorts strings. For example, under the default `string` collation `"EasyDB"` different from and sorted before `"easydb"`. Under the `caseInsensitive` collation those two strings are the same.
+A collation defines how EasyDB compares and sorts strings. The default `string` collation is case-sensitive so `"EasyDB"` is different from and sorted before `"easydb"`. Under the `caseInsensitive` collation those two strings are the same.
 
 Set a collation for a property by adding a `@CollateXXX` annotation:
 

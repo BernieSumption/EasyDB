@@ -1,5 +1,6 @@
 import XCTest
 import EasyDB
+import class Combine.Future
 
 class DatabaseTests: EasyDBTestCase {
 
@@ -36,5 +37,37 @@ class DatabaseTests: EasyDBTestCase {
             try accounts.save(account2)
         }
         // docs:end
+    }
+
+    // TODO: remove this demo and use in real transaction tests
+    func testSimultaneousTransactions() async throws {
+
+        let waiter1 = Waiter()
+        Task {
+            print("in task: before await")
+            await waiter1.wait()
+            print("in task: after await")
+        }
+        print("before resume")
+        waiter1.notify()
+        print("after resume")
+
+        await waiter1.wait()
+    }
+}
+
+class Waiter {
+
+    private var lock = true
+
+    func notify() {
+        assert(lock)
+        lock = false
+    }
+
+    func wait() async {
+        while lock {
+            try? await Task.sleep(nanoseconds: 1_000_000)
+        }
     }
 }

@@ -10,8 +10,11 @@ public class EasyDB {
 
     private var collections = [ObjectIdentifier: Any]()
 
+    // TODO: remove these 2
     private let collectionCreateQueue = DispatchQueue(label: "EasyDB.collectionCreateQueue")
     private let accessQueue = DispatchQueue(label: "EasyDB.databaseAccessQueue")
+
+    private var connectionManager = ConnectionManager()
 
     /// An `SQLLogger` instance to
     public var logSQL: SQLLogger = .none
@@ -82,7 +85,7 @@ public class EasyDB {
     }
 
     /// Execute a block of code in a transaction, rolling back the transaction if the block throws an error
-    public func transaction<T>(block: () throws -> T) throws -> T {
+    public func transaction<T>(block: () throws -> T) rethrows -> T {
         return try inAccessQueue {
             do {
                 try execute("BEGIN TRANSACTION")
@@ -101,6 +104,18 @@ public class EasyDB {
     /// in SQL without first using it in the API, you will need to register it
     public func registerCollation(_ collation: Collation) throws {
         try getConnection().registerCollation(collation)
+    }
+
+    @TaskLocal static var currentConnection: Connection?
+
+    func withConnection<T>(write: Bool, transaction: Bool, block: (_:Connection) throws -> T) throws -> T {
+        guard let current = EasyDB.currentConnection else {
+            let connection = try connectionManager.getConnection(database: self, write: write)
+            return try EasyDB.$currentConnection.withValue(connection) {
+                try block(connection)
+            }
+        }
+        return try block(current)
     }
 
     private var cachedConnection: Connection?

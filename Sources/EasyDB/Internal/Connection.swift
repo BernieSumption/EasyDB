@@ -7,16 +7,34 @@ class Connection {
     private var registeredCollationNames = Set<String>()
     private var collationFunctions = [CollationFunction]()
 
-    init(_ database: EasyDB) throws {
+    public let write: Bool
+
+    init(_ database: EasyDB, write: Bool = true) throws {
         self.database = database
+        self.write = write
         var connectionPointer: OpaquePointer?
-        try checkOK(sqlite3_open(database.path, &connectionPointer), sql: nil, db: nil)
+        let flags = SQLITE_OPEN_NOMUTEX
+            | (write
+               ? SQLITE_OPEN_READWRITE | SQLITE_OPEN_CREATE
+               : SQLITE_OPEN_READONLY)
+        try checkOK(
+            sqlite3_open_v2(database.path, &connectionPointer, flags, nil),
+            sql: nil,
+            db: nil)
         self.connectionPointer = try checkPointer(connectionPointer, from: "sqlite3_open")
         registerCollation(.binary)
         registerCollation(.string)
         registerCollation(.caseInsensitive)
         registerCollation(.localized)
         registerCollation(.localizedCaseInsensitive)
+    }
+
+    deinit {
+        let result = sqlite3_close(connectionPointer)
+        if result != SQLITE_OK {
+            sqlite3_close_v2(connectionPointer)
+            assert(false, "Failed to close connection, sqlite3_close returned \(result) - this is probably a bug in EasyDB that should be reported")
+        }
     }
 
     /// Compile and execute an SQL query, decoding the results into an instance of `T`

@@ -89,7 +89,10 @@ public class Collection<Row: Record>: Filterable, DefaultCollations {
 
     private func insert(_ row: Row, upsert: Bool) throws {
         let sql = getInsertSQL(upsert: upsert)
-        try database.getConnection().execute(sql: sql, namedParameters: row)
+
+        try database.withConnection(write: true, transaction: false) { connection in
+            try connection.execute(sql: sql, namedParameters: row)
+        }
     }
 
     private func insert(_ rows: [Row], upsert: Bool) throws {
