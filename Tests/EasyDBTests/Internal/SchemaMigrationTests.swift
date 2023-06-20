@@ -8,7 +8,7 @@ class SchemaMigrationTests: EasyDBTestCase {
 
     override func setUpWithError() throws {
         try super.setUpWithError()
-        c = try db.getConnection()
+        c = try getConnection()
         sm = SchemaMigration(connection: c)
     }
 

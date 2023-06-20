@@ -73,7 +73,9 @@ public class EasyDB {
     /// Execute an SQL statement. If the statement has results, they will be ignored
     public func execute(_ sqlFragment: SQLFragment<NoProperties>) throws {
         let sql = try sqlFragment.sql(collations: nil, overrideCollation: nil, registerCollation: registerCollation)
-        try getConnection().execute(sql: sql)
+        try withConnection(write: true, transaction: false) { conn in
+            try conn.execute(sql: sql)
+        }
     }
 
     /// Execute an SQL statement and return the results as an instance of `T`. `T` can be any codable type, see
@@ -81,7 +83,10 @@ public class EasyDB {
     public func execute<Result: Codable>(_ resultType: Result.Type, _ sqlFragment: SQLFragment<NoProperties>) throws -> Result {
         let sql = try sqlFragment.sql(collations: nil, overrideCollation: nil, registerCollation: registerCollation)
         let parameters = try sqlFragment.parameters()
-        return try getConnection().execute(resultType, sql: sql, parameters: parameters)
+
+        return try withConnection(write: true, transaction: false) { conn in
+            return try conn.execute(resultType, sql: sql, parameters: parameters)
+        }
     }
 
     /// Execute a block of code in a transaction, rolling back the transaction if the block throws an error
@@ -103,12 +108,15 @@ public class EasyDB {
     /// custom collations when they are first used. However if you want to refer to a collation by name
     /// in SQL without first using it in the API, you will need to register it
     public func registerCollation(_ collation: Collation) throws {
-        try getConnection().registerCollation(collation)
+        // TODO: now that we have multiple collations, this should be moved to a configuration API or removed from the public API
+        try withConnection(write: true, transaction: false) { conn in
+            conn.registerCollation(collation)
+        }
     }
 
     @TaskLocal static var currentConnection: Connection?
 
-    func withConnection<T>(write: Bool, transaction: Bool, block: (_:Connection) throws -> T) throws -> T {
+    func withConnection<T>(write: Bool = false, transaction: Bool = false, block: (_:Connection) throws -> T) throws -> T {
         guard let current = EasyDB.currentConnection else {
             let connection = try connectionManager.getConnection(database: self, write: write)
             return try EasyDB.$currentConnection.withValue(connection) {
@@ -116,16 +124,6 @@ public class EasyDB {
             }
         }
         return try block(current)
-    }
-
-    private var cachedConnection: Connection?
-    func getConnection() throws -> Connection {
-        if let cached = cachedConnection {
-            return cached
-        }
-        let connection = try Connection(self)
-        cachedConnection = connection
-        return connection
     }
 
     @TaskLocal static var isInAccessQueue = false

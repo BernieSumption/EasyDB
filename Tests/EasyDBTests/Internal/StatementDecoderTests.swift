@@ -206,7 +206,7 @@ class StatementDecoderTests: EasyDBTestCase {
 extension StatementDecoderTests {
 
     func selectAs<T: Decodable & Equatable>(_ sql: String, _ type: T.Type) throws -> T {
-        let s = try db.getConnection().notThreadSafe_prepare(sql: sql)
+        let s = try getConnection().notThreadSafe_prepare(sql: sql)
         return try StatementDecoder.decode(type, from: s)
     }
 

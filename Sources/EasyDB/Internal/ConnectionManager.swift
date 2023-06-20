@@ -5,15 +5,16 @@ struct ConnectionManager {
     var writeConnection: Connection?
 
     mutating func getConnection(database: EasyDB, write: Bool) throws -> Connection {
-        if write {
+        // TODO read connection pool
+//        if write {
             if let connection = writeConnection {
                 return connection
             }
             let connection = try Connection(database, write: write)
             writeConnection = connection
             return connection
-        } else {
-            throw EasyDBError.notImplemented(feature: "read-only connections")
-        }
+//        } else {
+//            throw EasyDBError.notImplemented(feature: "read-only connections")
+//        }
     }
 }

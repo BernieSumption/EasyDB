@@ -2,10 +2,10 @@ import XCTest
 
 @testable import EasyDB
 
-class ConnectionTests: XCTestCase {
+class ConnectionTests: EasyDBTestCase {
 
     func testRead() throws {
-        let c = try EasyDB(.memory).getConnection()
+        let c = try getConnection()
         let s = try c.notThreadSafe_prepare(sql: """
             SELECT
                 1 as int,
@@ -28,7 +28,7 @@ class ConnectionTests: XCTestCase {
     }
 
     func testWrite() throws {
-        let c = try EasyDB(.memory).getConnection()
+        let c = try getConnection()
         let create = try c.notThreadSafe_prepare(sql: "CREATE TABLE tmp (a)")
         XCTAssertEqual(try create.step(), .done)
 

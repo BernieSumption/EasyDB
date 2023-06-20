@@ -142,17 +142,20 @@ public struct QueryBuilder<Row: Record>: Filterable {
     }
 
     private func execute<Value: Codable>(_ type: Value.Type, _ mode: CompileMode) throws -> Value {
-        let query = try compile(mode)
-        return try getConnection().execute(type, sql: query.sql, parameters: query.parameters)
+        try collection.database.withConnection { conn in
+            let query = try compile(mode, conn)
+            return try conn.execute(type, sql: query.sql, parameters: query.parameters)
+        }
     }
 
     private func execute(_ mode: CompileMode) throws {
-        let query = try compile(mode)
-        return try getConnection().execute(sql: query.sql, parameters: query.parameters)
+        try collection.database.withConnection { conn in
+            let query = try compile(mode, conn)
+            try conn.execute(sql: query.sql, parameters: query.parameters)
+        }
     }
 
-    private func compile(_ mode: CompileMode) throws -> CompileResult {
-        let connection = try getConnection()
+    private func compile(_ mode: CompileMode, _ connection: Connection) throws -> CompileResult {
         var parameters = [DatabaseValue]()
         var sql = SQL()
         switch mode {
@@ -304,9 +307,5 @@ public struct QueryBuilder<Row: Record>: Filterable {
     private struct CompileResult {
         let sql: String
         let parameters: [DatabaseValue]
-    }
-
-    private func getConnection() throws -> Connection {
-        return try collection.database.getConnection()
     }
 }

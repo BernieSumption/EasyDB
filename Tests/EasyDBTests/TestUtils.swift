@@ -1,6 +1,6 @@
 import Foundation
 import XCTest
-import EasyDB
+@testable import EasyDB
 
 struct KitchenSinkRecord: Record, Equatable {
     var id: String
@@ -137,6 +137,12 @@ class EasyDBTestCase: XCTestCase {
     /// Return the SQL for all indices in the database
     func dbIndices() throws -> [String] {
         return try db.execute([String].self, "SELECT sql FROM sqlite_schema WHERE type = 'index'")
+    }
+
+    func getConnection() throws -> Connection {
+        try db.withConnection(write: true) { connection in
+            return connection
+        }
     }
 }
 
