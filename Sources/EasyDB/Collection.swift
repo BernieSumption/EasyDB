@@ -5,10 +5,11 @@
 public class Collection<Row: Record>: Filterable, DefaultCollations {
     public let tableName: String
 
-    let database: EasyDB
+    weak var database: EasyDB!
     let columns: [String]
     let mapper: KeyPathMapper<Row>
     let defaultCollations: [String: Collation]
+    let allDefaultCollations: Set<Collation>
 
     private let indices: [IndexSpec]
     private let idPropertyName: String
@@ -31,10 +32,10 @@ public class Collection<Row: Record>: Filterable, DefaultCollations {
         for property in mapper.rootProperties {
             let isId = property == idPropertyName
             let collation = try metadata.getCombinedConfig(property, isId: isId).collation
-            try database.registerCollation(collation)
             defaultCollations[property] = collation
         }
         self.defaultCollations = defaultCollations
+        self.allDefaultCollations = Set(self.defaultCollations.values)
 
         var indices = [IndexSpec]()
         for property in mapper.rootProperties {
@@ -61,6 +62,7 @@ public class Collection<Row: Record>: Filterable, DefaultCollations {
     /// - Parameter dropColumns: Remove unused columns. This defaults to `false`
     public func migrate(dropColumns: Bool = false) throws {
         try database.withConnection(write: true, transaction: false) { connection in
+            connection.registerCollection(self)
             let migration = SchemaMigration(connection: connection)
             try migration.migrateColumns(table: tableName, columns: columns)
             try migration.migrateIndices(table: tableName, indices: indices)
@@ -93,6 +95,7 @@ public class Collection<Row: Record>: Filterable, DefaultCollations {
         let sql = getInsertSQL(upsert: upsert)
 
         try database.withConnection(write: true, transaction: false) { connection in
+            connection.registerCollection(self)
             try connection.execute(sql: sql, namedParameters: row)
         }
     }
@@ -102,7 +105,9 @@ public class Collection<Row: Record>: Filterable, DefaultCollations {
             return
         }
         let sql = getInsertSQL(upsert: upsert)
+        // TODO: convert to use transaction:true instead of rolling our own
         try database.withConnection(write: true, transaction: false) { connection in
+            connection.registerCollection(self)
             do {
                 let statement = try connection.prepare(sql: sql)
                 try connection.execute(sql: "BEGIN TRANSACTION")

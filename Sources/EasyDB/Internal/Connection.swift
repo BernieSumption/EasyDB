@@ -5,6 +5,7 @@ class Connection {
     private let database: EasyDB
     private let connectionPointer: OpaquePointer
     private var registeredCollationNames = Set<String>()
+    private var registeredCollections = Set<ObjectIdentifier>()
     private var collationFunctions = [CollationFunction]()
 
     public let write: Bool
@@ -66,6 +67,18 @@ class Connection {
 
     func prepare(sql: String) throws -> Statement {
         return try Statement(connectionPointer, sql, logSQL: database.logSQL)
+    }
+
+    func registerCollection<T>(_ collection: Collection<T>) {
+        let id = ObjectIdentifier(collection)
+        guard !registeredCollections.contains(id) else {
+            return
+        }
+        registeredCollections.insert(id)
+
+        for collation in collection.allDefaultCollations {
+            registerCollation(collation)
+        }
     }
 
     func registerCollation(_ collation: Collation) {

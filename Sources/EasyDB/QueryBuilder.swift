@@ -148,6 +148,7 @@ public struct QueryBuilder<Row: Record>: Filterable {
 
     private func execute<Value: Codable>(_ type: Value.Type, _ mode: CompileMode) throws -> Value {
         try collection.database.withConnection(write: mode.isWrite) { connection in
+            connection.registerCollection(collection)
             let query = try compile(mode, connection)
             return try connection.execute(type, sql: query.sql, parameters: query.parameters)
         }
@@ -155,6 +156,7 @@ public struct QueryBuilder<Row: Record>: Filterable {
 
     private func execute(_ mode: CompileMode) throws {
         try collection.database.withConnection(write: mode.isWrite) { connection in
+            connection.registerCollection(collection)
             let query = try compile(mode, connection)
             try connection.execute(sql: query.sql, parameters: query.parameters)
         }

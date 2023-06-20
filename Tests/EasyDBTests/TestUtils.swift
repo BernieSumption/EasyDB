@@ -103,10 +103,11 @@ class EasyDBTestCase: XCTestCase {
     }
 
     override func tearDownWithError() throws {
+        db = nil
+        XCTAssertEqual(EasyDB.liveInstances, 0)
         if FileManager.default.fileExists(atPath: testFilePath) {
             try? FileManager.default.removeItem(atPath: testFilePath)
         }
-        db = nil
     }
 
     func populateCollection<Row: Record>(_ data: [Row]) throws -> Collection<Row> {

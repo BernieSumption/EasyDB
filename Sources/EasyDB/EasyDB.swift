@@ -34,7 +34,15 @@ public class EasyDB {
         }
         self.autoMigrate = autoMigrate
         self.autoDropColumns = autoDropColumns
+        EasyDB.liveInstances += 1
     }
+
+    deinit {
+        collections.removeAll()
+        EasyDB.liveInstances -= 1
+    }
+
+    static var liveInstances = 0
 
     public enum Location: ExpressibleByStringLiteral, Equatable {
         case path(String)
@@ -96,16 +104,6 @@ public class EasyDB {
                 try? execute("ROLLBACK TRANSACTION")
                 throw error
             }
-        }
-    }
-
-    /// Register a custom collation to use in SQL. This is normally not necessary as EasyDB registers
-    /// custom collations when they are first used. However if you want to refer to a collation by name
-    /// in SQL without first using it in the API, you will need to register it
-    public func registerCollation(_ collation: Collation) throws {
-        // TODO: now that we have multiple collations, this should be moved to a configuration API or removed from the public API
-        try withConnection(write: true, transaction: false) { connection in
-            connection.registerCollation(collation)
         }
     }
 
