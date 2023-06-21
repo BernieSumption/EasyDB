@@ -91,18 +91,38 @@ public class EasyDB {
         }
     }
 
-    /// Execute a block of code in a transaction, rolling back the transaction if the block throws an error
-    public func transaction<T>(block: () throws -> T) throws -> T {
-        return try withConnection(write: true) { _ in
-            do {
-                try execute("BEGIN TRANSACTION")
-                let result = try block()
-                try execute("COMMIT TRANSACTION")
-                return result
-            } catch {
-                try? execute("ROLLBACK TRANSACTION")
-                throw error
-            }
+    /// Execute a block of code in a transaction using the single global write connection. The calling
+    /// thread will block until the write connection is available.
+    ///
+    /// Code in the block can make any call to the EasyDB API e.g. `database.execute("INSERT INTO ...")`
+    /// or `collection.all().update(...)`.
+    ///
+    /// The transaction is rolled back if the block throws an error, otherwise it is committed.
+    ///
+    /// Transactions can be nested - code in the block can call `write` or `read`, which behave identically
+    /// and create a nested write transaction.  When several transactions are nested, changes are not visible
+    /// outside the transaction until the outermost transaction block completed.
+    public func write<T>(block: () throws -> T) throws -> T {
+        return try withConnection(write: true, transaction: true) { _ in
+            return try block()
+        }
+    }
+
+    /// Execute a block of code in a transaction using a read-only connection. Multiple threads can
+    /// read simultaneously.
+    ///
+    /// Code in the block can make any call to the EasyDB read API e.g. `database.execute("SELECT ...")`
+    /// (provided that the SQL doesn't modify data) or `collection.all().fetchMany()`. Any use of
+    /// writing methods will result in an exception being thrown.
+    ///
+    /// The transaction is rolled back if the block throws an error, otherwise it is committed
+    ///
+    /// Transactions can be nested - code in the block can call `read` to begin a nested transaction. When several
+    /// transactions are nested, changes are not visible outside the transaction until the outermost transaction
+    /// block completed.
+    public func read<T>(block: () throws -> T) throws -> T {
+        return try withConnection(write: false, transaction: true) { _ in
+            return try block()
         }
     }
 
@@ -112,10 +132,22 @@ public class EasyDB {
         guard let current = EasyDB.currentConnection else {
             let connection = try connectionManager.getConnection(database: self, write: write)
             return try EasyDB.$currentConnection.withValue(connection) {
-                try block(connection)
+                try withConnection(write: write, transaction: transaction, block: block)
             }
         }
-        return try block(current)
+        if !transaction {
+            return try block(current)
+        }
+        try current.execute(sql: "SAVEPOINT withConnection")
+        do {
+            let result = try block(current)
+            try current.execute(sql: "RELEASE withConnection")
+            return result
+        } catch {
+            try current.execute(sql: "ROLLBACK TO withConnection")
+            try current.execute(sql: "RELEASE withConnection")
+            throw error
+        }
     }
 }
 

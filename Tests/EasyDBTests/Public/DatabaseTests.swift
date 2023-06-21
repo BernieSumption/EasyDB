@@ -24,7 +24,7 @@ class DatabaseTests: EasyDBTestCase {
         ])
         // docs:start:database-transaction
         let accounts = try database.collection(Account.self)
-        try database.transaction {
+        try database.write {
             guard var account1 = try accounts.filter(id: 1).fetchOne(),
                   var account2 = try accounts.filter(id: 2).fetchOne() else {
                 throw MyError("Could not load accounts")
@@ -37,6 +37,42 @@ class DatabaseTests: EasyDBTestCase {
             try accounts.save(account2)
         }
         // docs:end
+    }
+
+    func testTransactionCommit() throws {
+        let c = try db.collection(Row.self)
+        XCTAssertEqual(try c.all().fetchMany(), [])
+        try db.write {
+            try c.insert(Row(1))
+        }
+        XCTAssertEqual(try c.all().fetchMany().map(\.value), [1])
+    }
+
+    func testTransactionRollback() throws {
+        let c = try db.collection(Row.self)
+        XCTAssertEqual(try c.all().fetchMany(), [])
+        XCTAssertThrowsError(
+            try db.write {
+                try c.insert(Row(1))
+                throw EasyDBError.unexpected(message: "whoops!")
+            }
+        )
+        XCTAssertEqual(try c.all().fetchMany(), [])
+    }
+
+    func testNestedTransactionRollback() throws {
+        db.logSQL = .print
+        let c = try db.collection(Row.self)
+        XCTAssertEqual(try c.all().fetchMany(), [])
+        try db.write {
+            try c.insert(Row(1))
+            try? db.write {
+                try c.insert(Row(2))
+                throw EasyDBError.unexpected(message: "whoops!")
+            }
+            try c.insert(Row(3))
+        }
+        XCTAssertEqual(try c.all().fetchMany().map(\.value), [1, 3])
     }
 
     // TODO: remove this demo and use in real transaction tests

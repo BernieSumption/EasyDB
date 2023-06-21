@@ -111,24 +111,14 @@ public class Collection<Row: Record>: Filterable, DefaultCollations {
             return
         }
         let sql = getInsertSQL(upsert: upsert)
-        // TODO: convert to use transaction:true instead of rolling our own
-        try database.withConnection(write: true, transaction: false) { connection in
+        try database.withConnection(write: true, transaction: true) { connection in
             connection.registerCollection(self)
-            do {
-                let statement = try connection.prepare(sql: sql)
-                try connection.execute(sql: "BEGIN TRANSACTION")
-                for row in rows {
-                    try statement.clearBoundParameters()
-                    try StatementEncoder.encode(row, into: statement)
-                    _ = try statement.step()
-                    statement.reset()
-                }
-                try connection.execute(sql: "COMMIT TRANSACTION")
-            } catch {
-                // don't throw an error if the rollback fails, because we want to throw the
-                // error that actually caused the statement to fail
-                try? connection.execute(sql: "ROLLBACK TRANSACTION")
-                throw error
+            let statement = try connection.prepare(sql: sql)
+            for row in rows {
+                try statement.clearBoundParameters()
+                try StatementEncoder.encode(row, into: statement)
+                _ = try statement.step()
+                statement.reset()
             }
         }
     }
