@@ -34,7 +34,6 @@ class DatabaseTests: EasyDBTestCase {
     }
 
     func testNestedTransactionRollback() throws {
-        db.logSQL = .print
         let c = try db.collection(Row.self)
         XCTAssertEqual(try c.all().fetchMany(), [])
         try db.write {
@@ -53,9 +52,11 @@ class DatabaseTests: EasyDBTestCase {
         let task1WriteStarted = DispatchSemaphore(value: 0)
         let task1AllowExit = DispatchSemaphore(value: 0)
         let task1Finished = DispatchSemaphore(value: 0)
+        let col = try db.collection(Row.self)
         Task {
             try db.write {
                 task1WriteStarted.signal()
+                try col.insert(Row(1))
                 task1AllowExit.wait()
             }
             task1Finished.signal()
@@ -70,6 +71,7 @@ class DatabaseTests: EasyDBTestCase {
         Task {
             try db.write {
                 _ = task2WriteStarted.signal()
+                try col.insert(Row(2))
             }
             task2Finished.signal()
         }
@@ -91,6 +93,13 @@ class DatabaseTests: EasyDBTestCase {
     }
 
     func testMultipleReaders() throws {
+        db.logSQL = .print
+//        let col = try db.collection(Row.self)
+
+//        try db.write {
+//            try col.insert(Row(1))
+//        }
+
         // create task 1 and start a read
         let task1ReadStarted = DispatchSemaphore(value: 0)
         let task1AllowExit = DispatchSemaphore(value: 0)

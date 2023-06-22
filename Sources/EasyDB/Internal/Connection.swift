@@ -10,25 +10,28 @@ class Connection: Hashable {
     private var collationFunctions = [CollationFunction]()
 
     public let write: Bool
+    public let name: String
 
-    init(_ database: EasyDB, write: Bool = true) throws {
+    init(_ database: EasyDB, write: Bool = true, name: String) throws {
         self.database = database
         self.write = write
+        self.name = name
         var connectionPointer: OpaquePointer?
-        let flags = SQLITE_OPEN_NOMUTEX
-            | (write
-               ? SQLITE_OPEN_READWRITE | SQLITE_OPEN_CREATE
-               : SQLITE_OPEN_READONLY)
+        let flags = SQLITE_OPEN_NOMUTEX | SQLITE_OPEN_READWRITE | SQLITE_OPEN_CREATE
         try checkOK(
             sqlite3_open_v2(database.path, &connectionPointer, flags, nil),
             sql: nil,
             db: nil)
         self.connectionPointer = try checkPointer(connectionPointer, from: "sqlite3_open")
 
-//        let journalMode = try self.execute(String.self, sql: "PRAGMA journal_mode = WAL")
-//        guard journalMode == "wal" else {
-//            throw EasyDBError.unexpected(message: "Could not enable WAL mode")
-//        }
+        let journalMode = try self.execute(String.self, sql: "PRAGMA journal_mode = WAL")
+        guard journalMode == "wal" else {
+            throw EasyDBError.unexpected(message: "Could not enable WAL mode")
+        }
+
+        if !write {
+            try self.execute(sql: "PRAGMA query_only = true")
+        }
 
         registerCollation(.binary)
         registerCollation(.string)
@@ -70,7 +73,7 @@ class Connection: Hashable {
     }
 
     func prepare(sql: String) throws -> Statement {
-        return try Statement(connectionPointer, sql, logSQL: database.logSQL)
+        return try Statement(connectionPointer, sql, logSQL: database.logSQL, connectionName: name)
     }
 
     func registerCollection<T>(_ collection: Collection<T>) {
@@ -118,7 +121,6 @@ class Connection: Hashable {
     static func == (lhs: Connection, rhs: Connection) -> Bool {
         return lhs === rhs
     }
-
 }
 
 /// Wrapper for a collation function - required because we need a reference type for `Unmanaged.passRetained(_:)`

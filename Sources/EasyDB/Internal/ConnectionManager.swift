@@ -49,7 +49,7 @@ struct ConnectionManager {
         if let connection = writeConnection {
             return connection
         }
-        let connection = try Connection(database, write: true)
+        let connection = try Connection(database, write: true, name: "write")
         writeConnection = connection
         return connection
     }
@@ -64,6 +64,7 @@ struct ConnectionManager {
 
     private var readerCache = Set<Connection>()
     private let readerManagementSemaphore = DispatchSemaphore(value: 1)
+    private var readerCount = 0
 
     mutating private func getOrCreateReadConnection(_ database: EasyDB) throws -> Connection {
         readerManagementSemaphore.wait()
@@ -80,7 +81,8 @@ struct ConnectionManager {
             readerCache.remove(connection)
             return connection
         }
-        return try Connection(database, write: false)
+        readerCount += 1
+        return try Connection(database, write: false, name: "read#\(readerCount)")
     }
 
     mutating func releaseReadConnection(_ connection: Connection) {

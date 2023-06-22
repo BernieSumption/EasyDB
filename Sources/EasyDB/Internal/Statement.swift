@@ -10,6 +10,7 @@ class Statement {
     private var hasColumnNames = false
     private let sql: String
     private let logSQL: SQLLogger
+    private let connectionName: String
 
     /// True if the most recent call to `step()` returned `.row`.
     ///
@@ -18,9 +19,10 @@ class Statement {
 
     private var parameters = [Int: String]()
 
-    init(_ db: OpaquePointer, _ sql: String, logSQL: SQLLogger = .none) throws {
+    init(_ db: OpaquePointer, _ sql: String, logSQL: SQLLogger, connectionName: String) throws {
         self.db = db
         self.sql = sql
+        self.connectionName = connectionName
         self.logSQL = logSQL
         var statement: OpaquePointer?
         try checkOK(sqlite3_prepare_v2(db, sql, -1, &statement, nil), sql: sql, db: db)
@@ -99,7 +101,7 @@ class Statement {
                 .map({ "\($0.key)=\($0.value)" })
                 .joined(separator: ", ")
 
-            logSQL.log("Executing statement: \"\(sql)\" (parameters: \(parameters))")
+            logSQL.log("Executing statement on \(connectionName): \"\(sql)\" (parameters: \(parameters))")
         }
         let resultCode = sqlite3_step(statement)
         switch resultCode {

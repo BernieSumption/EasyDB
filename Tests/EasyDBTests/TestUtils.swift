@@ -91,6 +91,7 @@ struct RowWithString: Record, Equatable, CustomStringConvertible {
 }
 
 let testFilePath = NSTemporaryDirectory() + "EasyDBTestCase.sqlite"
+let cleanupFiles = [testFilePath, testFilePath + "-shm", testFilePath + "-wal", testFilePath + "-journal"]
 
 class EasyDBTestCase: XCTestCase {
     var db: EasyDB!
@@ -106,8 +107,10 @@ class EasyDBTestCase: XCTestCase {
         db = nil
         XCTAssertEqual(liveEasyDBInstances, 0, "Memory leak detected: \(liveEasyDBInstances) live EasyDB instances remain")
         XCTAssertEqual(liveCollectionInstances, 0, "Memory leak detected: \(liveCollectionInstances) live Collection instances remain")
-        if FileManager.default.fileExists(atPath: testFilePath) {
-            try? FileManager.default.removeItem(atPath: testFilePath)
+        for cleanupFile in cleanupFiles {
+            if FileManager.default.fileExists(atPath: cleanupFile) {
+                try? FileManager.default.removeItem(atPath: cleanupFile)
+            }
         }
     }
 

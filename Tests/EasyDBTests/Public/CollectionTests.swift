@@ -8,7 +8,6 @@ class CollectionTests: EasyDBTestCase {
     }
 
     func testMigrateData() throws {
-        db.logSQL = .print
         let v1c = try db.collection(V1.self)
         let record1 = V1(a: 4)
         let record2 = V1(a: 5)

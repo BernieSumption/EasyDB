@@ -18,7 +18,6 @@ class WriteTests: EasyDBTestCase {
     }
 
     func testBulkInsertUsesTransaction() throws {
-        db.logSQL = .print
         let c = try db.collection(RowWithId.self)
         let a = RowWithId()
         let b = RowWithId()

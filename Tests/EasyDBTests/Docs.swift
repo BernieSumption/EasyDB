@@ -343,7 +343,6 @@ class DocsTests: EasyDBTestCase {
     }
 
     func testUseCustomCollationAnnotation() throws {
-        db.logSQL = .print
         // docs:start:custom-collation-annotation-use
         struct Book: Record {
             var id = UUID()
