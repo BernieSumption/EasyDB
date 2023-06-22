@@ -12,33 +12,6 @@ class DatabaseTests: EasyDBTestCase {
         XCTAssertEqual(result, [["c", "d"], ["e", "f"]])
     }
 
-    func testTransaction() throws {
-        let database = db!
-        struct Account: Record {
-            var id: Int
-            var balance: Int
-        }
-        try database.collection(Account.self).insert([
-            Account(id: 1, balance: 100),
-            Account(id: 2, balance: 0)
-        ])
-        // docs:start:database-transaction
-        let accounts = try database.collection(Account.self)
-        try database.write {
-            guard var account1 = try accounts.filter(id: 1).fetchOne(),
-                  var account2 = try accounts.filter(id: 2).fetchOne() else {
-                throw MyError("Could not load accounts")
-            }
-            // move 10p from account 1 to account 2 without allowing the balance to go negative
-            let amountToMove = max(account1.balance, 10)
-            account1.balance -= amountToMove
-            account2.balance += amountToMove
-            try accounts.save(account1)
-            try accounts.save(account2)
-        }
-        // docs:end
-    }
-
     func testTransactionCommit() throws {
         let c = try db.collection(Row.self)
         XCTAssertEqual(try c.all().fetchMany(), [])
@@ -75,35 +48,53 @@ class DatabaseTests: EasyDBTestCase {
         XCTAssertEqual(try c.all().fetchMany().map(\.value), [1, 3])
     }
 
-    // TODO: remove this demo and use in real transaction tests
-    func testSimultaneousTransactions() async throws {
-
-        let waiter1 = Waiter()
+    func testSingleWriter() throws {
+        // create task 1 and start a write
+        let task1WriteStarted = DispatchSemaphore(value: 0)
+        let task1AllowExit = DispatchSemaphore(value: 0)
+        let task1Finished = DispatchSemaphore(value: 0)
         Task {
-            print("in task: before await")
-            await waiter1.wait()
-            print("in task: after await")
+            try db.write {
+                task1WriteStarted.signal()
+                task1AllowExit.wait()
+            }
+            task1Finished.signal()
         }
-        print("before resume")
-        waiter1.notify()
-        print("after resume")
 
-        await waiter1.wait()
+        // wait for task 1's write to begin
+        task1WriteStarted.wait()
+
+        // create task 2 and attempt to start a concurrent write
+        let task2WriteStarted = DispatchSemaphore(value: 0)
+        let task2Finished = DispatchSemaphore(value: 0)
+        Task {
+            try db.write {
+                _ = task2WriteStarted.signal()
+            }
+            task2Finished.signal()
+        }
+
+        // Expect a timeout as task 2 is blocked waiting for task 1 to finish writing
+        XCTAssertEqual(
+            task2WriteStarted.wait(timeout: .now().advanced(by: .milliseconds(20))),
+            .timedOut)
+
+        task1AllowExit.signal()
+
+        // Expect a success as task 2 is now allowed to write
+        XCTAssertEqual(
+            task2WriteStarted.wait(timeout: .now().advanced(by: .milliseconds(100))),
+            .success)
+
+        task1Finished.wait()
+        task2Finished.wait()
     }
 }
 
-class Waiter {
+class Flag {
+    var value: Bool
 
-    private var lock = true
-
-    func notify() {
-        assert(lock)
-        lock = false
-    }
-
-    func wait() async {
-        while lock {
-            try? await Task.sleep(nanoseconds: 1_000_000)
-        }
+    init(_ value: Bool) {
+        self.value = value
     }
 }

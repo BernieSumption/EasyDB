@@ -130,7 +130,10 @@ public class EasyDB {
 
     func withConnection<T>(write: Bool = false, transaction: Bool = false, block: (_:Connection) throws -> T) throws -> T {
         guard let current = EasyDB.currentConnection else {
-            let connection = try connectionManager.getConnection(database: self, write: write)
+            let connection = try connectionManager.acquireConnection(database: self, write: write)
+            defer {
+                connectionManager.releaseConnection(connection)
+            }
             return try EasyDB.$currentConnection.withValue(connection) {
                 try withConnection(write: write, transaction: transaction, block: block)
             }

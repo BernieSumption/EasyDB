@@ -5,21 +5,35 @@ struct ConnectionManager {
 
     private var writeConnection: Connection?
     private var readConnection: Connection?
-    private let writeSemaphore = DispatchSemaphore(value: 1)
-    private let readSemaphore = DispatchSemaphore(value: 1)
+    private let writeCreateSemaphore = DispatchSemaphore(value: 1)
+    private let writeUseSemaphore = DispatchSemaphore(value: 1)
+    private let readCreateSemaphore = DispatchSemaphore(value: 1)
+    private let readUseSemaphore = DispatchSemaphore(value: 1)
 
-    mutating func getConnection(database: EasyDB, write: Bool) throws -> Connection {
+    mutating func acquireConnection(database: EasyDB, write: Bool) throws -> Connection {
         if write {
+            // acquire but do not release the use semaphore - will be released in releaseConnection
+            writeUseSemaphore.wait()
             return try getWriteConnection(database)
         } else {
+            // acquire but do not release the use semaphore - will be released in releaseConnection
+            readUseSemaphore.wait()
             return try getReadConnection(database)
         }
     }
 
+    mutating func releaseConnection(_ connection: Connection) {
+        if connection.write {
+            writeUseSemaphore.signal()
+        } else {
+            readUseSemaphore.signal()
+        }
+    }
+
     mutating private func getWriteConnection(_ database: EasyDB) throws -> Connection {
-        writeSemaphore.wait()
+        writeCreateSemaphore.wait()
         defer {
-            writeSemaphore.signal()
+            writeCreateSemaphore.signal()
         }
         if let connection = writeConnection {
             return connection
@@ -31,12 +45,15 @@ struct ConnectionManager {
 
     mutating private func getReadConnection(_ database: EasyDB) throws -> Connection {
         // TODO: read connection pool
-        readSemaphore.wait()
-        if writeConnection == nil {
-            _ = try getWriteConnection(database)
-        }
+        readCreateSemaphore.wait()
         defer {
-            readSemaphore.signal()
+            readCreateSemaphore.signal()
+        }
+        if writeConnection == nil {
+            // ensure that the write connection is created before any read
+            // connections, because the write connection auto-creates the
+            // database file and read connections require it to exist
+            _ = try getWriteConnection(database)
         }
         if let connection = readConnection {
             return connection
@@ -45,9 +62,4 @@ struct ConnectionManager {
         readConnection = connection
         return connection
     }
-
-//    mutating func releaseConnections() {
-//        readConnection = nil
-//        writeConnection = nil
-//    }
 }
