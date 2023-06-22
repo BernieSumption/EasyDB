@@ -23,6 +23,9 @@ public enum EasyDBError: Error, CustomStringConvertible {
     /// Invalid data was passed to an API method
     case misuse(message: String)
 
+    /// An SQLite error was thrown
+    case sqliteError(resultCode: ResultCode, message: String?, sql: String?)
+
     public var description: String {
         switch self {
         case .noSuchColumn(let name, let available):
@@ -39,6 +42,15 @@ public enum EasyDBError: Error, CustomStringConvertible {
         case .notImplemented(let feature):
             return "\(feature) is not implemented - if this would be useful to you please make a feature request as a GitHub issue and give some details about your use case"
         case .misuse(let message): return message
+        case .sqliteError(let resultCode, let message, let sql):
+            return "\(resultCode) \(message ?? "(no message)"); while executing \"\(sql ?? "(no query)")\""
         }
+    }
+
+    var isSqliteReadOnly: Bool {
+        if case .sqliteError(let resultCode, _, _) = self {
+            return resultCode == .READONLY
+        }
+        return false
     }
 }

@@ -1,7 +1,7 @@
 import Foundation
 import SQLite3
 
-class Connection {
+class Connection: Hashable {
     // TODO: check and throw error instead of assertion
     private weak var database: EasyDB!
     private let connectionPointer: OpaquePointer
@@ -109,6 +109,15 @@ class Connection {
             fatalError("call to sqlite3_create_collation_v2 failed with code \(code)")
         }
     }
+
+    func hash(into hasher: inout Hasher) {
+        ObjectIdentifier(self).hash(into: &hasher)
+    }
+
+    static func == (lhs: Connection, rhs: Connection) -> Bool {
+        return lhs === rhs
+    }
+
 }
 
 /// Wrapper for a collation function - required because we need a reference type for `Unmanaged.passRetained(_:)`
@@ -127,7 +136,7 @@ internal func checkOK(_ code: CInt, sql: String?, db: OpaquePointer?) throws {
         message = String(cString: sqlite3_errmsg(db))
     }
     if resultCode != .OK {
-        throw ConnectionError(resultCode: resultCode, message: message, sql: sql)
+        throw EasyDBError.sqliteError(resultCode: resultCode, message: message, sql: sql)
     }
 }
 

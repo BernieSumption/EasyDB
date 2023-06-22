@@ -11,7 +11,7 @@ public class EasyDB {
     private var collections = [ObjectIdentifier: Any]()
     private let collectionsSemaphore = DispatchSemaphore(value: 1)
 
-    private var connectionManager = ConnectionManager()
+    private var connectionManager: ConnectionManager
 
     /// An `SQLLogger` instance to
     public var logSQL: SQLLogger = .none
@@ -23,10 +23,14 @@ public class EasyDB {
     ///   - autoMigrate: Whether to automatically create tables and columns for collections.
     ///   - autoDropColumns: Whether to drop columns while running automatic migrations. This defaults to `false` and can be set to `true`
     ///       for the whole database using this option, and overridden for individual collections. Has no effect without `autoMigrate`
+    ///   - readerCacheSize: The number of reader connections to retain. It is always possible to create new readers, but
+    ///       creating a reader takes longer than re-using an existing reader. Up to `readerCacheSize` reader connections
+    ///       will be kept ready for the next read operation.
     public init(
         _ location: Location,
         autoMigrate: Bool = true,
-        autoDropColumns: Bool = false
+        autoDropColumns: Bool = false,
+        readerCacheSize: UInt = 3
     ) {
         switch location {
         case .path(let path):
@@ -34,12 +38,12 @@ public class EasyDB {
         }
         self.autoMigrate = autoMigrate
         self.autoDropColumns = autoDropColumns
+        self.connectionManager = ConnectionManager(readerCacheSize: readerCacheSize)
         liveEasyDBInstances += 1
     }
 
     deinit {
         collections.removeAll()
-        connectionManager = ConnectionManager()
         liveEasyDBInstances -= 1
     }
 
