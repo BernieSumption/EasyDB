@@ -9,10 +9,6 @@ class Connection: Hashable {
     private var registeredCollections = Set<UInt64>()
     private var collationFunctions = [CollationFunction]()
 
-    private var savepointStatement: Statement?
-    private var releaseStatement: Statement?
-    private var rollbackStatement: Statement?
-
     public let write: Bool
 
     init(_ database: EasyDB, write: Bool = true) throws {
@@ -42,9 +38,6 @@ class Connection: Hashable {
     }
 
     deinit {
-        savepointStatement = nil
-        releaseStatement = nil
-        rollbackStatement = nil
         let result = sqlite3_close(connectionPointer)
         if result != SQLITE_OK {
             sqlite3_close_v2(connectionPointer)
@@ -70,12 +63,10 @@ class Connection: Hashable {
 
     /// Compile and execute an SQL query that returns no results, getting named parameters from the provided struct or dictionary
     func execute<P: Codable>(sql: String, namedParameters: P) throws {
-        return try database.withConnection(write: true, transaction: false) { _ in
-            let statement = try prepare(sql: sql)
-            defer { statement.reset() }
-            try StatementEncoder.encode(namedParameters, into: statement)
-            _ = try statement.step()
-        }
+        let statement = try prepare(sql: sql)
+        defer { statement.reset() }
+        try StatementEncoder.encode(namedParameters, into: statement)
+        _ = try statement.step()
     }
 
     func prepare(sql: String) throws -> Statement {
@@ -118,30 +109,6 @@ class Connection: Hashable {
         guard code == SQLITE_OK else {
             fatalError("call to sqlite3_create_collation_v2 failed with code \(code)")
         }
-    }
-
-    func savepoint() throws {
-        try executeCachedStatement(\.savepointStatement, sql: "SAVEPOINT withConnection")
-    }
-
-    func release() throws {
-        try executeCachedStatement(\.releaseStatement, sql: "RELEASE withConnection")
-    }
-
-    func rollback() throws {
-        try executeCachedStatement(\.rollbackStatement, sql: "ROLLBACK TO withConnection")
-    }
-
-    func executeCachedStatement(_ keyPath: ReferenceWritableKeyPath<Connection, Statement?>, sql: String) throws {
-        if let cached = self[keyPath: keyPath] {
-            defer {
-                cached.reset()
-            }
-            _ = try cached.step()
-            return
-        }
-        self[keyPath: keyPath] = try prepare(sql: sql)
-        try executeCachedStatement(keyPath, sql: sql)
     }
 
     func hash(into hasher: inout Hasher) {

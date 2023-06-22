@@ -163,6 +163,17 @@ class DatabaseTests: EasyDBTestCase {
             XCTAssertEqual(try db.execute([Int].self, "SELECT value from t"), [1])
         }
     }
+
+//    func testPerf() throws {
+//        let c = try db.collection(Row.self)
+//        measure {
+//            for _ in 0...1000 {
+//               try? db.read {
+//                    _ = try? c.all().fetchCount()
+//                }
+//            }
+//        }
+//    }
 }
 
 class Flag {

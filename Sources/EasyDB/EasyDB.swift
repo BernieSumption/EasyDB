@@ -83,7 +83,7 @@ public class EasyDB {
     /// write connection and will block until the write connection is available. Wrap the call in a `read { ... }`
     /// block if it is read-only to allow multiple reads to run in parallel
     public func execute(_ sqlFragment: SQLFragment<NoProperties>) throws {
-        try withConnection(write: true, transaction: false) { connection in
+        try withConnection(write: true) { connection in
             let sql = try sqlFragment.sql(collations: nil, overrideCollation: nil, registerCollation: connection.registerCollation)
             try connection.execute(sql: sql)
         }
@@ -96,7 +96,7 @@ public class EasyDB {
     /// write connection and will block until the write connection is available. Wrap the call in a `read { ... }`
     /// block if it is read-only to allow multiple reads to run in parallel
     public func execute<Result: Codable>(_ resultType: Result.Type, _ sqlFragment: SQLFragment<NoProperties>) throws -> Result {
-        return try withConnection(write: true, transaction: false) { connection in
+        return try withConnection(write: true) { connection in
             let sql = try sqlFragment.sql(collations: nil, overrideCollation: nil, registerCollation: connection.registerCollation)
             let parameters = try sqlFragment.parameters()
             return try connection.execute(resultType, sql: sql, parameters: parameters)
@@ -153,14 +153,14 @@ public class EasyDB {
         if !transaction {
             return try block(current)
         }
-        try current.savepoint()
+        try current.execute(sql: "SAVEPOINT easydb")
         do {
             let result = try block(current)
-            try current.release()
+            try current.execute(sql: "RELEASE easydb")
             return result
         } catch {
-            try current.rollback()
-            try current.release()
+            try current.execute(sql: "ROLLBACK TO easydb")
+            try current.execute(sql: "RELEASE easydb")
             throw error
         }
     }

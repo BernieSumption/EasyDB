@@ -67,7 +67,7 @@ public class Collection<Row: Record>: Filterable, DefaultCollations {
     ///
     /// - Parameter dropColumns: Remove unused columns. This defaults to `false`
     public func migrate(dropColumns: Bool = false) throws {
-        try database.withConnection(write: true, transaction: false) { connection in
+        try database.withConnection(write: true, transaction: true) { connection in
             connection.registerCollection(self)
             let migration = SchemaMigration(connection: connection)
             try migration.migrateColumns(table: tableName, columns: columns)
@@ -100,7 +100,7 @@ public class Collection<Row: Record>: Filterable, DefaultCollations {
     private func insert(_ row: Row, upsert: Bool) throws {
         let sql = getInsertSQL(upsert: upsert)
 
-        try database.withConnection(write: true, transaction: false) { connection in
+        try database.withConnection(write: true) { connection in
             connection.registerCollection(self)
             try connection.execute(sql: sql, namedParameters: row)
         }
