@@ -78,6 +78,10 @@ public class EasyDB {
     }
 
     /// Execute an SQL statement. If the statement has results, they will be ignored
+    ///
+    /// By default it is assumed that the SQL modifies the database and so it is executed on the single
+    /// write connection and will block until the write connection is available. Wrap the call in a `read { ... }`
+    /// block if it is read-only to allow multiple reads to run in parallel
     public func execute(_ sqlFragment: SQLFragment<NoProperties>) throws {
         try withConnection(write: true, transaction: false) { connection in
             let sql = try sqlFragment.sql(collations: nil, overrideCollation: nil, registerCollation: connection.registerCollation)
@@ -87,6 +91,10 @@ public class EasyDB {
 
     /// Execute an SQL statement and return the results as an instance of `T`. `T` can be any codable type, see
     /// [selecting into custom result types](https://github.com/BernieSumption/EasyDB#selecting-into-custom-result-types)
+    ///
+    /// By default it is assumed that the SQL modifies the database and so it is executed on the single
+    /// write connection and will block until the write connection is available. Wrap the call in a `read { ... }`
+    /// block if it is read-only to allow multiple reads to run in parallel
     public func execute<Result: Codable>(_ resultType: Result.Type, _ sqlFragment: SQLFragment<NoProperties>) throws -> Result {
         return try withConnection(write: true, transaction: false) { connection in
             let sql = try sqlFragment.sql(collations: nil, overrideCollation: nil, registerCollation: connection.registerCollation)
@@ -145,14 +153,14 @@ public class EasyDB {
         if !transaction {
             return try block(current)
         }
-        try current.execute(sql: "SAVEPOINT withConnection")
+        try current.savepoint()
         do {
             let result = try block(current)
-            try current.execute(sql: "RELEASE withConnection")
+            try current.release()
             return result
         } catch {
-            try current.execute(sql: "ROLLBACK TO withConnection")
-            try current.execute(sql: "RELEASE withConnection")
+            try current.rollback()
+            try current.release()
             throw error
         }
     }

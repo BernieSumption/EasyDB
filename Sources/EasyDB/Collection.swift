@@ -160,7 +160,14 @@ public class Collection<Row: Record>: Filterable, DefaultCollations {
         let name = try property.requireSingleName()
         return defaultCollations[name] ?? .string
     }
+
+    let id: UInt64 = {
+        collectionIdCounter += 1
+        return collectionIdCounter
+    }()
 }
+
+private var collectionIdCounter: UInt64 = 0
 
 protocol DefaultCollations {
     func defaultCollation<T: Codable>(for property: PartialCodableKeyPath<T>) throws -> Collation
