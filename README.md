@@ -3,8 +3,8 @@
 EasyDB is an application database for iOS and other Apple platforms designed for the best developer experience. Based on SQLite for performance and reliability, it provides:
 
 - A fully automatic, type-safe API that covers most common use cases
-- Safe access SQL for the less common use cases 
-- Thread-safety: use the database concurrently from multiple threads/tasks
+- SQL for the less common use cases, using a safe API that prevents injection bugs 
+- Thread-safety: safely use the database concurrently from multiple threads/tasks
 - Documented-oriented design philosophy: store arbitrary structured data in your records
 
 ## Introduction
