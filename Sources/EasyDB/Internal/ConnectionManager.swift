@@ -9,19 +9,23 @@ struct ConnectionManager {
         self.readerCacheSize = readerCacheSize
     }
 
-    mutating func acquireConnection(database: EasyDB, write: Bool) throws -> Connection {
+    /// Get a connection, blocking if necessary until a connection of the appropriate kid is available
+    ///
+    /// No other threads will be able to use the connection until it is released
+    mutating func acquire(database: EasyDB, write: Bool) throws -> Connection {
         if write {
-            return try acquireWriteConnection(database)
+            return try acquireWriter(database)
         } else {
-            return try getOrCreateReadConnection(database)
+            return try getOrCreateReader(database)
         }
     }
 
-    mutating func releaseConnection(_ connection: Connection) {
+    /// Release a connection - the calling thread must not use the connection after releasing it
+    mutating func release(_ connection: Connection) {
         if connection.write {
-            releaseWriteConnection(connection)
+            releaseWriter(connection)
         } else {
-            releaseReadConnection(connection)
+            releaseReader(connection)
         }
     }
 
@@ -33,15 +37,15 @@ struct ConnectionManager {
     private let writerManagementSemaphore = DispatchSemaphore(value: 1)
     private let writerUseSemaphore = DispatchSemaphore(value: 1)
 
-    mutating private func acquireWriteConnection(_ database: EasyDB) throws -> Connection {
-        let connection = try getOrCreateWriteConnection(database)
+    mutating private func acquireWriter(_ database: EasyDB) throws -> Connection {
+        let connection = try getOrCreateWriter(database)
         // acquire the use semaphore after the connection is successfully created,
         // to avoid holding a lock if the creation fails.
         writerUseSemaphore.wait()
         return connection
     }
 
-    mutating private func getOrCreateWriteConnection(_ database: EasyDB) throws -> Connection {
+    mutating private func getOrCreateWriter(_ database: EasyDB) throws -> Connection {
         writerManagementSemaphore.wait()
         defer {
             writerManagementSemaphore.signal()
@@ -54,7 +58,7 @@ struct ConnectionManager {
         return connection
     }
 
-    mutating func releaseWriteConnection(_ connection: Connection) {
+    mutating func releaseWriter(_ connection: Connection) {
         writerUseSemaphore.signal()
     }
 
@@ -66,7 +70,7 @@ struct ConnectionManager {
     private let readerManagementSemaphore = DispatchSemaphore(value: 1)
     private var readerCount = 0
 
-    mutating private func getOrCreateReadConnection(_ database: EasyDB) throws -> Connection {
+    mutating private func getOrCreateReader(_ database: EasyDB) throws -> Connection {
         readerManagementSemaphore.wait()
         defer {
             readerManagementSemaphore.signal()
@@ -75,7 +79,7 @@ struct ConnectionManager {
             // ensure that the write connection is created before any read
             // connections, because the write connection auto-creates the
             // database file and read connections require it to exist
-            _ = try getOrCreateWriteConnection(database)
+            _ = try getOrCreateWriter(database)
         }
         if let connection = readerCache.first {
             readerCache.remove(connection)
@@ -85,7 +89,7 @@ struct ConnectionManager {
         return try Connection(database, write: false, name: "read#\(readerCount)")
     }
 
-    mutating func releaseReadConnection(_ connection: Connection) {
+    mutating func releaseReader(_ connection: Connection) {
         readerManagementSemaphore.wait()
         defer {
             readerManagementSemaphore.signal()
