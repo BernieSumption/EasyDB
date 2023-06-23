@@ -5,8 +5,8 @@
 public class Collection<Row: Record>: Filterable, DefaultCollations {
     public let tableName: String
 
-    // TODO: check and throw error instead of assertion
-    weak var database: EasyDB!
+    private weak var database: EasyDB?
+
     let columns: [String]
     let mapper: KeyPathMapper<Row>
     let defaultCollations: [String: Collation]
@@ -67,7 +67,7 @@ public class Collection<Row: Record>: Filterable, DefaultCollations {
     ///
     /// - Parameter dropColumns: Remove unused columns. This defaults to `false`
     public func migrate(dropColumns: Bool = false) throws {
-        try database.withConnection(write: true, transaction: true) { connection in
+        try getDatabase().withConnection(write: true, transaction: true) { connection in
             connection.registerCollection(self)
             let migration = SchemaMigration(connection: connection)
             try migration.migrateColumns(table: tableName, columns: columns)
@@ -97,10 +97,17 @@ public class Collection<Row: Record>: Filterable, DefaultCollations {
         try insert(rows, upsert: true)
     }
 
+    func getDatabase() throws -> EasyDB {
+        guard let database = self.database else {
+            throw EasyDBError.misuse(message: connectionUsedAfterDeinitMessage)
+        }
+        return database
+    }
+
     private func insert(_ row: Row, upsert: Bool) throws {
         let sql = getInsertSQL(upsert: upsert)
 
-        try database.withConnection(write: true) { connection in
+        try getDatabase().withConnection(write: true) { connection in
             connection.registerCollection(self)
             try connection.execute(sql: sql, namedParameters: row)
         }
@@ -111,7 +118,7 @@ public class Collection<Row: Record>: Filterable, DefaultCollations {
             return
         }
         let sql = getInsertSQL(upsert: upsert)
-        try database.withConnection(write: true, transaction: true) { connection in
+        try getDatabase().withConnection(write: true, transaction: true) { connection in
             connection.registerCollection(self)
             let statement = try connection.prepare(sql: sql)
             for row in rows {
@@ -172,6 +179,5 @@ private var collectionIdCounter: UInt64 = 0
 protocol DefaultCollations {
     func defaultCollation<T: Codable>(for property: PartialCodableKeyPath<T>) throws -> Collation
 }
-
 
 var liveCollectionInstances = 0

@@ -2,8 +2,7 @@ import Foundation
 import SQLite3
 
 class Connection: Hashable {
-    // TODO: check and throw error instead of assertion
-    private weak var database: EasyDB!
+    private weak var database: EasyDB?
     private let connectionPointer: OpaquePointer
     private var registeredCollationNames = Set<String>()
     private var registeredCollections = Set<UInt64>()
@@ -73,6 +72,9 @@ class Connection: Hashable {
     }
 
     func prepare(sql: String) throws -> Statement {
+        guard let database = self.database else {
+            throw EasyDBError.misuse(message: connectionUsedAfterDeinitMessage)
+        }
         return try Statement(connectionPointer, sql, logSQL: database.logSQL, connectionName: name)
     }
 
@@ -122,6 +124,9 @@ class Connection: Hashable {
         return lhs === rhs
     }
 }
+
+let connectionUsedAfterDeinitMessage =
+    "Connection used after database is deinitialised - ensure that you keep a reference to the EasyDB object until you no longer need it"
 
 /// Wrapper for a collation function - required because we need a reference type for `Unmanaged.passRetained(_:)`
 class CollationFunction {
