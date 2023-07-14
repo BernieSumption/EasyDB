@@ -201,6 +201,38 @@ class DocsTests: EasyDBTestCase {
         // docs:end
     }
 
+    func testTransactions() throws {
+        struct CountAndTotal: Equatable {
+            internal init(_ count: Int, _ total: Int) {
+                self.count = count
+                self.total = total
+            }
+
+            var count: Int
+            var total: Int
+        }
+
+        try employees.insert(Employee(name: "Bernie", salary: 5))
+
+        // docs:start:transaction-bad
+        let count = try employees.all().fetchCount()
+        // another task could modify the database here, leading to inconsistency
+        let total = try database.execute(Int.self, "SELECT SUM(salary) FROM Employee")
+        // docs:end
+
+        // docs:start:transaction-good
+        let countAndTotal = try database.read {
+            let count = try employees.all().fetchCount()
+            let total = try database.execute(Int.self, "SELECT SUM(salary) FROM Employee")
+            return CountAndTotal(count, total)
+        }
+        // docs:end
+
+        XCTAssertEqual(count, 1)
+        XCTAssertEqual(total, 5)
+        XCTAssertEqual(countAndTotal, CountAndTotal(1, 5))
+    }
+
     func testIndices() throws {
         // docs:start:indices
         struct Book: Record {
