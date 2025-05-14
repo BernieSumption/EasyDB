@@ -1,0 +1,15 @@
+
+disabled_rules:
+  # this rule because it breaks carefully constructed formatting of multi-line statements
+  - opening_brace
+  # I'll be the judge of whether my functions are too complex thank you very much
+  - cyclomatic_complexity
+  - function_body_length
+
+identifier_name:
+  excluded: [id, db, ok, OK]
+
+line_length:
+  warning: 150
+  error: 150
+  ignores_interpolated_strings: true
