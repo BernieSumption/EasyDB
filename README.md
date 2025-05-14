@@ -2,6 +2,11 @@
 
 EasyDB is a SQLite wrapper for iOS and other Apple platforms designed to provide a better developer experience for application developers than anything else available.
 
+> [!NOTE]  
+> EasyDB is a working proof of concept. However, it has not been used in a production application so I have not taken the step of publishing it for Swift Package Manager. If you're interested in using it, or taking some of the techniques from it, contact me and I'll provide support.
+
+## Why EasyDB?
+
 SQLite is by far the most popular database for iOS developers. It is reliable, fast, and already ships with iOS and macOS. The SQLite C API is very low level, and Apple's own Core Data is hard to use, so most developers use a library that wraps the low-level API. [GRDB](https://github.com/groue/GRDB.swift) and [SQLite.swift](https://github.com/stephencelis/SQLite.swift) two very good examples, and there are many more.
 
 EasyDB has a killer feature - of the many SQLite wrapper libraries in Swift, EasyDB is the only one that provides a type-safe query API with no boilerplate code or configuration beyond defining your record type:
